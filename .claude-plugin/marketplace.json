@@ -1,0 +1,14 @@
+{
+  "name": "agentic-sdlc-marketplace",
+  "owner": {
+    "name": "Dinesh NS",
+    "email": "dineshns@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "agentic-sdlc",
+      "source": "./plugins/agentic-sdlc",
+      "description": "Multi-agent SDLC pipeline: requirement → spec → stories → code → tests → runnable app."
+    }
+  ]
+}
