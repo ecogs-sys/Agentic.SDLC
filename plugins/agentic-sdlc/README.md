@@ -26,7 +26,7 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 ## Install
 
 ```
-/plugin marketplace add <github-org>/<repo-name>
+/plugin marketplace add ecogs-sys/Agentic.SDLC
 /plugin install agentic-sdlc@agentic-sdlc-marketplace
 ```
 

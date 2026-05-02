@@ -5,7 +5,7 @@ A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a mu
 ## Install
 
 ```
-/plugin marketplace add <your-github-org>/<this-repo-name>
+/plugin marketplace add ecogs-sys/Agentic.SDLC
 /plugin install agentic-sdlc@agentic-sdlc-marketplace
 ```
 
