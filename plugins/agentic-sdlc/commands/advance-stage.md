@@ -131,7 +131,7 @@ Display `runs/<run-id>/stories.md`.
   2. **Set `spec_frozen = true`** in state.json.
   3. Parse stories.md: for each `## STORY-XXX: ` heading, extract story ID and its `**Track:**` field. Add to `state.stories`:
      ```json
-     "STORY-001": { "track": "dotnet", "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0 }
+     "STORY-001": { "track": "dotnet", "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0, "fix_iterations": 0 }
      ```
   4. **Commit — stories approved, spec frozen:**
      ```bash
@@ -139,6 +139,19 @@ Display `runs/<run-id>/stories.md`.
      git commit -m "docs(<run-id>): stories approved — spec frozen"
      ```
   5. Immediately proceed to Stage: development below.
+
+### Story-state schema (set when a story is added to `state.stories`)
+```json
+"STORY-001": {
+  "track": "dotnet",
+  "status": "pending",
+  "reviewer_iterations": 0,        // engineer↔reviewer cycles in the original dev pass
+  "test_reviewer_iterations": 0,   // test-engineer↔test-reviewer cycles
+  "fix_iterations": 0              // re-entry cycles from BACK_TO_ENGINEER (test or devops)
+}
+```
+
+> **Why three counters:** the original linear pass is bounded by `reviewer_iterations` and `test_reviewer_iterations` (each capped at 5). When the test reviewer or DevOps reviewer routes BACK_TO_ENGINEER, that is a *new* fix cycle — it must not consume budget that's already spent. `fix_iterations` is reset to 0 on each cross-loop entry and capped at 5 per fix cycle.
 - **other:** treat as revision notes for tech-lead, re-run loop.
 
 ---
@@ -224,7 +237,7 @@ f. `DONE`:
 
 g. `BACK_TO_TEST_ENGINEER`: increment test_reviewer_iterations. If < 5: re-invoke test engineer. Repeat from (a). If = 5: escalate.
 
-h. `BACK_TO_ENGINEER`: increment reviewer_iterations. Re-invoke engineer with the failing test info. Repeat from Engineer → Reviewer loop step (a), using the fix commit message.
+h. `BACK_TO_ENGINEER`: **reset `fix_iterations` to 0** (it is a fresh cross-loop entry), then re-invoke the engineer with the failing test info. Repeat from Engineer → Reviewer loop step (a), but use `fix_iterations` (capped at 5) instead of `reviewer_iterations` for the fix cycle. Use the fix commit message. After the fix passes, re-run the test loop (a)–(g) — but do NOT reset `test_reviewer_iterations`; it continues from where it was.
 
 After all stories complete:
 - Update `current_stage = "devops"` in state.json.
@@ -283,16 +296,18 @@ f. Read reviewer's `**Routing decision:**`:
      - Announce completion (see below).
    - `BACK_TO_DEVOPS`: increment devops iterations. If < 5: re-invoke devops-engineer with reviewer issues. Repeat from (a).
    - `BACK_TO_DOTNET_ENGINEER <story-id>`:
+     - **Reset `state.stories[<story-id>].fix_iterations = 0`** (this is a fresh cross-loop entry from DevOps; pre-existing reviewer_iterations from the dev phase do NOT apply).
      - Re-invoke dotnet-engineer for that story with the failing context (passing backend_src).
      - **Commit engineer fix** (see engineer commit pattern above).
      - Re-invoke dotnet-reviewer.
      - **Commit reviewer outcome.**
-     - Re-invoke dotnet-test-engineer.
+     - If reviewer FAILs and fix_iterations < 5: increment, re-invoke engineer. Loop. If = 5: escalate.
+     - Once reviewer passes: re-invoke dotnet-test-engineer.
      - **Commit test engineer.**
      - Re-invoke dotnet-test-reviewer.
      - **Commit test reviewer outcome.**
      - If all pass: re-invoke devops-engineer.
-   - `BACK_TO_REACT_ENGINEER <story-id>`: same flow for react track.
+   - `BACK_TO_REACT_ENGINEER <story-id>`: same flow for react track (also reset `fix_iterations` to 0).
    - `HUMAN_REVIEW_REQUIRED`: present the ambiguity to the user. Wait for decision. Use their decision as context for next devops-engineer invocation.
    - If devops iterations = 5: escalate to user.
 
@@ -306,4 +321,4 @@ f. Read reviewer's `**Routing decision:**`:
 > To run the app locally now:
 > 1. Copy `.env.example` to `.env` and fill in passwords
 > 2. `docker compose up --build`
-> 3. Open http://localhost:3000"
+> 3. Open the frontend at the FRONTEND_PORT given in `tech-spec.md` (e.g. http://localhost:3000)"

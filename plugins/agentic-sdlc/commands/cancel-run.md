@@ -14,7 +14,7 @@ Cancel the active run: confirm with the user, then delete all artifacts and clea
 ### Step 1 — Find the active run
 Scan `runs/` for the most recent run whose state.json `current_stage` is not `"complete"` or `"cancelled"`. If none, say: "No active run to cancel."
 
-Read `branch` and `src_paths` from state.json.
+Read `branch`, `parent_branch` (may be missing for runs created before v0.5.0), and `src_paths` from state.json.
 
 ### Step 2 — Confirm
 Say:
@@ -34,10 +34,23 @@ If the workspace is a git repository:
 git checkout -- .
 git clean -fd
 
-# Switch back to the branch we came from (main or master)
-git checkout main 2>/dev/null || git checkout master 2>/dev/null || git checkout -
+# Switch back to the parent branch (recorded by /start-run on v0.5.0+).
+# Fall back to main, then master. Do NOT use `git checkout -` — that may land
+# us back on the run branch, after which `git branch -D` cannot delete it.
+if git rev-parse --verify <parent_branch> >/dev/null 2>&1; then
+  git checkout <parent_branch>
+elif git rev-parse --verify main >/dev/null 2>&1; then
+  git checkout main
+elif git rev-parse --verify master >/dev/null 2>&1; then
+  git checkout master
+else
+  echo "ERROR: no parent_branch in state.json and neither main nor master exists."
+  echo "Manually checkout your default branch and re-run /agentic-sdlc:cancel-run, or"
+  echo "delete branch <branch> yourself with: git branch -D <branch>"
+  exit 1
+fi
 
-# Delete the run branch
+# Delete the run branch (we are guaranteed to be on a different branch now)
 git branch -D <branch>
 ```
 
