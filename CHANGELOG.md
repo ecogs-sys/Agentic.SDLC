@@ -2,6 +2,60 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.5.0] - 2026-05-04
+
+### Fixed (Critical)
+- **C1: `dotnet sln` referenced `.slnx` while `dotnet new sln` created `.sln`.** Both `dotnet sln add` calls failed silently; the test project was never linked into the solution and tests for every story would silently fail to compile. Now uses `.sln` consistently.
+- **C2: `docker-compose-setup` skill had hardcoded `./dotnet` and `./react` build contexts** — leftover from before v0.2.0 separated generated code into `state.src_paths`. Skill now uses `<backend_src>`/`<frontend_src>` placeholders with substitution instructions.
+- **C3: DevOps Reviewer hardcoded ports 5000 and 3000.** If the architect chose different ports, smoke tests false-failed and burned BACK_TO_DEVOPS iterations. Reviewer now reads `BACKEND_PORT` and `FRONTEND_PORT` from `tech-spec.md` deployment topology.
+- **C4: `/health` endpoint required by reviewer but never required of engineers.** Added a mandatory `TECH-HEALTH` component in `write-tech-spec`, a "/health endpoint" requirement in `dotnet-conventions`, and an explicit instruction in `dotnet-engineer.md` to scaffold it on the first story.
+- **C5: Devops stage missing `iterations` counter in initial state.** `start-run` now writes `"devops": { "status": "pending", "iterations": 0 }`.
+- **C6: Spec-freeze enforced only by orchestrator command, not by agents.** Added "Spec-freeze guardrail" sections to all agents that have Write/Edit tools (BA, Architect, Tech Lead, all engineers, DevOps Engineer). True file-level enforcement via hooks deferred to a future release.
+
+### Fixed (High)
+- **H1: Counter accounting bug across cross-loop routing.** When `BACK_TO_ENGINEER` fired from the test reviewer or `BACK_TO_*_ENGINEER` from the DevOps reviewer, the orchestrator reused the original `reviewer_iterations` counter — which was often near 5 from the dev phase, causing immediate false escalation. Added a separate `fix_iterations` counter that is reset to 0 on each cross-loop entry, capped at 5 per fix cycle.
+- **H2: Dead state-machine references.** BA, Architect, and Tech Lead descriptions claimed to handle a `*_revision` stage that was never set. Replaced with the actual revision-via-iteration-counter pattern.
+- **H4: Cycle detection in `tech-lead-validator`.** Validator now performs DFS-based DAG validation on stories' `Depends on` graph, checks for self-references, and verifies that every `Depends on` entry is a defined STORY-ID. Cycles or unknown IDs fail the validation.
+- **H5: Workspace `.gitignore` runs/ policy documented.** The intentional difference between marketplace `.gitignore` (excludes `runs/`) and workspace `.gitignore` (commits `runs/` as audit trail) is now spelled out in start-run Step 5.
+- **H6: CHANGELOG missing v0.4.0 entry.** Added retroactively (see below).
+- **H7: Frontend smoke test false-PASSed on broken bundles.** nginx serves `index.html` for any path. Smoke test now verifies a `<script src="...">` tag is present in the response.
+- **H8: `dotnet test` / `npm test` ran twice per story.** Test engineer's full test pass was redundant with the test reviewer's coverage-instrumented run. Test engineers now compile-check (`dotnet build` / `tsc --noEmit`) instead.
+- **H9: `/cancel-run` git branch deletion was fragile.** Used `git checkout -` as final fallback, which could land back on the run branch and then fail to delete it. `start-run` now records `parent_branch` in `state.json`; `cancel-run` uses it as the primary fallback target.
+- **H11: Default coverage threshold fallback was implicit.** Test reviewers now explicitly fall back to `{lines: 80, critical_paths: 90}` when the story has no `coverage_threshold` field.
+
+### Fixed (Medium)
+- **M2: Hardcoded model IDs replaced with family aliases.** All 16 agents now use `model: sonnet` or `model: opus` instead of pinned versions like `claude-sonnet-4-6`. Plugin no longer breaks when a pinned minor is retired.
+- **M3: Tech-stack lock-in is announced upfront.** `/start-run` now states the fixed stack (.NET 8 + React 18 + Postgres + Docker Compose) before asking for the requirement, so users with a different stack stop early instead of getting a forced spec.
+- **M4: Removed redundant `npm install` after `npm create vite`** in `react-engineer`. Vite's create command already installs base dependencies.
+- **M8: `show-run-status` handles missing `Version:` line gracefully** (mid-write or malformed artifacts now report `v?` instead of erroring).
+- **M9: `.env.example` template note** explicitly tells the DevOps Engineer to include every env var referenced in the generated `docker-compose.yml`, not just the database baseline.
+- **M10: `/start-run` refuses if a run is already active**, with a clear message pointing to `/advance-stage` or `/cancel-run`.
+
+### Fixed (Low)
+- **N1: Added `license: "MIT"` to plugin.json.**
+- **N3: `.gitignore` template** removed redundant `**/coverage/` (kept `**/coverage*/` superset), added `*.log`.
+- **N4: `dotnet tool install`** uses `--tool-path` instead of `-g` so reportgenerator is installed into the run's coverage directory rather than polluting the user's machine.
+
+### Deferred to a future release
+- H3: Topological story-dispatch algorithm (Kahn's algorithm) — current rule "empty `Depends on` first" is ambiguous past initial stories.
+- H10: Resume-after-crash command — `state.json` captures enough state, but no UX exists.
+- H12: Robust prompt-injection defense in BA agent — added a one-line guardrail; full mitigation needs a separate effort.
+- M1: Unify all agent communication on JSON (vs. current mix of JSON for validators / Markdown for reviewers).
+- M5: Retry/backoff for transient failures (network blips during `npm ci`, `dotnet restore`, `docker pull`).
+- M6: Consistent state-update-then-commit ordering across all `/advance-stage` phases.
+- N2: Iter=5 escalation arrows in the README mermaid diagram.
+
+### Added
+- `docs/REVIEW-2026-05-04.md` — full deep-review document tracking every finding with severity, location, and disposition.
+
+## [0.4.0] - 2026-05-04
+
+### Added
+- **Auto-continue pipeline after approval.** After each user-review gate (`approve` reply), the orchestrator now immediately proceeds to the next stage instead of asking the user to run `/agentic-sdlc:advance-stage` manually. The user only types `approve` once per gate.
+
+### Changed
+- `start-run` and `advance-stage` updated to chain stages internally on approval (commit `5db136e`).
+
 ## [0.3.0] - 2026-05-04
 
 ### Changed
