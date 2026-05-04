@@ -6,6 +6,9 @@ description: Standard pattern for docker-compose configuration. Used by DevOps E
 # Docker Compose Setup
 
 ## docker-compose.yml
+
+> **Important:** the `<backend_src>` and `<frontend_src>` placeholders below MUST be substituted with the actual paths from `state.src_paths` (e.g. `./src/backend`, `./src/frontend`). Do NOT use the literal strings `./dotnet` or `./react` — those paths do not exist in v0.2.0+ workspaces.
+
 ```yaml
 services:
   db:
@@ -26,25 +29,32 @@ services:
 
   backend:
     build:
-      context: ./dotnet
+      context: ./<backend_src>      # substitute actual path, e.g. ./src/backend
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "<backend_port>:<backend_port>"   # use the port from tech-spec deployment topology
     environment:
       - ConnectionStrings__Default=Host=db;Database=${POSTGRES_DB:-appdb};Username=${POSTGRES_USER:-appuser};Password=${POSTGRES_PASSWORD:-apppassword}
-      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_URLS=http://+:<backend_port>
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:<backend_port>/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   frontend:
     build:
-      context: ./react
+      context: ./<frontend_src>     # substitute actual path, e.g. ./src/frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "<frontend_port>:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   db_data:
@@ -68,13 +78,16 @@ ENTRYPOINT ["dotnet", "<AppName>.Api.dll"]
 ```
 
 ## React Dockerfile
+
+> **API URL strategy:** the React app calls the backend through nginx's `/api/` proxy. We do NOT bake `localhost:<BACKEND_PORT>` into the bundle (that would break the moment someone serves the frontend on a non-localhost host). Set `VITE_API_URL=""` (empty/relative) so all `fetch()` calls go to `/api/...` on the same origin, and nginx proxies them to the backend container.
+
 ```dockerfile
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json .
 RUN npm ci
 COPY . .
-ARG VITE_API_URL=http://localhost:5000
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
@@ -85,6 +98,9 @@ EXPOSE 80
 ```
 
 ## nginx.conf (SPA + API proxy)
+
+Substitute `<BACKEND_PORT>` with the port from `tech-spec.md` deployment topology.
+
 ```nginx
 server {
     listen 80;
@@ -96,7 +112,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://backend:5000;
+        proxy_pass http://backend:<BACKEND_PORT>;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
@@ -104,15 +120,24 @@ server {
 ```
 
 ## .env.example
+
+> **The DevOps Engineer must include EVERY env var referenced in the generated `docker-compose.yml`** — not just the database vars below. If the tech-spec's deployment topology adds `JWT_SECRET`, `CORS_ORIGIN`, `OPENAI_API_KEY`, etc., those go here too. Missing vars cause `docker compose up` to fail with cryptic "variable is not set" warnings.
+
+Minimum baseline:
 ```
 POSTGRES_DB=appdb
 POSTGRES_USER=appuser
 POSTGRES_PASSWORD=changeme_in_production
 ```
 
+Add any additional vars listed in `tech-spec.md` Deployment topology section.
+
 ## Verification steps
+
+Use the actual ports from `tech-spec.md` deployment topology — do NOT assume 5000/3000.
+
 1. `docker compose build` — all images build
 2. `docker compose up -d && sleep 10`
-3. `curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health` → 200
-4. `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` → 200
+3. `curl -s -o /dev/null -w "%{http_code}" http://localhost:<BACKEND_PORT>/health` → 200
+4. `curl -s http://localhost:<FRONTEND_PORT>` → 200 AND response body contains `<script src="...">` (proves the bundle is referenced, not just nginx fallback)
 5. `docker compose down`

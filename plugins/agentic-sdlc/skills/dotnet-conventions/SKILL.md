@@ -77,6 +77,9 @@ public class FooServiceTests
 - Use `ProblemDetails` for API error responses (ASP.NET Core default).
 - `404 NotFound()` for missing resources, `400 BadRequest()` for validation, `500` for unhandled.
 
+## Required: `/health` endpoint
+Every backend MUST expose `GET /health` that returns HTTP 200 with `{"status":"ok"}`. This is what the docker-compose readiness check and the DevOps reviewer's smoke test hit. Implement it in `Program.cs` using `app.MapGet("/health", () => Results.Ok(new { status = "ok" }))` or as a `HealthController`. Do not require auth or a DB connection for this endpoint — it must succeed even before DB migrations run.
+
 ## Commands
 ```bash
 dotnet build          # Expected: Build succeeded.

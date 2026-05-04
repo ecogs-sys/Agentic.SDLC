@@ -19,15 +19,29 @@ Include `runs/<run-id>/state.json` in every commit so the run state is always ca
 
 ## Process
 
+### Step 0 — Refuse if a run is already active
+Scan `runs/` for any run whose `state.json` `current_stage` is not `"complete"` or `"cancelled"`. If one exists, do NOT start a new run — say:
+
+> "A run is already active: `<run-id>` (stage: `<current_stage>`, branch: `<branch>`).
+>
+> - Continue it with `/agentic-sdlc:advance-stage`.
+> - Or cancel it first with `/agentic-sdlc:cancel-run` and then re-run `/agentic-sdlc:start-run`.
+>
+> Concurrent runs are not supported."
+
+Then stop. Do not modify any files.
+
 ### Step 1 — Generate a run ID
 Format: `run-YYYY-MM-DD-NNN` (today's date, zero-padded sequence).
 Check `runs/` for existing runs to determine the next sequence number. If none, use `001`.
 
 ### Step 2 — Collect the requirement
 If the user didn't provide their requirement with the command, ask:
-> "Please describe what you want to build. Be as detailed as you like."
+> "I will generate a runnable application with the following fixed stack: **.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose**. If you need a different stack (Vue, Angular, Python, MongoDB, etc.), this plugin won't fit — let me know and we can stop here.
+>
+> Please describe what you want to build. Be as detailed as you like."
 
-Wait for their response.
+Wait for their response. If they explicitly request an incompatible stack, stop the run with a clear message and do not create the run directory.
 
 ### Step 3 — Detect source paths
 Inspect the workspace root to determine where generated code should go.
@@ -46,16 +60,19 @@ Wait for response:
 - **Any other text**: treat as space-separated backend and frontend paths. Use those.
 
 ### Step 4 — Create git branch
-If the workspace is a git repository:
+If the workspace is a git repository, first capture the current branch (this is the parent branch we'll return to on cancel):
 ```bash
+PARENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git checkout -b agentic-sdlc/<run-id>
 ```
-If the branch already exists or git is unavailable, warn the user but continue.
+Record `PARENT_BRANCH` — it goes into `state.json` (see Step 6). If the branch already exists or git is unavailable, warn the user but continue.
 
 ### Step 5 — Ensure .gitignore covers generated artifacts
 Check if `.gitignore` exists at the workspace root.
 - If missing: create it.
 - If exists: append any missing entries.
+
+**Note on `runs/`:** the workspace `.gitignore` does NOT exclude `runs/`. SDLC artifacts (req-spec, tech-spec, stories, state.json) are committed to the run branch as the audit trail. The marketplace repo's own `.gitignore` excludes `runs/` because that's a separate concern (don't pollute the marketplace with users' run artifacts). This is intentional, not an oversight.
 
 Ensure these entries are present:
 ```gitignore
@@ -70,8 +87,10 @@ node_modules/
 dist/
 
 # Test coverage
-**/coverage/
 **/coverage*/
+
+# Logs
+*.log
 
 # Environment — never commit secrets
 .env
@@ -98,6 +117,7 @@ Write `runs/<run-id>/state.json`:
 {
   "run_id": "<run-id>",
   "branch": "agentic-sdlc/<run-id>",
+  "parent_branch": "<PARENT_BRANCH>",
   "current_stage": "ba",
   "spec_frozen": false,
   "src_paths": {
@@ -115,7 +135,7 @@ Write `runs/<run-id>/state.json`:
     "tech_lead_validation": { "status": "pending", "iterations": 0 },
     "user_review_stories": { "status": "pending" },
     "development": { "status": "pending" },
-    "devops": { "status": "pending" }
+    "devops": { "status": "pending", "iterations": 0 }
   },
   "stories": {}
 }

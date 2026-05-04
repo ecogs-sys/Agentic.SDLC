@@ -20,6 +20,13 @@ description: Template and conventions for writing technical specs. Used by the A
 - Every TECH must implement at least one REQ.
 - Every REQ must be implemented by at least one TECH.
 
+## Mandatory infrastructure components
+Every tech spec MUST include these regardless of user requirements (the DevOps Reviewer's smoke tests depend on them):
+
+- **TECH-HEALTH:** Backend `/health` endpoint returning HTTP 200 with a small JSON body (e.g. `{"status":"ok"}`). This is what `docker compose up`'s readiness check and the DevOps reviewer's smoke test hit. Mark it `Implements: [INFRA]` (no REQ traceback needed — it is infrastructure, not feature).
+
+You may add other infrastructure TECHs (e.g. CORS configuration) as needed by the topology section.
+
 ## Format
 
 ```markdown
@@ -54,7 +61,8 @@ Version: <n>
 
 ## Quality checklist (self-check before finishing)
 - [ ] Every REQ-ID from req-spec.md appears in at least one TECH's Implements list
-- [ ] Every TECH has at least one REQ in its Implements list
-- [ ] Deployment topology includes all ports and all required env vars
+- [ ] Every TECH has at least one REQ in its Implements list (or `[INFRA]` for infrastructure TECHs)
+- [ ] **TECH-HEALTH (`/health` endpoint) is present**
+- [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
 - [ ] Stack section matches the fixed stack above exactly
 - [ ] Status is "draft"
