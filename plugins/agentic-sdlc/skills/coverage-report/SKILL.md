@@ -13,9 +13,10 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory coverage/
 ```
 
 ### Generate readable summary
+Install reportgenerator into a local tool path (`coverage/.tools`) — do NOT install globally with `-g`, that pollutes the user's machine.
 ```bash
-dotnet tool install -g dotnet-reportgenerator-globaltool 2>/dev/null || true
-reportgenerator \
+dotnet tool install dotnet-reportgenerator-globaltool --tool-path coverage/.tools 2>/dev/null || true
+coverage/.tools/reportgenerator \
   -reports:"coverage/**/coverage.cobertura.xml" \
   -targetdir:"coverage/report" \
   -reporttypes:"TextSummary"
