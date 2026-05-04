@@ -13,6 +13,7 @@ Run tests with coverage, verify quality, and produce a routing decision.
 ## Inputs (passed as context)
 - Run ID and Story ID
 - Story content (acceptance criteria, coverage_threshold)
+- `frontend_src` — path to the React source directory (e.g. `src/frontend`)
 - Production code and test files
 
 ## Outputs
@@ -22,7 +23,7 @@ A structured report with routing decision.
 1. Read all test files and the production code they test.
 2. Run tests with coverage (per coverage-report skill):
    ```bash
-   cd runs/<run-id>/react && npm test -- --run --coverage
+   cd <frontend_src> && npm test -- --run --coverage
    ```
 3. Check: do tests verify UI behavior (text on screen, user interactions), or do they test implementation details?
 4. Apply the decision tree from coverage-report skill.

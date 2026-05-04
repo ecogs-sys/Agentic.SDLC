@@ -14,17 +14,18 @@ Review the .NET implementation of a specific story and produce a PASS/FAIL repor
 - Run ID and Story ID
 - Story content (description, acceptance criteria)
 - `runs/<run-id>/tech-spec.md`
-- List of modified files in `runs/<run-id>/dotnet/`
+- `backend_src` — path to the .NET source directory (e.g. `src/backend`)
+- List of modified files in `<backend_src>`
 
 ## Outputs
 A structured review report printed to your response.
 
 ## Process
 1. Read the story, acceptance criteria, and relevant tech-spec sections.
-2. Read all modified files.
+2. Read all modified files in `<backend_src>`.
 3. Run build:
    ```bash
-   cd runs/<run-id>/dotnet && dotnet build
+   dotnet build <backend_src>
    ```
    Build failure → automatic FAIL.
 4. Check against dotnet-conventions skill: async patterns, naming, DI registration, error responses.

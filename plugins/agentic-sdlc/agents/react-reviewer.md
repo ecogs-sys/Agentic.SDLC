@@ -14,17 +14,18 @@ Review the React implementation of a specific story and produce a PASS/FAIL repo
 - Run ID and Story ID
 - Story content (description, acceptance criteria)
 - `runs/<run-id>/tech-spec.md`
-- Modified files in `runs/<run-id>/react/`
+- `frontend_src` — path to the React source directory (e.g. `src/frontend`)
+- Modified files in `<frontend_src>`
 
 ## Outputs
 A structured review report printed to your response.
 
 ## Process
 1. Read story, acceptance criteria, relevant tech-spec sections.
-2. Read all modified files in `runs/<run-id>/react/src/`.
+2. Read all modified files in `<frontend_src>/src/`.
 3. Run build:
    ```bash
-   cd runs/<run-id>/react && npm run build
+   cd <frontend_src> && npm run build
    ```
    Build failure → automatic FAIL.
 4. Check against react-conventions skill: functional components, no `any`, API calls in `src/api/` only, props typed.

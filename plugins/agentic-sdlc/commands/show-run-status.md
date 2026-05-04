@@ -15,7 +15,7 @@ Read state.json and display a clear status summary.
 2. If no runs exist: say "No runs found. Use /agentic-sdlc:start-run to begin."
 3. Read `runs/<run-id>/state.json`.
 4. For each artifact (req-spec.md, tech-spec.md, stories.md), check if it exists. If it does, read its `Version:` line.
-5. Check existence of: `runs/<run-id>/dotnet/`, `runs/<run-id>/react/`, `runs/<run-id>/docker-compose.yml`.
+5. Check existence of: `<backend_src>/` (from state.src_paths.backend), `<frontend_src>/` (from state.src_paths.frontend), `docker-compose.yml` at workspace root.
 6. Display:
 
 ```
@@ -23,8 +23,11 @@ Read state.json and display a clear status summary.
   Agentic SDLC — Run Status
 ═══════════════════════════════════════════
   Run ID:        <run-id>
+  Branch:        <branch>
   Current stage: <current_stage>
   Spec frozen:   yes | no
+  Backend src:   <src_paths.backend>
+  Frontend src:  <src_paths.frontend>
 
   PLANNING PHASE
   ─────────────────────────────────────────
@@ -50,13 +53,13 @@ Read state.json and display a clear status summary.
 
   ARTIFACTS
   ─────────────────────────────────────────
-  raw-input.md       exists | missing
-  req-spec.md        exists (v<n>) | missing
-  tech-spec.md       exists (v<n>) | missing
-  stories.md         exists (v<n>) | missing
-  dotnet/            exists | missing
-  react/             exists | missing
-  docker-compose.yml exists | missing
+  runs/<run-id>/raw-input.md    exists | missing
+  runs/<run-id>/req-spec.md     exists (v<n>) | missing
+  runs/<run-id>/tech-spec.md    exists (v<n>) | missing
+  runs/<run-id>/stories.md      exists (v<n>) | missing
+  <backend_src>/                exists | missing
+  <frontend_src>/               exists | missing
+  docker-compose.yml            exists | missing
 ═══════════════════════════════════════════
 ```
 

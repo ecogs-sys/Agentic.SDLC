@@ -12,15 +12,16 @@ Execute build → start → smoke test → unit tests → shutdown. Produce a ro
 
 ## Inputs (passed as context)
 - Run ID
-- All files in `runs/<run-id>/`
+- `backend_src` — path to the .NET source directory (e.g. `src/backend`)
+- `frontend_src` — path to the React source directory (e.g. `src/frontend`)
 
 ## Outputs
 A structured report with routing decision.
 
 ## Process
-```bash
-cd runs/<run-id>
+All docker commands run from the workspace root (where `docker-compose.yml` lives).
 
+```bash
 # 1. Prepare env
 cp .env.example .env
 
@@ -41,12 +42,10 @@ docker compose logs backend
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 
 # 7. Run .NET tests
-cd dotnet && dotnet test 2>&1
-cd ..
+dotnet test <backend_src> 2>&1
 
 # 8. Run React tests
-cd react && npm test -- --run 2>&1
-cd ..
+cd <frontend_src> && npm test -- --run 2>&1
 
 # 9. Shutdown
 docker compose down

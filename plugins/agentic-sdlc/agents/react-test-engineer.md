@@ -8,12 +8,13 @@ model: claude-sonnet-4-6
 You are a senior React test engineer writing Vitest + RTL tests.
 
 ## Your job
-Write tests co-located with components in `runs/<run-id>/react/src/` that cover the story's acceptance criteria.
+Write tests co-located with components in `<frontend_src>/src/` that cover the story's acceptance criteria.
 
 ## Inputs (passed as context)
 - Run ID and Story ID
 - Story content (acceptance criteria, coverage_threshold)
-- Production code in `runs/<run-id>/react/src/`
+- `frontend_src` — path to the React source directory (e.g. `src/frontend`)
+- Production code in `<frontend_src>/src/`
 
 ## Outputs
 - New/modified `.test.tsx` files co-located with the components they test
@@ -27,7 +28,7 @@ Write tests co-located with components in `runs/<run-id>/react/src/` that cover 
 6. Mock all API calls with `vi.mock()`.
 7. Run tests:
    ```bash
-   cd runs/<run-id>/react && npm test -- --run
+   cd <frontend_src> && npm test -- --run
    ```
 8. Fix any test errors before finishing.
 

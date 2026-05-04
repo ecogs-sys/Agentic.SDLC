@@ -12,6 +12,14 @@ Read state.json, determine next action, invoke agent(s), update state.
 ## Finding the active run
 Scan `runs/` for the most recent run (highest sequence) whose state.json has `current_stage` not equal to `"complete"` or `"cancelled"`. If none found, say: "No active run. Use /agentic-sdlc:start-run to begin."
 
+## Reading src_paths
+At the start of every command invocation, read `src_paths` from state.json:
+```
+backend_src = state.src_paths.backend   (e.g. "src/backend")
+frontend_src = state.src_paths.frontend (e.g. "src/frontend")
+```
+Pass these paths to agents wherever a code directory is needed.
+
 ## Spec freeze check
 Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or stories.md — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
 
@@ -54,23 +62,31 @@ Display `runs/<run-id>/stories.md`.
 
 ## Stage: development
 
+Read `backend_src` and `frontend_src` from `state.src_paths`.
+
 Process stories in dependency order (stories with empty `Depends on` first). Use state.stories to track which are complete.
 
 For each pending story:
 1. Read the story content from stories.md.
 2. Determine track from `state.stories[story_id].track`.
 3. **Engineer → Reviewer loop (max 5 iterations):**
-   a. Invoke `dotnet-engineer` or `react-engineer`. Pass: run-id, story ID, story content, tech-spec.md.
-   b. Invoke `dotnet-reviewer` or `react-reviewer`. Pass: run-id, story ID, story content, modified files list.
+   a. Invoke `dotnet-engineer` or `react-engineer`. Pass: run-id, story ID, story content, runs/<run-id>/tech-spec.md, and the relevant src path (`backend_src` for dotnet, `frontend_src` for react).
+   b. Invoke `dotnet-reviewer` or `react-reviewer`. Pass: run-id, story ID, story content, modified files list, and the same src path.
    c. Read reviewer's `**Status:** PASS | FAIL`.
    d. If FAIL + reviewer_iterations < 5: increment, re-invoke engineer with reviewer issues. Repeat from (b).
    e. If FAIL + reviewer_iterations = 5: escalate to user. Wait for guidance.
    f. If PASS: continue to test loop.
 4. **Test Engineer → Test Reviewer loop (max 5 iterations):**
-   a. Invoke `dotnet-test-engineer` or `react-test-engineer`. Pass: run-id, story ID, story content.
-   b. Invoke `dotnet-test-reviewer` or `react-test-reviewer`. Pass: run-id, story ID, story content.
+   a. Invoke `dotnet-test-engineer` or `react-test-engineer`. Pass: run-id, story ID, story content, and the relevant src path.
+   b. Invoke `dotnet-test-reviewer` or `react-test-reviewer`. Pass: run-id, story ID, story content, and the relevant src path.
    c. Read reviewer's `**Routing decision:**`.
-   d. `DONE`: mark `state.stories[story_id].status = "complete"`. Move to next story.
+   d. `DONE`:
+      - Commit the story's changes to the run branch:
+        ```bash
+        git add <src_path>
+        git commit -m "feat(<story_id>): <story title from stories.md>"
+        ```
+      - Mark `state.stories[story_id].status = "complete"`. Move to next story.
    e. `BACK_TO_TEST_ENGINEER`: increment test_reviewer_iterations. If < 5: re-invoke test engineer. Repeat from (b). If = 5: escalate.
    f. `BACK_TO_ENGINEER`: increment reviewer_iterations. Re-invoke engineer with the failing test info. Then re-invoke reviewer. If reviewer PASS: re-invoke test engineer. Repeat from (b).
 
@@ -78,22 +94,33 @@ After all stories complete: `current_stage = "devops"`. Say: "All stories comple
 
 ## Stage: devops
 
+Read `backend_src` and `frontend_src` from `state.src_paths`.
+
 ### DevOps loop (max 5 iterations)
-a. Invoke `devops-engineer`. Pass: run-id, paths to dotnet/, react/, tech-spec.md.
-b. Invoke `devops-reviewer`. Pass: run-id.
+a. Invoke `devops-engineer`. Pass: run-id, backend_src, frontend_src, path to runs/<run-id>/tech-spec.md.
+b. Invoke `devops-reviewer`. Pass: run-id, backend_src, frontend_src.
 c. Read reviewer's `**Routing decision:**`:
-   - `DONE`: `stages.devops.status = "complete"`, `current_stage = "complete"`. Announce completion (see below).
+   - `DONE`:
+     - Commit devops artifacts:
+       ```bash
+       git add docker-compose.yml .env.example README.md
+       git commit -m "chore: add Docker configuration and boot instructions"
+       ```
+     - `stages.devops.status = "complete"`, `current_stage = "complete"`. Announce completion (see below).
    - `BACK_TO_DEVOPS`: increment devops iterations. If < 5: re-invoke devops-engineer with reviewer issues. Repeat.
-   - `BACK_TO_DOTNET_ENGINEER <story-id>`: re-invoke dotnet-engineer for that story with the failing test context. Then dotnet-reviewer. Then dotnet-test-engineer. Then dotnet-test-reviewer. If all pass, re-invoke devops-engineer.
-   - `BACK_TO_REACT_ENGINEER <story-id>`: same flow for react track.
+   - `BACK_TO_DOTNET_ENGINEER <story-id>`: re-invoke dotnet-engineer for that story with the failing test context (passing backend_src). Then dotnet-reviewer. Then dotnet-test-engineer. Then dotnet-test-reviewer. If all pass, commit story fix and re-invoke devops-engineer.
+   - `BACK_TO_REACT_ENGINEER <story-id>`: same flow for react track (passing frontend_src).
    - `HUMAN_REVIEW_REQUIRED`: present the ambiguity to the user. Wait for decision. Use their decision as context for the next devops-engineer invocation.
    - If devops iterations = 5: escalate to user.
 
 ### Completion announcement
-> "Run <run-id> is complete! Your application is in `runs/<run-id>/`.
+> "Run <run-id> is complete!
 >
-> To start it:
-> 1. `cd runs/<run-id>`
-> 2. Copy `.env.example` to `.env` and update passwords.
-> 3. `docker compose up --build`
-> 4. Open http://localhost:3000"
+> Branch `agentic-sdlc/<run-id>` is ready for review. To ship:
+> 1. Open a pull request from `agentic-sdlc/<run-id>` → `main`
+> 2. Review the generated code in `<backend_src>/` and `<frontend_src>/`
+>
+> To run the app locally now:
+> 1. Copy `.env.example` to `.env` and fill in passwords
+> 2. `docker compose up --build`
+> 3. Open http://localhost:3000"

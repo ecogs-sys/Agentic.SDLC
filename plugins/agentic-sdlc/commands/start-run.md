@@ -7,7 +7,7 @@ description: Start a new Agentic SDLC run. Collects the user's requirement, crea
 You are the Agentic SDLC orchestrator.
 
 ## Your job
-Start a new run: collect the requirement, initialize state, run the BA + validation loop, and present the requirement spec for user review.
+Start a new run: collect the requirement, initialize state, create the git branch, run the BA + validation loop, and present the requirement spec for user review.
 
 ## Process
 
@@ -21,7 +21,59 @@ If the user didn't provide their requirement with the command, ask:
 
 Wait for their response.
 
-### Step 3 — Create run directory and write raw-input.md
+### Step 3 — Detect source paths
+Inspect the workspace root to determine where generated code should go.
+
+Check in order:
+1. If `src/backend/` or `src/frontend/` exist → use `src/backend` and `src/frontend`
+2. If `backend/` and `frontend/` exist at root → use `backend` and `frontend`
+3. If `src/` exists but no backend/frontend subdirs → use `src/backend` and `src/frontend`
+4. Otherwise (new workspace) → default to `src/backend` and `src/frontend`
+
+Announce the detected paths:
+> "Source code will be generated into `<backend_src>/` (.NET) and `<frontend_src>/` (React). Reply with different paths if you'd like to change this, or press Enter to continue."
+
+Wait for response:
+- **Enter / empty / "ok" / "yes"**: proceed with detected paths.
+- **Any other text**: treat as space-separated backend and frontend paths (e.g. `app/api app/web`). Use those.
+
+### Step 4 — Create git branch
+If the workspace is a git repository:
+```bash
+git checkout -b agentic-sdlc/<run-id>
+```
+If the branch already exists or git is unavailable, warn the user but continue.
+
+### Step 5 — Ensure .gitignore covers generated artifacts
+Check if `.gitignore` exists at the workspace root.
+- If missing: create it.
+- If exists: append any missing entries.
+
+Ensure these entries are present:
+```gitignore
+# .NET build artifacts
+**/bin/
+**/obj/
+*.user
+.vs/
+
+# React build artifacts
+node_modules/
+dist/
+
+# Test coverage
+**/coverage/
+**/coverage*/
+
+# Environment — never commit secrets
+.env
+
+# IDE
+.idea/
+*.suo
+```
+
+### Step 6 — Create run directory and write raw-input.md
 Create `runs/<run-id>/` directory.
 
 Write `runs/<run-id>/raw-input.md`:
@@ -33,13 +85,18 @@ Captured: <YYYY-MM-DD HH:MM>
 <user's requirement verbatim — do not paraphrase or edit>
 ```
 
-### Step 4 — Write initial state.json
+### Step 7 — Write initial state.json
 Write `runs/<run-id>/state.json`:
 ```json
 {
   "run_id": "<run-id>",
+  "branch": "agentic-sdlc/<run-id>",
   "current_stage": "ba",
   "spec_frozen": false,
+  "src_paths": {
+    "backend": "<backend_src>",
+    "frontend": "<frontend_src>"
+  },
   "stages": {
     "ba": { "status": "in_progress", "iterations": 0 },
     "ba_validation": { "status": "pending", "iterations": 0 },
@@ -57,7 +114,7 @@ Write `runs/<run-id>/state.json`:
 }
 ```
 
-### Step 5 — BA loop (max 5 iterations)
+### Step 8 — BA loop (max 5 iterations)
 
 **Iteration loop:**
 
@@ -77,7 +134,7 @@ d. If `"status": "fail"`:
 e. If `"status": "pass"`:
    - Update state.json: `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
 
-### Step 6 — User review gate
+### Step 9 — User review gate
 Read and display `runs/<run-id>/req-spec.md` in full.
 
 Say:
@@ -85,7 +142,7 @@ Say:
 
 Wait for response:
 - **"approve"** (case-insensitive): update state.json `stages.user_review_req.status = "complete"`, `current_stage = "architect"`. Say: "Requirement spec approved. Run `/agentic-sdlc:advance-stage` to continue to the Architect stage."
-- **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 5. (User revision counts toward the 5-iteration limit.)
+- **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 8. (User revision counts toward the 5-iteration limit.)
 
 ## Spec freeze
 Do not set `spec_frozen` here. That happens after Tech Lead approval in /advance-stage.
