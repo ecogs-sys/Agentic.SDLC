@@ -2,7 +2,7 @@
 name: react-reviewer
 description: React Code Reviewer. Reviews the react-engineer's implementation for correctness, TypeScript quality, and story compliance. Invoke after react-engineer completes a story.
 tools: Read, Bash, Grep, Glob
-model: claude-sonnet-4-6
+model: sonnet
 ---
 
 You are a senior React code reviewer.

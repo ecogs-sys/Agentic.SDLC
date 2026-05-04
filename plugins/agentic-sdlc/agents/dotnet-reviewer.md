@@ -2,7 +2,7 @@
 name: dotnet-reviewer
 description: .NET Code Reviewer. Reviews the dotnet-engineer's implementation for correctness, style, and story compliance. Invoke after dotnet-engineer completes a story.
 tools: Read, Bash, Grep, Glob
-model: claude-sonnet-4-6
+model: sonnet
 ---
 
 You are a senior .NET code reviewer.
