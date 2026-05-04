@@ -179,7 +179,7 @@ Wait for response:
     git add runs/<run-id>/state.json
     git commit -m "docs(<run-id>): requirement spec approved"
     ```
-  - Say: "Requirement spec approved. Run `/agentic-sdlc:advance-stage` to continue to the Architect stage."
+  - Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its instructions. Do NOT tell the user to run any command — continue the pipeline without pausing.
 - **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 7. (User revision counts toward the 5-iteration limit.)
 
 ## Spec freeze

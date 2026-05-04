@@ -83,7 +83,7 @@ Display `runs/<run-id>/tech-spec.md`.
     git add runs/<run-id>/state.json
     git commit -m "docs(<run-id>): technical spec approved"
     ```
-  - Say: "Technical spec approved. Run /advance-stage to continue to Tech Lead."
+  - Immediately proceed to Stage: tech_lead below.
 - **other:** treat as revision notes for architect, re-run loop.
 
 ---
@@ -138,7 +138,7 @@ Display `runs/<run-id>/stories.md`.
      git add runs/<run-id>/state.json
      git commit -m "docs(<run-id>): stories approved — spec frozen"
      ```
-  5. Say: "Stories approved. Spec is now **frozen**. Run /advance-stage to begin development."
+  5. Immediately proceed to Stage: development below.
 - **other:** treat as revision notes for tech-lead, re-run loop.
 
 ---
@@ -233,7 +233,7 @@ After all stories complete:
   git add runs/<run-id>/state.json
   git commit -m "docs(<run-id>): all stories complete"
   ```
-- Say: "All stories complete. Run /advance-stage to begin DevOps phase."
+- Immediately proceed to Stage: devops below.
 
 ---
 
