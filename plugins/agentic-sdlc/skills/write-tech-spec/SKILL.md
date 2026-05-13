@@ -10,6 +10,7 @@ description: Template and conventions for writing technical specs. Used by the A
 - Frontend: React 18 + Vite + TypeScript
 - Database: PostgreSQL (via Docker)
 - Deployment: docker-compose
+- CSS framework: set by Architect during codebase discovery (Tailwind CSS | Bootstrap | CSS Modules | detected from existing project)
 
 ## ID assignment rules
 - IDs are TECH-001, TECH-002, ... in discovery order.
@@ -43,6 +44,14 @@ Version: <n>
 - Frontend: React 18 + Vite + TypeScript
 - Database: PostgreSQL (via Docker)
 - Deployment: docker-compose
+- CSS framework: <Tailwind CSS | Bootstrap | CSS Modules | detected: X>
+
+## Existing system *(brownfield only — omit entirely for greenfield)*
+- Backend patterns: <service layer approach, middleware, auth, naming conventions>
+- Frontend patterns: <CSS framework, component folder structure, state management>
+- Database patterns: <table naming, migration approach, notable constraints>
+- Decisions preserved: <list of existing patterns new TECHs must not break>
+- Intentional deviations: <list of changes from existing patterns, each with justification>
 
 ## Components
 ### TECH-001: <component name>
@@ -66,3 +75,5 @@ Version: <n>
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
 - [ ] Stack section matches the fixed stack above exactly
 - [ ] Status is "draft"
+- [ ] CSS framework is specified in the Stack section
+- [ ] Brownfield: `## Existing system` section is present and all new TECHs align with it or document their deviation
