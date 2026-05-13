@@ -29,8 +29,33 @@ A structured review report printed to your response.
    ```
    Build failure → automatic FAIL.
 4. Check against react-conventions skill: functional components, no `any`, API calls in `src/api/` only, props typed.
-5. Check story scope: matches what was asked.
-6. Check for obvious bugs: unhandled promise rejections, missing null checks on API responses.
+5. **CSS isolation check:**
+   Grep for raw hex values in component and page source files:
+   ```bash
+   grep -rEn "#[0-9a-fA-F]{3,6}" <frontend_src>/src/components <frontend_src>/src/pages 2>/dev/null
+   ```
+   Any match outside `design-tokens.css` or `tailwind.config.ts` is a **CRITICAL** issue.
+
+   Grep for raw pixel values in styles:
+   ```bash
+   grep -rEn ":\s*[0-9]+px" <frontend_src>/src/components <frontend_src>/src/pages 2>/dev/null
+   ```
+   Flag any match that is not inside `design-tokens.css` as a **WARNING**.
+
+   Visually scan for CSS selectors in component stylesheets that target class names defined in a different component file — flag as **CRITICAL**.
+
+6. **Component decomposition check:**
+   - Any component file over ~150 lines: open it and inspect for mixed responsibilities. Flag as **WARNING** if the file contains fetch/API calls AND JSX rendering AND `useState` for non-UI state (e.g. form submission status, pagination).
+   - Any component that imports from `src/api/` AND renders JSX AND contains `useReducer` or multiple `useState` calls for business logic: flag as **CRITICAL** — the data-fetching logic belongs in a custom hook.
+   - Verify new components follow the detected decomposition pattern: feature-scoped layout for fresh projects (`src/pages/<Name>/SubComponent.tsx`), or the existing folder structure for brownfield.
+
+7. **Design token check:**
+   - Fresh project: verify `design-tokens.css` is imported in `main.tsx`.
+   - Confirm interactive elements (buttons, inputs, links) use `var(--color-primary)` or framework-equivalent token — not a hard-coded color.
+   - Flag any component using hard-coded color or spacing values as a **WARNING**.
+
+8. Check story scope: matches what was asked.
+9. Check for obvious bugs: unhandled promise rejections, missing null checks on API responses.
 
 ## Output format
 ```
@@ -49,4 +74,4 @@ A structured review report printed to your response.
 **Summary:** <1-2 sentences>
 ```
 
-PASS requires: build passes AND no CRITICAL issues.
+PASS requires: build passes AND no CRITICAL issues (including raw hex colors in components, fetch logic inside render components, and cross-component CSS selectors).
