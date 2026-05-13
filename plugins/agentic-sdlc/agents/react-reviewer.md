@@ -30,17 +30,17 @@ A structured review report printed to your response.
    Build failure → automatic FAIL.
 4. Check against react-conventions skill: functional components, no `any`, API calls in `src/api/` only, props typed.
 5. **CSS isolation check:**
-   Grep for raw hex values in component and page source files:
+   Grep for raw hex values across all source files (excludes token and config files automatically):
    ```bash
-   grep -rEn "#[0-9a-fA-F]{3,6}" <frontend_src>/src/components <frontend_src>/src/pages 2>/dev/null
+   grep -rEn "#[0-9a-fA-F]{3,8}\b" <frontend_src>/src 2>/dev/null | grep -v "design-tokens\.css\|tailwind\.config\."
    ```
-   Any match outside `design-tokens.css` or `tailwind.config.ts` is a **CRITICAL** issue.
+   Any match is a **CRITICAL** issue.
 
-   Grep for raw pixel values in styles:
+   Grep for raw pixel spacing/radius values (border widths and shadows are exempt):
    ```bash
-   grep -rEn ":\s*[0-9]+px" <frontend_src>/src/components <frontend_src>/src/pages 2>/dev/null
+   grep -rEn "(padding|margin|gap|border-radius)\s*:\s*[0-9]+px" <frontend_src>/src 2>/dev/null | grep -v "design-tokens\.css"
    ```
-   Flag any match that is not inside `design-tokens.css` as a **WARNING**.
+   Every match is a **WARNING**.
 
    Visually scan for CSS selectors in component stylesheets that target class names defined in a different component file — flag as **CRITICAL**.
 
