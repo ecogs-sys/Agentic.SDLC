@@ -9,14 +9,15 @@ description: Project-specific React coding conventions. Used by React Engineer, 
 ```
 react/
 ├── src/
-│   ├── components/       # Reusable UI components
+│   ├── components/       # Shared components (used by 2+ features)
 │   │   └── <Name>/
 │   │       ├── <Name>.tsx
 │   │       └── <Name>.test.tsx
 │   ├── pages/            # Route-level page components
 │   │   └── <Name>Page/
 │   │       ├── <Name>Page.tsx
-│   │       └── <Name>Page.test.tsx
+│   │       ├── <Name>Page.test.tsx
+│   │       └── <SubComponent>.tsx   # Co-located sub-components (used only here)
 │   ├── hooks/            # Custom React hooks
 │   ├── api/              # fetch wrappers (one file per resource)
 │   ├── types/            # TypeScript type definitions
@@ -44,14 +45,14 @@ react/
 
 ## Design system
 
-Detect the CSS framework already in use before writing any styles:
+Detect the CSS framework already in use before writing any styles. Check `package.json` dependency signals first (rows 1–3); they take precedence over file-glob signals (rows 4–5) when both match.
 
 | Signal in `<frontend_src>` | Framework | How to apply Verdant tokens |
 |---|---|---|
-| `tailwind.config.ts` or `tailwind.config.js` present | Tailwind | Extend config with Verdant color/spacing/radius tokens (see react-engineer step 2) |
 | `bootstrap` in `package.json` dependencies | Bootstrap | Override Bootstrap CSS vars with Verdant tokens in a global `_verdant-bootstrap.css` |
-| `*.module.css` files present | CSS Modules | Use `var(--token-name)` inside `.module.css` files; tokens loaded globally via `main.tsx` |
 | `styled-components` or `@emotion/*` in `package.json` | CSS-in-JS | Follow existing patterns; reference Verdant tokens via `createGlobalStyle` or theme |
+| `tailwind.config.ts` or `tailwind.config.js` present | Tailwind | Extend config with Verdant color/spacing/radius tokens (see react-engineer step 2) |
+| `*.module.css` files present | CSS Modules | Use `var(--token-name)` inside `.module.css` files; tokens loaded globally via `main.tsx` |
 | `<frontend_src>` has content but none of the above match | Plain CSS | Follow existing conventions — do **not** inject Verdant tokens |
 | Empty / no `<frontend_src>` | Fresh project | Read CSS framework from `tech-spec.md`; invoke `agentic-sdlc:verdant-design` skill |
 
@@ -98,6 +99,8 @@ These rules apply regardless of CSS framework:
   background-color: #15803d;  /* raw hex — use var(--color-primary) */
   padding: 8px 16px;          /* raw px — use var(--space-2) var(--space-4) */
 }
+/* ↑ bare global class name — `.button` collides with Bootstrap/global CSS.
+   Use `.root` inside Button.module.css (as shown in the Correct example above). */
 ```
 
 ## API calls
