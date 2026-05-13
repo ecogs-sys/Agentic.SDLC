@@ -60,13 +60,24 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
    import './styles/design-tokens.css'
    ```
 
-   **Tailwind CSS:**
+   **Tailwind CSS** (uses Tailwind v3 + PostCSS — stable and compatible with `tailwind.config.ts`):
    ```bash
-   cd <frontend_src> && npm install -D tailwindcss @tailwindcss/vite
+   cd <frontend_src> && npm install -D tailwindcss@3 postcss autoprefixer && npx tailwindcss init -p
    ```
    Create `<frontend_src>/src/styles/design-tokens.css` — copy `colors_and_type.css` from the verdant-design skill verbatim.
-   Add as the **first** import in `src/main.tsx`: `import './styles/design-tokens.css'`
-   Create `<frontend_src>/tailwind.config.ts`:
+   Create `<frontend_src>/src/styles/tailwind.css`:
+   ```css
+   @tailwind base;
+   @tailwind components;
+   @tailwind utilities;
+   ```
+   Add to `src/main.tsx` in this order (tokens first, then Tailwind):
+   ```typescript
+   import './styles/design-tokens.css'
+   import './styles/tailwind.css'
+   ```
+   The `design-tokens.css` import is required — Tailwind emits `var(--color-primary)` references that only resolve because these CSS variables are loaded globally.
+   Replace the generated `tailwind.config.js` with `<frontend_src>/tailwind.config.ts`:
    ```typescript
    import type { Config } from 'tailwindcss'
 
@@ -85,21 +96,26 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
            border:          'var(--border)',
          },
          spacing: {
-           1: 'var(--space-1)',
-           2: 'var(--space-2)',
-           3: 'var(--space-3)',
-           4: 'var(--space-4)',
-           5: 'var(--space-5)',
-           6: 'var(--space-6)',
-           8: 'var(--space-8)',
+           1:  'var(--space-1)',
+           2:  'var(--space-2)',
+           3:  'var(--space-3)',
+           4:  'var(--space-4)',
+           5:  'var(--space-5)',
+           6:  'var(--space-6)',
+           8:  'var(--space-8)',
+           10: 'var(--space-10)',
+           12: 'var(--space-12)',
+           16: 'var(--space-16)',
+           20: 'var(--space-20)',
+           24: 'var(--space-24)',
          },
          borderRadius: {
-           sm:  'var(--radius-sm)',
+           sm:      'var(--radius-sm)',
            DEFAULT: 'var(--radius-md)',
-           md:  'var(--radius-md)',
-           lg:  'var(--radius-lg)',
-           xl:  'var(--radius-xl)',
-           '2xl': 'var(--radius-2xl)',
+           md:      'var(--radius-md)',
+           lg:      'var(--radius-lg)',
+           xl:      'var(--radius-xl)',
+           '2xl':   'var(--radius-2xl)',
          },
        },
      },
