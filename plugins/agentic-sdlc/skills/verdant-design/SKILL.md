@@ -13,8 +13,9 @@ This is the Verdant Design System bundled into the Agentic SDLC plugin.
 - **React Engineer or Reviewer (any project):** Read `README.md` to understand the full token system and component visual conventions.
 - **Token reference:** All CSS custom properties are defined in `colors_and_type.css`. Key tokens:
   - Colors: `--color-primary`, `--color-accent`, `--fg-1`, `--fg-2`, `--bg-base`, `--bg-surface`, `--border`
+  - Semantic states: `--color-success`, `--color-warning`, `--color-error`, `--color-info` (each has `-subtle` and `-fg` variants)
   - Spacing: `--space-1` (4px) through `--space-24` (96px)
-  - Radius: `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px), `--radius-xl` (12px)
+  - Radius: `--radius-sm` (4px), `--radius-md` (6px), `--radius-lg` (8px), `--radius-xl` (12px), `--radius-2xl` (16px)
   - Typography: `--font-sans`, `--text-base` (14px), `--weight-semibold`, `--leading-normal`
 
 ## Files
