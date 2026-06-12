@@ -12,6 +12,26 @@ description: Template and conventions for writing technical specs. Used by the A
 - Deployment: docker-compose
 - CSS framework: set by Architect during codebase discovery (Tailwind CSS | Bootstrap | CSS Modules | detected from existing project)
 
+## Backend architecture: Clean Architecture (mandatory)
+
+The .NET backend MUST follow Clean Architecture with four projects. **Source-code
+dependencies point only inward** — the domain layer depends on nothing.
+
+| Layer | Project | Contains | May reference |
+|---|---|---|---|
+| **Domain** | `AppName.Domain` | Entities, value objects, domain enums/exceptions. Pure C# — no EF Core, no ASP.NET. | nothing |
+| **Application** | `AppName.Application` | Use-case/service logic, DTOs, repository & gateway **interfaces**. No EF Core. | Domain |
+| **Infrastructure** | `AppName.Infrastructure` | EF Core `DbContext`, migrations, repository implementations, external gateways. | Application (+ Domain) |
+| **Api** | `AppName.Api` | Controllers, `Program.cs` DI composition root, `/health`. Controllers depend on Application interfaces, never on `DbContext`. | Application + Infrastructure |
+
+Every backend TECH MUST declare which layer it belongs to via a `**Layer:**` field. A TECH's
+`Depends on` must never cross a layer boundary outward (Domain must not depend on
+Application/Infrastructure/Api; Application not on Infrastructure/Api; Infrastructure not on
+Api). `TECH-HEALTH` is an **Api**-layer component.
+
+Frontend components are not assigned a backend layer — omit `Layer` for UI-component TECHs (or
+mark them `Layer: Frontend`).
+
 ## ID assignment rules
 - IDs are TECH-001, TECH-002, ... in discovery order.
 - IDs are **write-once** — never renumber or reuse.
@@ -56,6 +76,7 @@ Version: <n>
 ## Components
 ### TECH-001: <component name>
 **Type:** API endpoint | UI component | service | data model | database table | ...
+**Layer:** Domain | Application | Infrastructure | Api  *(backend TECHs only; omit or use `Frontend` for UI components)*
 **Description:** <technical detail, including method signatures, data shapes, or behavior>
 **Implements:** [REQ-001, REQ-003]
 **Depends on:** [TECH-005]
@@ -71,7 +92,8 @@ Version: <n>
 ## Quality checklist (self-check before finishing)
 - [ ] Every REQ-ID from req-spec.md appears in at least one TECH's Implements list
 - [ ] Every TECH has at least one REQ in its Implements list (or `[INFRA]` for infrastructure TECHs)
-- [ ] **TECH-HEALTH (`/health` endpoint) is present**
+- [ ] Every backend TECH declares a valid `Layer` (Domain | Application | Infrastructure | Api) and no `Depends on` crosses a layer boundary outward
+- [ ] **TECH-HEALTH (`/health` endpoint) is present** (Layer: Api)
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
 - [ ] Stack section matches the fixed stack above
 - [ ] Status is "draft"

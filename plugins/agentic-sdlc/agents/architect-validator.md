@@ -25,8 +25,9 @@ A JSON validation report printed to your response.
 4. Forward traceability: every REQ-ID must appear in at least one TECH's Implements list. Missing → `missing`.
 5. Backward traceability: every TECH's Implements list must contain valid REQ-IDs. Invalid → `added_without_source`.
 6. Check stack: must be .NET 8, React 18, PostgreSQL, docker-compose. Deviation → `altered`.
-7. Check deployment topology: ports and env vars must be concrete (not "TBD"). If TBD → `notes`.
-8. Status: "pass" if missing and added_without_source are empty.
+7. **Clean Architecture check:** every backend TECH must declare a valid `Layer` (Domain | Application | Infrastructure | Api). A missing or invalid layer → `altered`. The dependency rule must hold across each TECH's `Depends on`: a Domain TECH must not depend on Application/Infrastructure/Api; Application not on Infrastructure/Api; Infrastructure not on Api. Any outward dependency → `altered`.
+8. Check deployment topology: ports and env vars must be concrete (not "TBD"). If TBD → `notes`.
+9. Status: "pass" if missing and added_without_source are empty. (Layer/dependency-rule violations surface under `altered` for the architect to correct.)
 
 ## Output format
 ```json

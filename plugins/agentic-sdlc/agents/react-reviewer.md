@@ -29,6 +29,11 @@ A structured review report printed to your response.
    ```
    Build failure → automatic FAIL.
 4. Check against react-conventions skill: functional components, no `any`, API calls in `src/api/` only, props typed.
+   **Clean Architecture dependency rule** (see react-conventions skill, "The dependency rule") — any `fetch`/`axios`/`XMLHttpRequest` call inside a component or page file (anything outside `src/api/`) is a **CRITICAL** violation; data must come through a hook that calls the `api` layer:
+   ```bash
+   grep -rEn "fetch\(|axios|XMLHttpRequest" <frontend_src>/src/components <frontend_src>/src/pages 2>/dev/null
+   ```
+   Also flag as **CRITICAL**: `domain/` (or `types/`) files importing from `api`/`hooks`/`components`, and component/page files importing directly from another component's internals to bypass a hook. Correct layer placement: types → `domain/`, fetch → `api/`, orchestration → `hooks/`, rendering → `components/`/`pages/`.
 5. **CSS isolation check:**
    Grep for raw hex values across all source files (excludes token and config files automatically):
    ```bash
@@ -77,4 +82,4 @@ A structured review report printed to your response.
 **Summary:** <1-2 sentences>
 ```
 
-PASS requires: build passes AND no CRITICAL issues (including raw hex colors in components, fetch logic inside render components, and cross-component CSS selectors).
+PASS requires: build passes AND no CRITICAL issues (including raw hex colors in components, fetch/axios calls inside components or pages, Clean Architecture dependency-rule violations, fetch logic inside render components, and cross-component CSS selectors).

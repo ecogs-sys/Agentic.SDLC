@@ -5,27 +5,42 @@ description: Project-specific React coding conventions. Used by React Engineer, 
 
 # React Conventions
 
-## Project structure
+## Architecture: Clean Architecture (mandatory)
+
+The frontend follows Clean Architecture as **layered folders**. **Dependencies point only
+inward** — `domain` depends on nothing; presentation is outermost.
+
 ```
 react/
 ├── src/
-│   ├── components/       # Shared components (used by 2+ features)
+│   ├── domain/          # LAYER 1 (innermost): TS types, models, pure logic. No React, no fetch.
+│   │                    #   (in brownfield projects an existing `types/` folder is the domain layer)
+│   ├── api/             # LAYER 2: API clients / fetch wrappers (one file per resource) → may use domain
+│   ├── hooks/           # LAYER 3: use-cases / orchestration (useFoo) → uses api + domain
+│   ├── components/      # LAYER 4: presentation, shared (used by 2+ features) → consume hooks, NO fetch
 │   │   └── <Name>/
 │   │       ├── <Name>.tsx
 │   │       └── <Name>.test.tsx
-│   ├── pages/            # Route-level page components
+│   ├── pages/           # LAYER 4: route-level composition → compose components + hooks, NO fetch
 │   │   └── <Name>Page/
 │   │       ├── <Name>Page.tsx
 │   │       ├── <Name>Page.test.tsx
 │   │       └── <SubComponent>.tsx   # Co-located sub-components (used only here)
-│   ├── hooks/            # Custom React hooks
-│   ├── api/              # fetch wrappers (one file per resource)
-│   ├── types/            # TypeScript type definitions
 │   └── App.tsx
 ├── index.html
 ├── vite.config.ts
 └── package.json
 ```
+
+### The dependency rule
+- **domain** (types/models/pure logic) imports nothing from `api`, `hooks`, `components`, or `pages`.
+- **api** may import `domain`. This is the **only** layer that calls `fetch`/`axios`/HTTP.
+- **hooks** may import `api` and `domain`. Orchestration and data-fetching state live here.
+- **components** / **pages** may import `hooks`, `domain`, and other components. They render —
+  they **never** call `fetch`/`axios` directly. Data comes from a hook.
+
+A `fetch`/`axios`/`XMLHttpRequest` call inside a component or page (anything outside `src/api/`)
+is a hard failure.
 
 ## Component conventions
 - Functional components only — no class components.
@@ -41,7 +56,7 @@ react/
 ## TypeScript style
 - Strict mode enabled (`"strict": true` in tsconfig).
 - No `any` types — use `unknown` and narrow, or define proper types.
-- API response types defined in `src/types/`.
+- Domain types and API response types defined in `src/domain/` (or an existing `src/types/` folder in brownfield projects).
 
 ## Design system
 
@@ -112,7 +127,7 @@ export async function fetchTodos(): Promise<Todo[]> {
   return res.json();
 }
 ```
-- All fetch calls in `src/api/<resource>.ts` only.
+- All fetch calls in `src/api/<resource>.ts` only — never inside a component, page, or hook body (hooks call the `api` layer; they do not `fetch` directly).
 - Base URL from `import.meta.env.VITE_API_URL`.
 
 ## Vitest + React Testing Library patterns

@@ -172,7 +172,7 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
    import './styles/_verdant-bootstrap.css'
    import 'bootstrap/dist/css/bootstrap.min.css'
    ```
-3. Follow the react-conventions skill for all style decisions — including the detected design system token usage, component decomposition rules (feature-scoped for fresh; follow existing for brownfield), and CSS isolation rules (no raw hex/px values, no cross-component style leakage).
+3. Follow the react-conventions skill for all style decisions — including **Clean Architecture layer placement** (see the skill's "Architecture: Clean Architecture" section), the detected design system token usage, component decomposition rules (feature-scoped for fresh; follow existing for brownfield), and CSS isolation rules (no raw hex/px values, no cross-component style leakage). Place each part of the story in its layer: types/models → `src/domain/` (or existing `src/types/`); fetch/HTTP calls → `src/api/`; data-fetching and orchestration → `src/hooks/`; rendering → `src/components/` and `src/pages/`. **Never call `fetch`/`axios` inside a component or page** — go through a hook that calls the `api` layer.
 4. Implement only the story's acceptance criteria.
 5. Run `npm run build`:
    ```bash
@@ -187,6 +187,7 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
 - No test files created or modified.
 - Only `<frontend_src>` files modified.
 - Component decomposition rule followed (feature-scoped for fresh; existing structure for brownfield).
+- Clean Architecture layers respected: types in `domain/`, fetch in `api/`, orchestration in `hooks/`, rendering in `components/`/`pages/`; no `fetch`/`axios` calls inside a component or page.
 - CSS isolation rules met: no raw hex color values, no raw pixel spacing/radius values, no cross-component style selectors.
 - All colors and spacing use design tokens (`var(--color-primary)`, `var(--space-2)`, etc.) or the detected CSS framework equivalent.
 
