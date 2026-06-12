@@ -20,9 +20,9 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 
 ## Process
 1. **Codebase discovery** — scan the working directory before reading the req-spec:
-   - **Backend:** Glob for `*.csproj` and `src/**/*.cs`. If found: open `Program.cs` and note the .NET version, service registration pattern (minimal API vs controller-based), and any existing endpoint conventions. Check for `Migrations/` or `*DbContext.cs` and note table-naming conventions.
+   - **Backend:** Glob for `**/*.csproj`. If found: locate `Program.cs` in the same directory and note the .NET version, service registration pattern (minimal API vs controller-based), and any existing endpoint conventions. Check for `**/Migrations/*.cs` or `**/*DbContext.cs` and note table-naming conventions.
    - **Frontend:** Look for a directory containing `package.json` alongside a `src/` folder (common paths: `src/frontend/`, `src/client/`, `client/`). If found: read `package.json` dependencies to identify the CSS framework (`tailwindcss`, `bootstrap`, etc.), and scan `src/` to identify component folder structure (flat, feature-scoped, or atomic).
-   - **Database:** Look for `Migrations/*.cs` or `*.sql` schema files. If found: note table names and their naming convention (PascalCase, snake_case), and any notable constraints or relationship patterns.
+   - **Database:** Look for `**/Migrations/*.cs` or `**/*.sql` schema files. If found: note table names and their naming convention (PascalCase, snake_case), and any notable constraints or relationship patterns.
 
    **Brownfield (existing code found):** Document findings in an `## Existing system` section at the top of `tech-spec.md` (before `## Components`). Design all TECHs to align with existing patterns. When a TECH intentionally deviates from an existing pattern, add a note in the TECH description explaining why.
 

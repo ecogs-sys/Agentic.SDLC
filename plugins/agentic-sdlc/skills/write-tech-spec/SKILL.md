@@ -48,7 +48,7 @@ Version: <n>
 
 ## Existing system *(brownfield only — omit entirely for greenfield)*
 - Backend patterns: <service layer approach, middleware, auth, naming conventions>
-- Frontend patterns: <CSS framework, component folder structure, state management>
+- Frontend patterns: <component folder structure, state management>
 - Database patterns: <table naming, migration approach, notable constraints>
 - Decisions preserved: <list of existing patterns new TECHs must not break>
 - Intentional deviations: <list of changes from existing patterns, each with justification>
@@ -73,7 +73,7 @@ Version: <n>
 - [ ] Every TECH has at least one REQ in its Implements list (or `[INFRA]` for infrastructure TECHs)
 - [ ] **TECH-HEALTH (`/health` endpoint) is present**
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
-- [ ] Stack section matches the fixed stack above exactly
+- [ ] Stack section matches the fixed stack above
 - [ ] Status is "draft"
 - [ ] CSS framework is specified in the Stack section
-- [ ] Brownfield: `## Existing system` section is present and all new TECHs align with it or document their deviation
+- [ ] If brownfield: `## Existing system` section is present and all new TECHs align with it or document their deviation

@@ -34,13 +34,13 @@ A structured review report printed to your response.
    ```bash
    grep -rEn "#[0-9a-fA-F]{3,8}\b" <frontend_src>/src 2>/dev/null | grep -v "design-tokens\.css\|tailwind\.config\."
    ```
-   Any match is a **CRITICAL** issue.
+   Any match is a **CRITICAL** issue. Exception: hex values used exclusively inside a `box-shadow` or `filter` property are treated as **WARNING** instead (shadows are exempt from the strict hex rule).
 
    Grep for raw pixel spacing/radius values (border widths and shadows are exempt):
    ```bash
    grep -rEn "(padding|margin|gap|border-radius)\s*:\s*[0-9]+px" <frontend_src>/src 2>/dev/null | grep -v "design-tokens\.css"
    ```
-   Every match is a **WARNING**.
+   Every match is a **WARNING**. This grep covers shorthand properties only — also visually scan for longhand variants (`padding-top`, `margin-left`, etc.) and flag those as **WARNING** as well.
 
    Visually scan for CSS selectors in component stylesheets that target class names defined in a different component file — flag as **CRITICAL**.
 
@@ -50,7 +50,10 @@ A structured review report printed to your response.
    - Verify new components follow the detected decomposition pattern: feature-scoped layout for fresh projects (`src/pages/<Name>/SubComponent.tsx`), or the existing folder structure for brownfield.
 
 7. **Design token check:**
-   - Fresh project: verify `design-tokens.css` is imported in `main.tsx`.
+   - Fresh project: verify the import sequence in `main.tsx` matches the CSS framework:
+     - CSS Modules: `design-tokens.css` first
+     - Tailwind: `design-tokens.css` then `tailwind.css`
+     - Bootstrap: `design-tokens.css` then `_verdant-bootstrap.css` then `bootstrap/dist/css/bootstrap.min.css`
    - Confirm interactive elements (buttons, inputs, links) use `var(--color-primary)` or framework-equivalent token — not a hard-coded color.
    - Flag any component using hard-coded color or spacing values as a **WARNING**.
 
