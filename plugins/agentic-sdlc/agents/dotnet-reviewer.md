@@ -29,8 +29,17 @@ A structured review report printed to your response.
    ```
    Build failure → automatic FAIL.
 4. Check against dotnet-conventions skill: async patterns, naming, DI registration, error responses.
-5. Check story scope: implementation matches story — not more, not less.
-6. Check for obvious bugs: null dereferences on user input, missing await, wrong HTTP status codes.
+5. **Clean Architecture compliance** (see dotnet-conventions skill, "The dependency rule") — each of these is a **CRITICAL** issue:
+   - Project references point outward (Domain → Application/Infrastructure/Api, Application → Infrastructure/Api, or Infrastructure → Api). Check the `.csproj` `<ProjectReference>` entries.
+   - EF Core / `DbContext` used outside the Infrastructure project (e.g. a `using Microsoft.EntityFrameworkCore` or `DbContext` reference in Application, Domain, or a controller).
+   - A controller injecting `DbContext` or a concrete repository instead of an Application interface.
+   - Code placed in the wrong layer versus the tech-spec's `Layer` field (e.g. an entity defined in Api, a repository implementation in Application).
+   ```bash
+   grep -rEn "EntityFrameworkCore|DbContext" <backend_src> --include=*.cs | grep -iv "Infrastructure"
+   ```
+   Matches outside Infrastructure (excluding `Program.cs` DI registration, which is allowed) indicate a violation.
+6. Check story scope: implementation matches story — not more, not less.
+7. Check for obvious bugs: null dereferences on user input, missing await, wrong HTTP status codes.
 
 ## Output format
 ```

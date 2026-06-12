@@ -5,21 +5,43 @@ description: Project-specific .NET coding conventions. Used by .NET Engineer, Re
 
 # .NET Conventions
 
-## Project structure
+## Architecture: Clean Architecture (mandatory)
+
+The backend follows Clean Architecture as **four projects**. **Source-code dependencies point
+only inward** — `Domain` depends on nothing; `Api` is the outermost composition root.
+
 ```
-dotnet/
-├── <AppName>.Api/
-│   ├── Controllers/      # One controller per resource
-│   ├── Services/         # IFooService.cs + FooService.cs
-│   ├── Models/           # FooRequest.cs, FooResponse.cs
-│   ├── Data/             # EF Core DbContext + migrations
-│   ├── Program.cs        # Entry point + DI registration
+<backend_src>/
+├── <AppName>.sln
+├── <AppName>.Domain/         # refs: none
+│   ├── Entities/             # domain entities (POCOs — no EF attributes required)
+│   └── ValueObjects/         # value objects, domain enums/exceptions
+├── <AppName>.Application/     # refs: Domain
+│   ├── Abstractions/         # IFooRepository.cs, IFooService.cs (interfaces only)
+│   ├── Services/             # FooService.cs — use-case logic
+│   └── Models/               # FooRequest.cs, FooResponse.cs (DTOs)
+├── <AppName>.Infrastructure/  # refs: Application (+ Domain)
+│   ├── Data/                 # AppDbContext.cs + EF Core migrations
+│   └── Repositories/         # FooRepository.cs — implements Application interfaces
+├── <AppName>.Api/            # refs: Application + Infrastructure
+│   ├── Controllers/          # One controller per resource — depends on Application interfaces
+│   ├── Program.cs            # Entry point + DI composition root + /health
 │   └── appsettings.json
-└── <AppName>.Tests/
-    ├── Controllers/      # Controller unit tests
-    ├── Services/         # Service unit tests
-    └── Integration/      # WebApplicationFactory tests
+└── <AppName>.Tests/          # refs: the project(s) under test
+    ├── Domain/               # entity / value-object tests
+    ├── Application/          # service unit tests (mock the Abstractions)
+    ├── Infrastructure/       # repository tests (SQLite in-memory)
+    └── Integration/          # WebApplicationFactory tests
 ```
+
+### The dependency rule
+- **Domain** references nothing. No EF Core, no ASP.NET, no framework packages.
+- **Application** references **only** Domain. Declares interfaces + DTOs + service logic. No EF Core.
+- **Infrastructure** references Application. **EF Core, `DbContext`, and migrations live here and only here.** Repository classes implement the Application `Abstractions` interfaces.
+- **Api** references Application + Infrastructure. It is the only project that knows about `DbContext`. Controllers inject Application interfaces (`IFooService`) — **never** `DbContext` or a concrete repository.
+
+A violation — e.g. `DbContext` in Api, a controller using a concrete repository, Domain
+referencing Application, or an Application class importing EF Core — is a hard failure.
 
 ## Naming conventions
 - Controllers: `<Resource>Controller.cs`
@@ -33,12 +55,18 @@ dotnet/
 - Return `IActionResult` or `ActionResult<T>` from controllers.
 
 ## Dependency injection
-- Register services in `Program.cs`: `builder.Services.AddScoped<IFooService, FooService>()`.
+- `Program.cs` (Api) is the **composition root** — it is the only place that wires concrete
+  types to interfaces across layers: `builder.Services.AddScoped<IFooService, FooService>()`
+  (Application impl) and `builder.Services.AddScoped<IFooRepository, FooRepository>()`
+  (Infrastructure impl).
 - Inject via constructor; never use service locator pattern.
+- Controllers depend on Application interfaces only — never on `DbContext` or a concrete repository.
 
 ## EF Core
-- Code-first migrations: `dotnet ef migrations add <Name>`.
-- `DbContext` registered as scoped.
+- Lives **only** in the Infrastructure project. `AppDbContext` is defined under
+  `Infrastructure/Data/`; migrations are generated there (`dotnet ef migrations add <Name>
+  -p <AppName>.Infrastructure -s <AppName>.Api`).
+- `DbContext` registered as scoped in `Program.cs` (the composition root).
 - Always use async EF methods: `ToListAsync()`, `FirstOrDefaultAsync()`, `SaveChangesAsync()`.
 
 ## xUnit test structure
