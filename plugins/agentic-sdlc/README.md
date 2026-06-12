@@ -49,13 +49,13 @@ flowchart TD
     ADV2 --> TL
 
     subgraph PLAN ["③ Story Breakdown"]
-        TL["🤖 Tech Lead<br/>writes stories.md"] --> TLV["🔍 Tech Lead Validator"]
+        TL["🤖 Tech Lead<br/>writes stories/ (index + per-story)"] --> TLV["🔍 Tech Lead Validator"]
         TLV -- "fail / iter < 5<br/>re-run with diff" --> TL
         TLV -- "fail / iter = 5" --> ESC3["⚠️ Escalate to User"]
         ESC3 -- "user guidance" --> TL
     end
 
-    TLV -- pass --> RG3{{"👤 User Review Gate<br/>stories.md"}}
+    TLV -- pass --> RG3{{"👤 User Review Gate<br/>stories/index.md"}}
     RG3 -- "request changes" --> TL
     RG3 -- "approve · 🔒 SPEC FREEZE" --> ADV3(["▶ /advance-stage"])
 
@@ -153,7 +153,7 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 
 ## Spec freeze rule
 
-After you approve the stories, `req-spec.md`, `tech-spec.md`, and `stories.md` are **frozen**. No agent can modify them. To make upstream changes: `/agentic-sdlc:cancel-run` and start a new run.
+After you approve the stories, `req-spec.md`, `tech-spec.md`, and everything under `runs/<run-id>/stories/` are **frozen**. No agent can modify them. To make upstream changes: `/agentic-sdlc:cancel-run` and start a new run.
 
 ## Where artifacts live
 
@@ -167,7 +167,10 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 │       ├── raw-input.md                ← your original requirement (verbatim)
 │       ├── req-spec.md                 ← BA output
 │       ├── tech-spec.md                ← Architect output
-│       └── stories.md                  ← Tech Lead output
+│       └── stories/                    ← Tech Lead output
+│           ├── index.md                ← overview, execution-plan diagram, story table
+│           ├── STORY-001.md            ← one self-contained file per story
+│           └── STORY-002.md
 │
 ├── src/backend/                        ← generated .NET project (default)
 │   ├── AppName.Api/
