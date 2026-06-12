@@ -61,7 +61,7 @@ flowchart TD
 
     ADV3 --> NEXT
 
-    subgraph DEV ["④ Development — stories processed in dependency order"]
+    subgraph DEV ["④ Development — stories processed wave-by-wave"]
         NEXT["📋 Next pending story"] --> TRACK{"Track?"}
 
         subgraph DOTNET [".NET Track"]

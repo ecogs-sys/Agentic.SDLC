@@ -93,6 +93,7 @@ flowchart LR
 ````
 
 Use `—` in the `Depends on` column for stories with no dependencies.
+The `Complexity` column copies each story's `**Estimated complexity:**` value (S | M | L).
 
 ## Complexity guidelines
 - **S (Small):** Single endpoint or component, no new data model, < 1 hour.
