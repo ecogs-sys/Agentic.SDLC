@@ -38,6 +38,55 @@ Before invoking any agent: if `spec_frozen = true` and the current stage would m
 
 ---
 
+## Stage: ba
+
+This stage runs only when the run was sent **back** to the Business Analyst — either by a "Requirements change" route from the tech-spec review gate (see Stage: architect) or because `current_stage = "ba"` in state.json. (The *first* BA pass of a run is driven by `/agentic-sdlc:start-run`, not here.)
+
+### BA loop (max 5 iterations)
+
+On each iteration:
+
+a. Invoke the `ba` agent. Pass: run-id, path to raw-input.md, revision notes (the user's change notes on the first iteration; the validator's diff on subsequent iterations).
+
+b. **Commit — BA draft/revision:**
+   ```bash
+   git add runs/<run-id>/req-spec.md runs/<run-id>/state.json
+   git commit -m "docs(<run-id>): BA req-spec revision (iter <n>)"
+   ```
+
+c. Invoke `ba-validator`. Pass: run-id, paths to raw-input.md and req-spec.md.
+
+d. Update `stages.ba_validation` in state.json with the validation outcome.
+
+e. **Commit — BA validation outcome:**
+   ```bash
+   git add runs/<run-id>/state.json
+   # On pass:
+   git commit -m "docs(<run-id>): BA req-spec passed validation"
+   # On fail:
+   git commit -m "docs(<run-id>): BA req-spec failed validation (iter <n>)"
+   ```
+
+f. If fail + iterations < 5: increment `stages.ba.iterations`, re-invoke `ba` with the validator's diff. Repeat from (a).
+   If fail + iterations = 5: set `stages.ba.status = "escalated"`. Escalate to user with the diff; wait for guidance.
+   If pass: update `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
+
+### User review gate — req-spec
+Display `runs/<run-id>/req-spec.md`.
+> "The Business Analyst has produced the requirement spec (Version <n>). Reply **'approve'** to continue, or describe what to change."
+
+- **approve:**
+  - Update state.json: `stages.user_review_req.status = "complete"`, `current_stage = "architect"`.
+  - **Commit — req-spec approved:**
+    ```bash
+    git add runs/<run-id>/state.json
+    git commit -m "docs(<run-id>): requirement spec approved"
+    ```
+  - Immediately proceed to Stage: architect below.
+- **other:** treat as revision notes for the BA, re-run the BA loop.
+
+---
+
 ## Stage: architect
 
 ### Architect loop (max 5 iterations)
@@ -84,7 +133,29 @@ Display `runs/<run-id>/tech-spec.md`.
     git commit -m "docs(<run-id>): technical spec approved"
     ```
   - Immediately proceed to Stage: tech_lead below.
-- **other:** treat as revision notes for architect, re-run loop.
+- **other (a change request):** ask one follow-up to find where the change belongs:
+  > "Is this a **requirements** change or a **technical** change?
+  > - **requirements** — I'll re-open the Business Analyst. The updated req-spec flows back through the Architect to this gate.
+  > - **technical** — I'll have the Architect revise the tech-spec directly."
+
+  - **technical:** treat the user's notes as revision notes for the architect, re-run the Architect loop (existing behaviour).
+  - **requirements — route back to BA:**
+    1. Update state.json (reset the planning chain; counters to 0 because this is a fresh cross-loop entry that must not inherit spent iteration budget):
+       ```
+       current_stage               = "ba"
+       stages.ba                   = { status: "in_progress", iterations: 0 }
+       stages.ba_validation        = { status: "pending",     iterations: 0 }
+       stages.user_review_req      = { status: "pending" }
+       stages.architect            = { status: "pending", iterations: 0 }
+       stages.architect_validation = { status: "pending", iterations: 0 }
+       stages.user_review_tech     = { status: "pending" }
+       ```
+    2. **Commit — re-open BA:**
+       ```bash
+       git add runs/<run-id>/state.json
+       git commit -m "docs(<run-id>): tech-spec review — re-open BA for requirements change"
+       ```
+    3. Proceed to Stage: ba above, passing the user's change notes as the BA's revision notes. The chain then flows forward as usual: BA → BA Validator → user review req → Architect → Architect Validator → this gate again.
 
 ---
 
