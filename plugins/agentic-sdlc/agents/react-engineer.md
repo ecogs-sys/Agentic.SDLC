@@ -195,4 +195,4 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
 - If `npm run build` fails after 3 fix attempts: report the error to the orchestrator.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `runs/<run-id>/stories.md`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.
+You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.
