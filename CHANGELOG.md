@@ -2,6 +2,23 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.0] - 2026-06-13
+
+### Added
+- **Clean Architecture mandated across both tracks.** The pipeline now designs, builds, and reviews to Clean Architecture with an inward dependency rule.
+  - **Backend (.NET): four projects** — `Domain` (entities, no deps) ← `Application` (use cases, DTOs, repository interfaces) ← `Infrastructure` (EF Core `DbContext`, repository impls) ← `Api` (controllers, DI composition root, `/health`). EF Core is confined to Infrastructure; controllers depend on Application interfaces, never on `DbContext`.
+  - **Frontend (React): four folder layers** — `domain/` (types, models, pure logic) ← `api/` (fetch clients) ← `hooks/` (orchestration) ← `components/`+`pages/` (presentation). No `fetch`/`axios` calls inside components or pages.
+- `write-tech-spec`: every backend TECH declares a `Layer` field; checklist enforces a valid layer and no outward `Depends on`.
+- `architect`: assigns each backend TECH a layer and designs to the dependency rule; brownfield discovery notes the existing layer layout.
+- `architect-validator`: validates layer declarations and the dependency rule (violations surface under `altered`).
+- `dotnet-conventions`: replaced the single-project layout with the four-project structure, reference wiring, and per-layer placement rules.
+- `dotnet-engineer`: four-project scaffolding commands (`dotnet new` + inward `dotnet add reference`); places each story's code in the correct layer.
+- `dotnet-reviewer`: **CRITICAL** Clean Architecture compliance check (outward project references, `DbContext` leakage outside Infrastructure, controllers using concrete repositories, wrong-layer code).
+- `react-conventions`: relabeled the structure as Clean Architecture layers, added an explicit `domain/` layer, stated the dependency rule.
+- `react-engineer`: places code per layer; never calls `fetch`/`axios` inside a component or page.
+- `react-reviewer`: **CRITICAL** check for `fetch`/`axios` outside `src/api/` and for cross-layer import violations.
+- `docs/superpowers/specs/2026-06-13-clean-architecture-design.md` — design spec for this change.
+
 ## [0.5.0] - 2026-05-04
 
 ### Fixed (Critical)
