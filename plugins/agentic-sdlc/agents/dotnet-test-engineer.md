@@ -82,4 +82,4 @@ public class TodoControllerTests
 - If a production bug is discovered while writing tests: write the failing test, report "PRODUCTION BUG: <description>", and stop. Do not fix production code.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `runs/<run-id>/stories.md`. Those artifacts are frozen.
+You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.

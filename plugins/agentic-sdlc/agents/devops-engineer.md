@@ -62,4 +62,4 @@ Produce all Docker and docker-compose configuration so the full app starts with 
 - If `docker compose build` fails after 3 attempts: report the error; do not loop further.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `runs/<run-id>/stories.md`. Those artifacts are frozen during the DevOps phase.
+You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during the DevOps phase.
