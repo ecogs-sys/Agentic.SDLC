@@ -34,7 +34,56 @@ Always include `runs/<run-id>/state.json` when state was updated. Commit message
 - `chore` — devops, config, tooling
 
 ## Spec freeze check
-Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or stories.md — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
+Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or any file under `runs/<run-id>/stories/` — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
+
+---
+
+## Stage: ba
+
+This stage runs only when the run was sent **back** to the Business Analyst — either by a "Requirements change" route from the tech-spec review gate (see Stage: architect) or because `current_stage = "ba"` in state.json. (The *first* BA pass of a run is driven by `/agentic-sdlc:start-run`, not here.)
+
+### BA loop (max 5 iterations)
+
+On each iteration:
+
+a. Invoke the `ba` agent. Pass: run-id, path to raw-input.md, revision notes (the user's change notes on the first iteration; the validator's diff on subsequent iterations).
+
+b. **Commit — BA draft/revision:**
+   ```bash
+   git add runs/<run-id>/req-spec.md runs/<run-id>/state.json
+   git commit -m "docs(<run-id>): BA req-spec revision (iter <n>)"
+   ```
+
+c. Invoke `ba-validator`. Pass: run-id, paths to raw-input.md and req-spec.md.
+
+d. Update `stages.ba_validation` in state.json with the validation outcome.
+
+e. **Commit — BA validation outcome:**
+   ```bash
+   git add runs/<run-id>/state.json
+   # On pass:
+   git commit -m "docs(<run-id>): BA req-spec passed validation"
+   # On fail:
+   git commit -m "docs(<run-id>): BA req-spec failed validation (iter <n>)"
+   ```
+
+f. If fail + iterations < 5: increment `stages.ba.iterations`, re-invoke `ba` with the validator's diff. Repeat from (a).
+   If fail + iterations = 5: set `stages.ba.status = "escalated"`. Escalate to user with the diff; wait for guidance.
+   If pass: update `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
+
+### User review gate — req-spec
+Display `runs/<run-id>/req-spec.md`.
+> "The Business Analyst has produced the requirement spec (Version <n>). Reply **'approve'** to continue, or describe what to change."
+
+- **approve:**
+  - Update state.json: `stages.user_review_req.status = "complete"`, `current_stage = "architect"`.
+  - **Commit — req-spec approved:**
+    ```bash
+    git add runs/<run-id>/state.json
+    git commit -m "docs(<run-id>): requirement spec approved"
+    ```
+  - Immediately proceed to Stage: architect below.
+- **other:** treat as revision notes for the BA, re-run the BA loop.
 
 ---
 
@@ -84,7 +133,29 @@ Display `runs/<run-id>/tech-spec.md`.
     git commit -m "docs(<run-id>): technical spec approved"
     ```
   - Immediately proceed to Stage: tech_lead below.
-- **other:** treat as revision notes for architect, re-run loop.
+- **other (a change request):** ask one follow-up to find where the change belongs:
+  > "Is this a **requirements** change or a **technical** change?
+  > - **requirements** — I'll re-open the Business Analyst. The updated req-spec flows back through the Architect to this gate.
+  > - **technical** — I'll have the Architect revise the tech-spec directly."
+
+  - **technical:** treat the user's notes as revision notes for the architect, re-run the Architect loop (existing behaviour).
+  - **requirements — route back to BA:**
+    1. Update state.json (reset the planning chain; counters to 0 because this is a fresh cross-loop entry that must not inherit spent iteration budget):
+       ```
+       current_stage               = "ba"
+       stages.ba                   = { status: "in_progress", iterations: 0 }
+       stages.ba_validation        = { status: "pending",     iterations: 0 }
+       stages.user_review_req      = { status: "pending" }
+       stages.architect            = { status: "pending", iterations: 0 }
+       stages.architect_validation = { status: "pending", iterations: 0 }
+       stages.user_review_tech     = { status: "pending" }
+       ```
+    2. **Commit — re-open BA:**
+       ```bash
+       git add runs/<run-id>/state.json
+       git commit -m "docs(<run-id>): tech-spec review — re-open BA for requirements change"
+       ```
+    3. Proceed to Stage: ba above, passing the user's change notes as the BA's revision notes. The chain then flows forward as usual: BA → BA Validator → user review req → Architect → Architect Validator → this gate again.
 
 ---
 
@@ -98,14 +169,14 @@ a. Invoke `tech-lead` agent. Pass: run-id, path to tech-spec.md, revision notes 
 
 b. **Commit — Tech Lead draft/revision:**
    ```bash
-   git add runs/<run-id>/stories.md runs/<run-id>/state.json
+   git add runs/<run-id>/stories/ runs/<run-id>/state.json
    # First iteration:
    git commit -m "docs(<run-id>): Tech Lead stories draft"
    # Subsequent iterations:
    git commit -m "docs(<run-id>): Tech Lead stories revision (iter <n>)"
    ```
 
-c. Invoke `tech-lead-validator`. Pass: run-id, paths to tech-spec.md and stories.md.
+c. Invoke `tech-lead-validator`. Pass: run-id, path to tech-spec.md and the runs/<run-id>/stories/ directory (index.md + all STORY-XXX.md files).
 
 d. Update `stages.tech_lead_validation` in state.json with the validation outcome.
 
@@ -123,15 +194,15 @@ f. If fail + iterations < 5: re-invoke tech-lead with diff. Repeat from (a).
    If pass: update stages to complete.
 
 ### User review gate + SPEC FREEZE
-Display `runs/<run-id>/stories.md`.
+Display `runs/<run-id>/stories/index.md` (the execution-plan diagram and story table). Offer to show any individual `STORY-XXX.md` on request.
 > "The Tech Lead has produced the stories (Version <n>). Reply **'approve'** to freeze the spec and begin development, or describe what to change."
 
 - **approve:**
   1. `stages.user_review_stories.status = "complete"`, `current_stage = "development"`.
   2. **Set `spec_frozen = true`** in state.json.
-  3. Parse stories.md: for each `## STORY-XXX: ` heading, extract story ID and its `**Track:**` field. Add to `state.stories`:
+  3. Parse `runs/<run-id>/stories/index.md`: read the `## Story index` table (columns `Story | Track | Wave | Depends on | Complexity | File`). For each row, add to `state.stories` (capturing `track` and `wave`):
      ```json
-     "STORY-001": { "track": "dotnet", "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0, "fix_iterations": 0 }
+     "STORY-001": { "track": "dotnet", "wave": 1, "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0, "fix_iterations": 0 }
      ```
   4. **Commit — stories approved, spec frozen:**
      ```bash
@@ -144,6 +215,7 @@ Display `runs/<run-id>/stories.md`.
 ```json
 "STORY-001": {
   "track": "dotnet",
+  "wave": 1,
   "status": "pending",
   "reviewer_iterations": 0,        // engineer↔reviewer cycles in the original dev pass
   "test_reviewer_iterations": 0,   // test-engineer↔test-reviewer cycles
@@ -160,10 +232,10 @@ Display `runs/<run-id>/stories.md`.
 
 Read `backend_src` and `frontend_src` from `state.src_paths`.
 
-Process stories in dependency order (stories with empty `Depends on` first). Use state.stories to track which are complete.
+Process stories by **wave**: handle wave 1 first, then wave 2, and so on (read `wave` from `state.stories`). Within a wave, process in story-ID order. This honours the dependency graph computed by the Tech Lead. Use state.stories to track which are complete.
 
 For each pending story:
-1. Read the story content from stories.md.
+1. Read the story content from `runs/<run-id>/stories/STORY-XXX.md` (self-contained).
 2. Determine track and src_path (`backend_src` for dotnet, `frontend_src` for react).
 
 ### 3. Engineer → Reviewer loop (max 5 iterations)
