@@ -34,7 +34,7 @@ Always include `runs/<run-id>/state.json` when state was updated. Commit message
 - `chore` — devops, config, tooling
 
 ## Spec freeze check
-Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or stories.md — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
+Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or any file under `runs/<run-id>/stories/` — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
 
 ---
 
@@ -98,14 +98,14 @@ a. Invoke `tech-lead` agent. Pass: run-id, path to tech-spec.md, revision notes 
 
 b. **Commit — Tech Lead draft/revision:**
    ```bash
-   git add runs/<run-id>/stories.md runs/<run-id>/state.json
+   git add runs/<run-id>/stories/ runs/<run-id>/state.json
    # First iteration:
    git commit -m "docs(<run-id>): Tech Lead stories draft"
    # Subsequent iterations:
    git commit -m "docs(<run-id>): Tech Lead stories revision (iter <n>)"
    ```
 
-c. Invoke `tech-lead-validator`. Pass: run-id, paths to tech-spec.md and stories.md.
+c. Invoke `tech-lead-validator`. Pass: run-id, path to tech-spec.md and the runs/<run-id>/stories/ directory (index.md + all STORY-XXX.md files).
 
 d. Update `stages.tech_lead_validation` in state.json with the validation outcome.
 
@@ -123,15 +123,15 @@ f. If fail + iterations < 5: re-invoke tech-lead with diff. Repeat from (a).
    If pass: update stages to complete.
 
 ### User review gate + SPEC FREEZE
-Display `runs/<run-id>/stories.md`.
+Display `runs/<run-id>/stories/index.md` (the execution-plan diagram and story table). Offer to show any individual `STORY-XXX.md` on request.
 > "The Tech Lead has produced the stories (Version <n>). Reply **'approve'** to freeze the spec and begin development, or describe what to change."
 
 - **approve:**
   1. `stages.user_review_stories.status = "complete"`, `current_stage = "development"`.
   2. **Set `spec_frozen = true`** in state.json.
-  3. Parse stories.md: for each `## STORY-XXX: ` heading, extract story ID and its `**Track:**` field. Add to `state.stories`:
+  3. Parse `runs/<run-id>/stories/index.md`: read the `## Story index` table (columns `Story | Track | Wave | Depends on | Complexity | File`). For each row, add to `state.stories` (capturing `track` and `wave`):
      ```json
-     "STORY-001": { "track": "dotnet", "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0, "fix_iterations": 0 }
+     "STORY-001": { "track": "dotnet", "wave": 1, "status": "pending", "reviewer_iterations": 0, "test_reviewer_iterations": 0, "fix_iterations": 0 }
      ```
   4. **Commit — stories approved, spec frozen:**
      ```bash
@@ -144,6 +144,7 @@ Display `runs/<run-id>/stories.md`.
 ```json
 "STORY-001": {
   "track": "dotnet",
+  "wave": 1,
   "status": "pending",
   "reviewer_iterations": 0,        // engineer↔reviewer cycles in the original dev pass
   "test_reviewer_iterations": 0,   // test-engineer↔test-reviewer cycles
@@ -160,10 +161,10 @@ Display `runs/<run-id>/stories.md`.
 
 Read `backend_src` and `frontend_src` from `state.src_paths`.
 
-Process stories in dependency order (stories with empty `Depends on` first). Use state.stories to track which are complete.
+Process stories by **wave**: handle wave 1 first, then wave 2, and so on (read `wave` from `state.stories`). Within a wave, process in story-ID order. This honours the dependency graph computed by the Tech Lead. Use state.stories to track which are complete.
 
 For each pending story:
-1. Read the story content from stories.md.
+1. Read the story content from `runs/<run-id>/stories/STORY-XXX.md` (self-contained).
 2. Determine track and src_path (`backend_src` for dotnet, `frontend_src` for react).
 
 ### 3. Engineer → Reviewer loop (max 5 iterations)
