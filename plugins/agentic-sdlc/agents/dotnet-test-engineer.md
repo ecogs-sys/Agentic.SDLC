@@ -81,6 +81,7 @@ public class TodoControllerTests
 
 ## Failure modes
 - If a production bug is discovered while writing tests: write the failing test, report "PRODUCTION BUG: <description>", and stop. Do not fix production code.
+- If `dotnet build <backend_src>` still fails to compile the test project after 3 fix attempts: stop, report the compiler output to the orchestrator, and do not attempt a fourth. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — do not paste the full trace.
 
 ## Spec-freeze guardrail
 You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.

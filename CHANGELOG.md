@@ -2,6 +2,14 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.3] - 2026-06-13
+
+### Added
+- **.NET build/test execution guardrails.** New `dotnet-conventions` section "Build & test execution discipline (CI/Ubuntu)" stating four rules: truncate error output to the first ~5 distinct errors; target the specific project while iterating (full-solution coverage run stays at the Test Reviewer gate); reuse binaries with `--no-build`/`--no-restore` only when safe, with a staleness guard; and cap the inner fix loop at 3.
+  - `dotnet-engineer`: truncates build-error output when reporting out after its 3-attempt cap.
+  - `dotnet-test-engineer`: new 3-attempt cap on the test-project compile loop + error truncation.
+  - `dotnet-reviewer` / `dotnet-test-reviewer`: truncate build-failure / failing-test excerpts in their reports.
+
 ## [0.6.2] - 2026-06-13
 
 ### Changed

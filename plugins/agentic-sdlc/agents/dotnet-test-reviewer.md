@@ -31,6 +31,7 @@ A structured report with routing decision.
    ```
 3. Check: do tests verify story acceptance criteria, or are they trivially passing (e.g., `Assert.True(true)`)?
 4. Apply the decision tree from coverage-report skill.
+5. When tests fail, list the failing test names and only the first ~5 distinct errors in your report — not full stack traces (see the dotnet-conventions skill, "Build & test execution discipline").
 
 ## Output format
 ```

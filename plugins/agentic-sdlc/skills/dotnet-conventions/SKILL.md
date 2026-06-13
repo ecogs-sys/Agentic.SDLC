@@ -122,3 +122,30 @@ Every backend MUST expose `GET /health` that returns HTTP 200 with `{"status":"o
 dotnet build          # Expected: Build succeeded.
 dotnet test           # Expected: All tests pass.
 ```
+
+## Build & test execution discipline (CI/Ubuntu)
+
+These rules keep agent runs fast and context lean — a full solution build-and-test cycle is
+slow on Linux/CI, and full stack traces waste the agent's context budget.
+
+- **Truncate error output.** When `dotnet build` / `dotnet test` emits more than ~30 lines of
+  errors, do NOT read or echo the whole trace. Read only the first ~5 distinct errors and fix
+  those — repeated errors usually share one root cause. Scope output at the source:
+  ```bash
+  dotnet build <backend_src> 2>&1 | head -n 30
+  ```
+- **Target the specific project while iterating.** Build/test the project you changed, not the
+  whole solution:
+  ```bash
+  dotnet test <backend_test>/<AppName>.Tests/<AppName>.Tests.csproj --filter "FullyQualifiedName~<ClassUnderTest>"
+  ```
+  The single authoritative full-solution run with coverage belongs to the Test Reviewer's gate,
+  not to iteration.
+- **Reuse binaries only when safe (`--no-build` / `--no-restore`).** After a successful build in
+  the same invocation with nothing changed since, you may re-run tests with `dotnet test
+  --no-build` to save time. Force a clean build (drop the flags) whenever a `.csproj`, project
+  reference, or package changed — and ALWAYS for the Test Reviewer's authoritative coverage run.
+  Never report a pass off stale binaries.
+- **Cap the inner fix loop at 3.** Within a single agent invocation, stop after 3 consecutive
+  failed fix attempts on the same persistent build/test error. Report the (truncated) logs to the
+  orchestrator instead of attempting a fourth — the orchestrator's outer loop handles escalation.
