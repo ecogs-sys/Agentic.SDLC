@@ -172,11 +172,16 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 │           ├── STORY-001.md            ← one self-contained file per story
 │           └── STORY-002.md
 │
-├── src/backend/                        ← generated .NET project (default)
-│   ├── AppName.Api/
+├── src/backend/                        ← generated .NET source (default)
+│   ├── AppName.sln
+│   ├── AppName.Domain/
+│   ├── AppName.Application/
+│   ├── AppName.Infrastructure/
+│   └── AppName.Api/
+├── tests/backend/                      ← generated .NET tests (default — never under src/)
 │   └── AppName.Tests/
 ├── src/frontend/                       ← generated React project (default)
-│   └── src/
+│   └── src/                            ← React tests are co-located (*.test.tsx)
 │
 ├── docker-compose.yml                  ← DevOps output (workspace root)
 ├── .env.example

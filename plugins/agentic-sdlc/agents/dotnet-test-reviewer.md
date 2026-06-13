@@ -13,7 +13,8 @@ Run tests with coverage, verify quality, and produce a routing decision.
 ## Inputs (passed as context)
 - Run ID and Story ID
 - Story content (acceptance criteria, coverage_threshold: {"lines": N, "critical_paths": M})
-- `backend_src` — path to the .NET source directory (e.g. `src/backend`)
+- `backend_src` — path to the .NET source directory (e.g. `src/backend`); the `.sln` lives here, so `dotnet test <backend_src>` runs the whole suite
+- `backend_test` — path to the .NET test directory (e.g. `tests/backend`) where the test files live
 - Production code and test files
 
 ## Outputs

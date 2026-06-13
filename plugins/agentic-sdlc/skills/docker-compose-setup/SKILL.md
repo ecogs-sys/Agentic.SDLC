@@ -61,15 +61,24 @@ volumes:
 ```
 
 ## .NET Dockerfile
+
+> **Build context is `<backend_src>` (source only).** The test project lives under
+> `<backend_test>` (e.g. `tests/backend`), which is **outside** this build context — so the
+> Dockerfile must NOT restore the `.sln` (it references the out-of-context test project).
+> Restore and publish the **Api project** directly; it pulls in its transitive source
+> references (Domain → Application → Infrastructure), all of which are in context.
+
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
-COPY *.sln .
+# Copy each source project's csproj for restore-layer caching (no test project here)
+COPY <AppName>.Domain/*.csproj ./<AppName>.Domain/
+COPY <AppName>.Application/*.csproj ./<AppName>.Application/
+COPY <AppName>.Infrastructure/*.csproj ./<AppName>.Infrastructure/
 COPY <AppName>.Api/*.csproj ./<AppName>.Api/
-COPY <AppName>.Tests/*.csproj ./<AppName>.Tests/
-RUN dotnet restore
+RUN dotnet restore <AppName>.Api/<AppName>.Api.csproj
 COPY . .
-RUN dotnet publish <AppName>.Api -c Release -o /out
+RUN dotnet publish <AppName>.Api/<AppName>.Api.csproj -c Release -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app

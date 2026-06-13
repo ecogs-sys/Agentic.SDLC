@@ -15,6 +15,7 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 - Story content (description, acceptance criteria, implements list)
 - `runs/<run-id>/tech-spec.md` — for API contracts and data models
 - `backend_src` — path to the .NET source directory (e.g. `src/backend`)
+- `backend_test` — path to the .NET test directory (e.g. `tests/backend`). Test code lives here, **never under `<backend_src>`**.
 - Current state of `<backend_src>` — may be empty (first story) or partially built
 
 ## Outputs
@@ -22,23 +23,26 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 
 ## Process
 1. Read the story and tech-spec.md. Understand exactly what to build.
-2. Check what already exists in `<backend_src>`. If empty, scaffold a new **Clean Architecture** solution (four projects + tests). Use `.sln` (the default classic format) consistently — do NOT mix `.sln` and `.slnx`. The reference wiring below enforces the inward dependency rule (Domain ← Application ← Infrastructure ← Api):
+2. Check what already exists in `<backend_src>`. If empty, scaffold a new **Clean Architecture** solution (four source projects under `<backend_src>` + one test project under `<backend_test>`). **The test project goes in `<backend_test>`, never under `<backend_src>`** (the `.sln` stays in `<backend_src>` and references it by relative path). Use `.sln` (the default classic format) consistently — do NOT mix `.sln` and `.slnx`. The reference wiring below enforces the inward dependency rule (Domain ← Application ← Infrastructure ← Api):
    ```bash
    dotnet new sln -n AppName -o <backend_src>
 
-   # Layer projects (inner → outer)
+   # Source projects (inner → outer) — all under <backend_src>
    dotnet new classlib -n AppName.Domain        -o <backend_src>/AppName.Domain
    dotnet new classlib -n AppName.Application    -o <backend_src>/AppName.Application
    dotnet new classlib -n AppName.Infrastructure -o <backend_src>/AppName.Infrastructure
    dotnet new webapi   -n AppName.Api --use-minimal-apis false -o <backend_src>/AppName.Api
-   dotnet new xunit    -n AppName.Tests          -o <backend_src>/AppName.Tests
 
-   # Add all projects to the solution
+   # Test project — under <backend_test> (NOT under <backend_src>)
+   dotnet new xunit    -n AppName.Tests          -o <backend_test>/AppName.Tests
+
+   # Add all projects to the solution (the .sln lives in <backend_src>;
+   # dotnet records relative paths, so the test project resolves to ../../<backend_test>/...)
    dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Domain/AppName.Domain.csproj
    dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Application/AppName.Application.csproj
    dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
    dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Api/AppName.Api.csproj
-   dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Tests/AppName.Tests.csproj
+   dotnet sln <backend_src>/AppName.sln add <backend_test>/AppName.Tests/AppName.Tests.csproj
 
    # Dependency rule: references point only inward
    dotnet add <backend_src>/AppName.Application/AppName.Application.csproj       reference <backend_src>/AppName.Domain/AppName.Domain.csproj
@@ -46,11 +50,11 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
    dotnet add <backend_src>/AppName.Api/AppName.Api.csproj                       reference <backend_src>/AppName.Application/AppName.Application.csproj
    dotnet add <backend_src>/AppName.Api/AppName.Api.csproj                       reference <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
 
-   # Tests reference the layers under test
-   dotnet add <backend_src>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Api/AppName.Api.csproj
-   dotnet add <backend_src>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Application/AppName.Application.csproj
-   dotnet add <backend_src>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
-   dotnet add <backend_src>/AppName.Tests/AppName.Tests.csproj package Moq
+   # Tests reference the layers under test (cross-tree project references are fine)
+   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Api/AppName.Api.csproj
+   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Application/AppName.Application.csproj
+   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
+   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj package Moq
 
    # EF Core lives only in Infrastructure
    dotnet add <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj package Microsoft.EntityFrameworkCore

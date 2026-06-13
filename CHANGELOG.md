@@ -2,6 +2,19 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.2] - 2026-06-13
+
+### Changed
+- **.NET test code now lives in a separate top-level `tests/` tree, never under `src/`.** The four source projects stay under `<backend_src>` (default `src/backend`); the xUnit test project moves to `<backend_test>` (default `tests/backend`). The `.sln` remains in `<backend_src>` and references the test project by relative path, so `dotnet build/test <backend_src>` still build and run the whole suite.
+  - `start-run`: detects/derives `backend_test` (mirrors `src/<name>` → `tests/<name>`) and stores it in `state.src_paths.backend_test`.
+  - `advance-stage`: threads `backend_test`/`test_path` to the .NET engineer, test engineer, and test reviewer; commits stage the test path.
+  - `dotnet-conventions`: source-vs-test layout made explicit (tests never under `src/`).
+  - `dotnet-engineer`: scaffolds the test project under `<backend_test>` with cross-tree project references; `.sln` (in `<backend_src>`) records the relative path.
+  - `dotnet-test-engineer` / `dotnet-test-reviewer`: read/write tests under `<backend_test>`.
+  - `docker-compose-setup`: .NET Dockerfile no longer restores the `.sln` (it references the out-of-context test project) — it restores/publishes the Api project directly and copies all four source `csproj` for restore-layer caching (also fixes a latent restore bug under Clean Architecture).
+  - `show-run-status` / `README`: report and document the `tests/backend` location.
+- **React is unchanged:** Vitest/RTL tests stay co-located next to their components inside `<frontend_src>` (the idiomatic React convention); only the .NET track uses a separate `tests/` tree.
+
 ## [0.6.1] - 2026-06-13
 
 ### Added
