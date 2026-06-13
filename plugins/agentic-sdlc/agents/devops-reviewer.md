@@ -47,8 +47,8 @@ docker compose logs backend
 FRONTEND_BODY=$(curl -s http://localhost:<FRONTEND_PORT>)
 echo "$FRONTEND_BODY" | grep -E '<script[^>]*src=' >/dev/null && echo "frontend bundle present" || echo "frontend bundle MISSING"
 
-# 7. Run .NET tests
-dotnet test <backend_src> 2>&1
+# 7. Run .NET tests (bounded so a hung test fails fast instead of stalling the review)
+dotnet test <backend_src> --blame-hang-timeout 120s 2>&1
 
 # 8. Run React tests
 cd <frontend_src> && npm test -- --run 2>&1

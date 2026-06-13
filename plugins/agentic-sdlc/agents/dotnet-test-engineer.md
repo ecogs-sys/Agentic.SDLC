@@ -20,8 +20,16 @@ Write tests in `<backend_test>/<AppName>.Tests/` that cover every acceptance cri
 ## Outputs
 - New/modified test files in `<backend_test>/<AppName>.Tests/`
 
+## Test scope (critical)
+Write tests that exercise the **application's runtime behavior** only. You must NOT:
+- invoke the `dotnet` CLI (`build` / `restore` / `sln` / `run`) or start any external process from a test — it hangs the run on lock/network contention for zero behavioral coverage;
+- write tests asserting project structure, layering, or that the solution "compiles" — those are enforced by the architect-validator and the build step, never by tests;
+- depend on an ambient DB / network / Docker — use SQLite in-memory (repositories) or `WebApplicationFactory` over SQLite/EF in-memory (integration).
+
+A purely structural acceptance criterion ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture and validated upstream — it gets **no** test here. See the dotnet-conventions skill, "Test scope: behavior only".
+
 ## Process
-1. Read the story's acceptance criteria — each one must have at least one test.
+1. Read the story's acceptance criteria — each behavioral criterion must have at least one test (skip purely structural criteria; see "Test scope" above).
 2. Read the production code implemented for this story.
 3. Follow the dotnet-conventions skill for test structure (Arrange/Act/Assert, naming, Moq).
 4. Create one test class per production class under test, in a matching directory structure.

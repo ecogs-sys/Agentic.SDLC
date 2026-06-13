@@ -24,7 +24,7 @@ A structured report with routing decision.
 1. Read all test files and the production code they test. **Determine the coverage threshold:** if the story has a `coverage_threshold` field, use it; otherwise fall back to the project default of `{"lines": 80, "critical_paths": 90}` (from the coverage-report skill).
 2. Run tests with coverage (per coverage-report skill). Install reportgenerator into a local tool path so we don't pollute the user's machine with a global tool:
    ```bash
-   dotnet test <backend_src> --collect:"XPlat Code Coverage" --results-directory <backend_src>/coverage/
+   dotnet test <backend_src> --collect:"XPlat Code Coverage" --results-directory <backend_src>/coverage/ --blame-hang-timeout 120s
    dotnet tool install dotnet-reportgenerator-globaltool --tool-path <backend_src>/coverage/.tools 2>/dev/null || true
    <backend_src>/coverage/.tools/reportgenerator -reports:"<backend_src>/coverage/**/coverage.cobertura.xml" -targetdir:"<backend_src>/coverage/report" -reporttypes:"TextSummary"
    cat <backend_src>/coverage/report/Summary.txt
