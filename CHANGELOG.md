@@ -2,6 +2,11 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.1] - 2026-06-13
+
+### Added
+- `CLAUDE.md` — project instructions documenting the git workflow (always branch from an up-to-date `master`; confirm before branching off a non-`master` branch) and the release rule (bump the plugin version on every PR to `master`).
+
 ## [0.6.0] - 2026-06-13
 
 ### Added
