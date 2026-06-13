@@ -27,7 +27,7 @@ A structured review report printed to your response.
    ```bash
    dotnet build <backend_src>
    ```
-   Build failure → automatic FAIL.
+   Build failure → automatic FAIL. When excerpting the failure into your report, include only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — not the full trace.
 4. Check against dotnet-conventions skill: async patterns, naming, DI registration, error responses.
 5. **Clean Architecture compliance** (see dotnet-conventions skill, "The dependency rule") — each of these is a **CRITICAL** issue:
    - Project references point outward (Domain → Application/Infrastructure/Api, Application → Infrastructure/Api, or Infrastructure → Api). Check the `.csproj` `<ProjectReference>` entries.

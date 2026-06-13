@@ -1,6 +1,6 @@
 {
   "name": "agentic-sdlc",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Agentic SDLC for .NET + React applications.",
   "author": {
     "name": "ecogs"
