@@ -1,0 +1,66 @@
+name: Release plugin
+
+# A merged PR to master pushes a commit here. Per CLAUDE.md, every such PR
+# bumps the version in plugin.json, so we cut a GitHub release for that version.
+# Merges that don't change the version are no-ops (the tag already exists).
+on:
+  push:
+    branches: [master]
+    paths:
+      - plugins/agentic-sdlc/.claude-plugin/plugin.json
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read plugin version
+        id: version
+        run: |
+          version=$(jq -r .version plugins/agentic-sdlc/.claude-plugin/plugin.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether release already exists
+        id: exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.version.outputs.tag }} already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract changelog section
+        if: steps.exists.outputs.exists == 'false'
+        id: notes
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # Print the lines between this version's heading and the next "## " heading.
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { capture=1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG entry found for [$version]." > release-notes.md
+          fi
+
+      - name: Create release
+        if: steps.exists.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file release-notes.md \
+            --target "$GITHUB_SHA"

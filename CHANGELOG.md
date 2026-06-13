@@ -2,6 +2,11 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.4] - 2026-06-13
+
+### Added
+- **Automated GitHub releases on merge to `master`.** New `.github/workflows/release.yml` triggers on pushes to `master` that touch `plugin.json`, reads the plugin `version`, and—if a `v<version>` release doesn't already exist—creates a tag and GitHub Release whose notes are the matching `## [<version>]` section of `CHANGELOG.md`. Idempotent: merges that don't bump the version are no-ops.
+
 ## [0.6.3] - 2026-06-13
 
 ### Added
