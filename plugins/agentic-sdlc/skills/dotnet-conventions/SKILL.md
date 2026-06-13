@@ -110,6 +110,27 @@ public class FooServiceTests
 - Mock only at service boundaries; test real logic.
 - For repository tests: use SQLite in-memory database instead of mocking EF Core.
 
+## Test scope: behavior only — never the build, SDK, or project structure
+
+Tests exercise the **application's runtime behavior** through its own types. They must NEVER:
+
+- **Invoke the `dotnet` CLI or spawn any external process** — no `dotnet build` / `restore` /
+  `sln list` / `run`, no `Process.Start`. Spawning `dotnet` from inside a `dotnet test` run is
+  slow and deadlocks on the NuGet package-folder lock or a network restore; it has produced
+  multi-minute hangs for zero behavioral coverage. If you find yourself shelling out to a tool,
+  the test is wrong.
+- **Assert on project structure, layering, or "it compiles"** — e.g. "the solution has four
+  projects", "Domain references nothing", "the build succeeds". Clean Architecture layering is
+  enforced by the **architect-validator**; "it compiles" is proven by the build step. These are
+  not runtime behavior and get **zero** tests at this layer. A structural acceptance criterion
+  ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture itself and
+  validated upstream — do not write a test for it.
+- **Depend on an ambient database, network service, or Docker.** Repository tests use SQLite
+  in-memory; integration tests use `WebApplicationFactory` with the data layer pointed at SQLite
+  in-memory (or EF in-memory) — never `(localdb)`, a `Server=localhost` SQL Server, or
+  Testcontainers requiring a Docker daemon. CI/Ubuntu agents have none of these, so such tests
+  hang on connect-retry.
+
 ## Error handling
 - Use `ProblemDetails` for API error responses (ASP.NET Core default).
 - `404 NotFound()` for missing resources, `400 BadRequest()` for validation, `500` for unhandled.
@@ -149,3 +170,17 @@ slow on Linux/CI, and full stack traces waste the agent's context budget.
 - **Cap the inner fix loop at 3.** Within a single agent invocation, stop after 3 consecutive
   failed fix attempts on the same persistent build/test error. Report the (truncated) logs to the
   orchestrator instead of attempting a fourth — the orchestrator's outer loop handles escalation.
+- **Bound every test run so a hang fails fast.** A test that blocks (e.g. in fixture setup, or a
+  test that shells out — which it must not; see "Test scope" above) will otherwise stall the run
+  indefinitely. Always pass `--blame-hang-timeout` so the run self-terminates and names the
+  offending test instead of hanging forever:
+  ```bash
+  dotnet test <project> --blame-hang-timeout 120s
+  ```
+  A run that exceeds the timeout is a **failure to diagnose** (which test stalled, and why) — not
+  a slow run to wait out. "It's just slow, I'll wait" is the wrong reflex; find the blocking test.
+- **Never pipe a test run you need to observe through `tail`.** `tail` buffers all of stdin and
+  flushes only at EOF, so a still-running — or hung — `dotnet test ... | tail` shows *nothing*:
+  you lose both live progress and the hang report. `head`/`tail` truncation is for *error output
+  after a finished build* (above), not for a live or authoritative test run. To see which test is
+  executing, use `--logger "console;verbosity=detailed"` — it prints each test as it starts.

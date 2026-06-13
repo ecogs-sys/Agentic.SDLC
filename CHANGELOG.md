@@ -2,6 +2,15 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.6.5] - 2026-06-14
+
+### Changed
+- **.NET test guardrails: behavior-only scope + bounded execution.** Diagnosed a 20-minute `dotnet test` hang on Ubuntu caused by an emergent `ScaffoldTests` class that shelled out to `dotnet build`/`restore`/`sln list` (~15 nested subprocesses) to "verify" Clean Architecture project structure — deadlocking on the NuGet lock for zero behavioral coverage.
+  - `dotnet-conventions`: new "Test scope: behavior only" section forbidding tests that invoke the `dotnet` CLI / spawn processes, assert on project structure or "it compiles" (enforced by the architect-validator and the build, not by tests), or depend on an ambient DB/network/Docker. Structural acceptance criteria get zero tests.
+  - `dotnet-conventions` ("Build & test execution discipline"): two new rules — bound every test run with `--blame-hang-timeout` so a hang fails fast and names the test (a timeout is a failure to diagnose, not a slow run to wait out); and never pipe an observed/authoritative test run through `tail` (it buffers to EOF, hiding both progress and the hang report) — use `--logger "console;verbosity=detailed"` instead.
+  - `dotnet-test-engineer`: new "Test scope (critical)" section + step 1 now skips purely structural criteria.
+  - `dotnet-test-reviewer` / `devops-reviewer`: the authoritative coverage / suite runs now pass `--blame-hang-timeout 120s`.
+
 ## [0.6.4] - 2026-06-13
 
 ### Added
