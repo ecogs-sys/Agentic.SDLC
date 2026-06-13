@@ -15,10 +15,12 @@ Scan `runs/` for the most recent run (highest sequence) whose state.json has `cu
 ## Reading src_paths
 At the start of every command invocation, read `src_paths` from state.json:
 ```
-backend_src  = state.src_paths.backend   (e.g. "src/backend")
-frontend_src = state.src_paths.frontend  (e.g. "src/frontend")
+backend_src  = state.src_paths.backend       (e.g. "src/backend")
+backend_test = state.src_paths.backend_test   (e.g. "tests/backend"; default "tests/backend" if absent — older runs)
+frontend_src = state.src_paths.frontend       (e.g. "src/frontend")
 ```
-Pass these paths to agents wherever a code directory is needed.
+Pass these paths to agents wherever a code directory is needed. .NET test code lives under
+`backend_test` (never under `backend_src`); React tests are co-located inside `frontend_src`.
 
 ## Git commit discipline
 Commit after **every** step that produces or updates files. The pattern is always:
@@ -230,21 +232,23 @@ Display `runs/<run-id>/stories/index.md` (the execution-plan diagram and story t
 
 ## Stage: development
 
-Read `backend_src` and `frontend_src` from `state.src_paths`.
+Read `backend_src`, `backend_test`, and `frontend_src` from `state.src_paths`.
 
 Process stories by **wave**: handle wave 1 first, then wave 2, and so on (read `wave` from `state.stories`). Within a wave, process in story-ID order. This honours the dependency graph computed by the Tech Lead. Use state.stories to track which are complete.
 
 For each pending story:
 1. Read the story content from `runs/<run-id>/stories/STORY-XXX.md` (self-contained).
-2. Determine track and src_path (`backend_src` for dotnet, `frontend_src` for react).
+2. Determine track and paths:
+   - **dotnet track:** `src_path = backend_src`, `test_path = backend_test`.
+   - **react track:** `src_path = frontend_src`, `test_path = frontend_src` (tests are co-located).
 
 ### 3. Engineer → Reviewer loop (max 5 iterations)
 
-a. Invoke `dotnet-engineer` or `react-engineer`. Pass: run-id, story ID, story content, runs/<run-id>/tech-spec.md, src_path.
+a. Invoke `dotnet-engineer` or `react-engineer`. Pass: run-id, story ID, story content, runs/<run-id>/tech-spec.md, src_path (and `test_path`/`backend_test` for the dotnet track — the first-story scaffold creates the test project there).
 
-b. **Commit — Engineer draft/revision:**
+b. **Commit — Engineer draft/revision** (include `<test_path>` too — the dotnet scaffold creates the test project under it):
    ```bash
-   git add <src_path> runs/<run-id>/state.json
+   git add <src_path> <test_path> runs/<run-id>/state.json
    # First iteration:
    git commit -m "feat(STORY-XXX): engineer draft"
    # Subsequent iterations (reviewer feedback):
@@ -272,18 +276,18 @@ f. If FAIL + reviewer_iterations < 5: increment, re-invoke engineer with reviewe
 
 ### 4. Test Engineer → Test Reviewer loop (max 5 iterations)
 
-a. Invoke `dotnet-test-engineer` or `react-test-engineer`. Pass: run-id, story ID, story content, src_path.
+a. Invoke `dotnet-test-engineer` or `react-test-engineer`. Pass: run-id, story ID, story content, src_path, test_path (for the dotnet track, `test_path = backend_test`; tests are written there).
 
 b. **Commit — Test Engineer draft/revision:**
    ```bash
-   git add <src_path> runs/<run-id>/state.json
+   git add <test_path> runs/<run-id>/state.json
    # First iteration:
    git commit -m "test(STORY-XXX): test engineer draft"
    # Subsequent iterations:
    git commit -m "test(STORY-XXX): test engineer revision — coverage feedback (iter <n>)"
    ```
 
-c. Invoke `dotnet-test-reviewer` or `react-test-reviewer`. Pass: run-id, story ID, story content, src_path.
+c. Invoke `dotnet-test-reviewer` or `react-test-reviewer`. Pass: run-id, story ID, story content, src_path, test_path.
 
 d. Update story test_reviewer_iterations in state.json.
 

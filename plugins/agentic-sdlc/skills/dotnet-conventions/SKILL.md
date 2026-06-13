@@ -10,28 +10,37 @@ description: Project-specific .NET coding conventions. Used by .NET Engineer, Re
 The backend follows Clean Architecture as **four projects**. **Source-code dependencies point
 only inward** — `Domain` depends on nothing; `Api` is the outermost composition root.
 
+### Source vs. test layout (mandatory)
+
+**Production code lives under `<backend_src>/`. Test code lives under `<backend_test>/`
+(default `tests/backend`) — never inside `<backend_src>/`.** The `.sln` stays in
+`<backend_src>/` and references the test project by relative path, so `dotnet build
+<backend_src>` and `dotnet test <backend_src>` still build and run everything.
+
 ```
-<backend_src>/
-├── <AppName>.sln
-├── <AppName>.Domain/         # refs: none
-│   ├── Entities/             # domain entities (POCOs — no EF attributes required)
-│   └── ValueObjects/         # value objects, domain enums/exceptions
-├── <AppName>.Application/     # refs: Domain
-│   ├── Abstractions/         # IFooRepository.cs, IFooService.cs (interfaces only)
-│   ├── Services/             # FooService.cs — use-case logic
-│   └── Models/               # FooRequest.cs, FooResponse.cs (DTOs)
-├── <AppName>.Infrastructure/  # refs: Application (+ Domain)
-│   ├── Data/                 # AppDbContext.cs + EF Core migrations
-│   └── Repositories/         # FooRepository.cs — implements Application interfaces
-├── <AppName>.Api/            # refs: Application + Infrastructure
-│   ├── Controllers/          # One controller per resource — depends on Application interfaces
-│   ├── Program.cs            # Entry point + DI composition root + /health
-│   └── appsettings.json
-└── <AppName>.Tests/          # refs: the project(s) under test
-    ├── Domain/               # entity / value-object tests
-    ├── Application/          # service unit tests (mock the Abstractions)
-    ├── Infrastructure/       # repository tests (SQLite in-memory)
-    └── Integration/          # WebApplicationFactory tests
+<repo root>/
+├── <backend_src>/                # e.g. src/backend — SOURCE ONLY
+│   ├── <AppName>.sln             # references the test project at ../../<backend_test>/...
+│   ├── <AppName>.Domain/         # refs: none
+│   │   ├── Entities/             # domain entities (POCOs — no EF attributes required)
+│   │   └── ValueObjects/         # value objects, domain enums/exceptions
+│   ├── <AppName>.Application/     # refs: Domain
+│   │   ├── Abstractions/         # IFooRepository.cs, IFooService.cs (interfaces only)
+│   │   ├── Services/             # FooService.cs — use-case logic
+│   │   └── Models/               # FooRequest.cs, FooResponse.cs (DTOs)
+│   ├── <AppName>.Infrastructure/  # refs: Application (+ Domain)
+│   │   ├── Data/                 # AppDbContext.cs + EF Core migrations
+│   │   └── Repositories/         # FooRepository.cs — implements Application interfaces
+│   └── <AppName>.Api/            # refs: Application + Infrastructure
+│       ├── Controllers/          # One controller per resource — depends on Application interfaces
+│       ├── Program.cs            # Entry point + DI composition root + /health
+│       └── appsettings.json
+└── <backend_test>/               # e.g. tests/backend — TESTS ONLY (never under src/)
+    └── <AppName>.Tests/          # refs: the project(s) under test
+        ├── Domain/               # entity / value-object tests
+        ├── Application/          # service unit tests (mock the Abstractions)
+        ├── Infrastructure/       # repository tests (SQLite in-memory)
+        └── Integration/          # WebApplicationFactory tests
 ```
 
 ### The dependency rule

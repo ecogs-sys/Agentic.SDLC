@@ -52,8 +52,14 @@ Check in order:
 3. If `src/` exists but no backend/frontend subdirs → use `src/backend` and `src/frontend`
 4. Otherwise (new workspace) → default to `src/backend` and `src/frontend`
 
+Also derive the **.NET test path** (`backend_test`) — .NET test code lives in a separate
+top-level `tests/` tree, **never under `src/`**. Default to `tests/backend`. If `<backend_src>`
+follows the `src/<name>` pattern, mirror it as `tests/<name>` (e.g. `src/backend` → `tests/backend`,
+plain `backend` → `tests/backend`). (React tests stay co-located inside `<frontend_src>` — no
+separate test path.)
+
 Announce the detected paths:
-> "Source code will be generated into `<backend_src>/` (.NET) and `<frontend_src>/` (React). Reply with different paths if you'd like to change this, or press Enter to continue."
+> "Source code will be generated into `<backend_src>/` (.NET source) and `<frontend_src>/` (React); .NET tests into `<backend_test>/`. React tests are co-located alongside their components. Reply with different paths if you'd like to change this, or press Enter to continue."
 
 Wait for response:
 - **Enter / empty / "ok" / "yes"**: proceed with detected paths.
@@ -122,6 +128,7 @@ Write `runs/<run-id>/state.json`:
   "spec_frozen": false,
   "src_paths": {
     "backend": "<backend_src>",
+    "backend_test": "<backend_test>",
     "frontend": "<frontend_src>"
   },
   "stages": {
