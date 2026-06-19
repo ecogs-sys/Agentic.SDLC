@@ -191,9 +191,20 @@ on this version; finish them on the prior plugin version.
 - `commands/advance-stage.md`
 - `commands/show-run-status.md`
 - `commands/cancel-run.md`
-- `README.md` — new stage in the table, workflow diagram, pipeline order, layout
-- `.claude-plugin/plugin.json` — version bump `0.6.5 → 0.7.0`
+- `plugins/agentic-sdlc/README.md` — new stage in the table, mermaid workflow
+  diagram, pipeline order, layout
+- `plugins/agentic-sdlc/.claude-plugin/plugin.json` — version bump `0.6.5 → 0.7.0`
 - `CHANGELOG.md` — matching entry
+- **Root `README.md`** — references the hand-authored pipeline SVG (below)
+- **`docs/agentic-sdlc-pipeline.svg`** — add the Phase Planner + Validator band
+  *above* the BA. This SVG is hand-laid-out with absolute coordinates
+  (`viewBox 0 0 706.94 1860`) **and a precomputed text-gap `<mask>` of pixel-exact
+  rects**. Inserting a top band requires shifting every element down by one
+  stage-height, growing the `viewBox`/`mask` canvas height, and recomputing the
+  mask rects. Treat as its own dedicated implementation step; verify by rendering
+  the SVG, not just by diffing. The Phase Planner band also documents the
+  program → phase relationship (one big requirement fans out to N sequential
+  phase-runs).
 
 **Resulting totals:** 17 agents, 9 skills, 5 commands.
 
