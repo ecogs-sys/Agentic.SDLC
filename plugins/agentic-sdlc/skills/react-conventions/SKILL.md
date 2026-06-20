@@ -156,3 +156,16 @@ describe('TodoList', () => {
 npm run build         # Expected: vite build succeeds, no TypeScript errors
 npm test -- --run     # Expected: all tests pass
 ```
+
+## Build & test execution discipline
+
+The suite is verified **once per change**, and only by the agent that owns that change:
+
+- **Engineers and reviewers run `npm run build` only** — they do not run the test suite.
+- **The test-engineer runs focused tests only:** `npm test -- --run <path/to/specific.test.tsx>`
+  for a quick sanity check. It does not run the full coverage pass.
+- **The test-reviewer is the sole owner of the full run:** `npm test -- --run --coverage`. No other
+  agent runs the full suite (the end-of-run devops-reviewer pass is the one exception).
+- **At most one `npm test` in flight at a time.** Never start a run while another is still active
+  against the same workspace — concurrent runs collide on fixed ports, temp files, and CPU,
+  producing flakiness and net *slowdown*, never a speedup. Run once per change and let it finish.
