@@ -10,7 +10,19 @@ You are the Agentic SDLC orchestrator.
 Read state.json, determine next action, invoke agent(s), update state.
 
 ## Finding the active run
-Scan `runs/` for the most recent run (highest sequence) whose state.json has `current_stage` not equal to `"complete"` or `"cancelled"`. If none found, say: "No active run. Use /agentic-sdlc:start-run to begin."
+1. Scan `runs/` for the most recent `runs/<program-id>/program.json` (highest
+   sequence) whose program is not fully delivered.
+2. Read `current_phase` from program.json; the active phase folder is the matching
+   `phases[]` entry's `folder` (e.g. `phase-02`).
+3. The active run is `runs/<program-id>/<phase-folder>/`; its `state.json` drives
+   this command exactly as before. The composite `run_id` in that state.json is
+   `<program-id>/<phase-folder>`, so every `runs/<run-id>/…` path below resolves to
+   `runs/<program-id>/<phase-folder>/…` unchanged.
+
+If no program is found, say: "No active program. Use /agentic-sdlc:start-run to
+begin." If a program is found but its active phase is already `complete`, say: "The
+current phase is complete. Use /agentic-sdlc:next-phase to start the next phase, or
+open its PR to ship it."
 
 ## Reading src_paths
 At the start of every command invocation, read `src_paths` from state.json:
@@ -369,6 +381,14 @@ f. Read reviewer's `**Routing decision:**`:
        git add runs/<run-id>/state.json
        git commit -m "chore(<run-id>): run complete"
        ```
+     - Update the matching `phases[]` entry in `runs/<program-id>/program.json` to
+       `"status": "complete"` and commit:
+       ```bash
+       git add runs/<program-id>/program.json
+       git commit -m "docs(<program-id>): phase <phase_number> complete"
+       ```
+     - Do NOT start the next phase automatically. Crossing a phase boundary is the
+       deliberate `/agentic-sdlc:next-phase` step.
      - Announce completion (see below).
    - `BACK_TO_DEVOPS`: increment devops iterations. If < 5: re-invoke devops-engineer with reviewer issues. Repeat from (a).
    - `BACK_TO_DOTNET_ENGINEER <story-id>`:
