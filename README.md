@@ -4,7 +4,7 @@ A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a mu
 
 ## Pipeline overview
 
-![Agentic SDLC pipeline with DevOps phase](docs/agentic-sdlc-pipeline.svg)
+![Agentic SDLC pipeline with phase planning and DevOps phase](docs/agentic-sdlc-pipeline.svg)
 
 ## Install
 
@@ -24,9 +24,9 @@ plugins/
   agentic-sdlc/
     .claude-plugin/
       plugin.json            ← plugin manifest (name, version)
-    agents/                  ← 16 subagent definitions
-    skills/                  ← 8 reusable skill files
-    commands/                ← 4 slash commands
+    agents/                  ← 18 subagent definitions
+    skills/                  ← 10 reusable skill files
+    commands/                ← 5 slash commands
     README.md                ← plugin user documentation
 CHANGELOG.md
 LICENSE
