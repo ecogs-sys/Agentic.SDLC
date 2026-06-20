@@ -56,7 +56,9 @@ Say:
 - **"replan"**:
   1. Invoke `phase-planner`. Pass: program-id, original-input.md, the frozen
      already-shipped phases (1..current_phase) with a one-line summary of each, and
-     a note that only phases > current_phase may change.
+     a note that only phases > current_phase may change. Set
+     `phase_plan.status = "in_progress"` and `phase_plan.iterations = 0` at the
+     start of the replan; on the user's approval it returns to `"frozen"`.
   2. Commit the revision:
      ```bash
      git add runs/<program-id>/phase-plan.md runs/<program-id>/program.json
@@ -64,9 +66,12 @@ Say:
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
      start-run Step 7. On pass, display the revised remaining phases and ask the
-     user to **approve** before continuing. On approve, update `phase_count`
-     (`phase_plan.phase_count`) and `phases[]` for the not-yet-started phases.
+     user to **approve**. On **approve**, update `phase_count`
+     (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
+     continue to Step 5. On **any other response**, treat it as revision notes and
+     re-invoke `phase-planner` (repeat the replan loop).
 - **"keep"**: proceed with the existing plan.
+- **anything else**: treat as `keep` — proceed with the existing plan.
 
 ### Step 5 — Determine the next phase
 Let `N = current_phase + 1`. Read the Phase N entry from `phases[]` (folder
