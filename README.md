@@ -4,7 +4,7 @@ A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a mu
 
 ## Pipeline overview
 
-![Agentic SDLC pipeline with DevOps phase](docs/agentic-sdlc-pipeline.svg)
+![Agentic SDLC pipeline with phase planning and DevOps phase](docs/agentic-sdlc-pipeline.svg)
 
 ## Install
 
