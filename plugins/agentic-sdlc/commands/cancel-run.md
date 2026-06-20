@@ -84,4 +84,4 @@ committed), delete it.
   > /agentic-sdlc:start-run for a new program."
 
 ## Note
-Cancellation is clean when code was committed to the run branch — switching branches restores the original workspace state. If code was generated but not yet committed (mid-story), `git checkout -- .` discards those changes before the branch switch.
+Cancellation is clean when code was committed to the phase branch — switching branches restores the original workspace state. If code was generated but not yet committed (mid-story), `git checkout -- .` discards those changes before the branch switch.
