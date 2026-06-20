@@ -1,5 +1,5 @@
 ---
-description: Start a new Agentic SDLC run. Collects the user's requirement, creates the run directory and state.json, writes raw-input.md, then drives the BA → BA Validator loop and first user review gate.
+description: Start a new Agentic SDLC program. Collects the user's requirement, creates the program directory and branch, drives the Phase Planner → Validator loop and phase-plan gate, then creates the Phase 1 run and drives the BA → BA Validator loop and first user review gate.
 ---
 
 # /agentic-sdlc:start-run
@@ -7,33 +7,40 @@ description: Start a new Agentic SDLC run. Collects the user's requirement, crea
 You are the Agentic SDLC orchestrator.
 
 ## Your job
-Start a new run: collect the requirement, initialize state, create the git branch, run the BA + validation loop, and present the requirement spec for user review.
+Start a new program: collect the requirement, initialize the program, create the
+git branch, split the requirement into phases (Phase Planner + Validator loop +
+phase-plan gate), then create the Phase 1 run and drive the BA + validation loop
+up to the requirement-spec review gate.
 
-## Git commit helper
-After every step that produces or updates files, commit immediately using:
-```bash
-git add <files>
-git commit -m "<message>"
-```
-Include `runs/<run-id>/state.json` in every commit so the run state is always captured.
+## Composite run IDs
+Each phase is a normal run whose `run_id` is the composite `<program-id>/phase-0N`.
+This makes every `runs/<run-id>/…` path resolve to `runs/<program-id>/phase-0N/…`,
+so the BA, Architect, Tech Lead, and development agents need no changes.
 
 ## Process
 
-### Step 0 — Refuse if a run is already active
-Scan `runs/` for any run whose `state.json` `current_stage` is not `"complete"` or `"cancelled"`. If one exists, do NOT start a new run — say:
+### Step 0 — Refuse if a program is already active
+Scan `runs/` for any `runs/<program-id>/program.json`. A program is **active**
+unless it is fully delivered (`phase_plan.status == "frozen"` AND `current_phase
+== phase_count` AND the phase at `current_phase` has status `complete`). If an
+active program exists, do NOT start a new one — say:
 
-> "A run is already active: `<run-id>` (stage: `<current_stage>`, branch: `<branch>`).
+> "A program is already active: `<program-id>` (phase `<current_phase>` of
+> `<phase_count>`).
 >
-> - Continue it with `/agentic-sdlc:advance-stage`.
-> - Or cancel it first with `/agentic-sdlc:cancel-run` and then re-run `/agentic-sdlc:start-run`.
+> - Continue the current phase with `/agentic-sdlc:advance-stage`.
+> - Start the next phase (once the current one is merged) with
+>   `/agentic-sdlc:next-phase`.
+> - Or cancel the current phase with `/agentic-sdlc:cancel-run`.
 >
-> Concurrent runs are not supported."
+> Concurrent programs are not supported."
 
 Then stop. Do not modify any files.
 
-### Step 1 — Generate a run ID
-Format: `run-YYYY-MM-DD-NNN` (today's date, zero-padded sequence).
-Check `runs/` for existing runs to determine the next sequence number. If none, use `001`.
+### Step 1 — Generate a program ID
+Format: `program-YYYY-MM-DD-NNN` (today's date, zero-padded sequence).
+Check `runs/` for existing `program-*` directories to determine the next sequence
+number. If none, use `001`.
 
 ### Step 2 — Collect the requirement
 If the user didn't provide their requirement with the command, ask:
@@ -69,7 +76,7 @@ Wait for response:
 If the workspace is a git repository, first capture the current branch (this is the parent branch we'll return to on cancel):
 ```bash
 PARENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git checkout -b agentic-sdlc/<run-id>
+git checkout -b agentic-sdlc/<program-id>/phase-01
 ```
 Record `PARENT_BRANCH` — it goes into `state.json` (see Step 6). If the branch already exists or git is unavailable, warn the user but continue.
 
@@ -106,23 +113,128 @@ dist/
 *.suo
 ```
 
-### Step 6 — Create run directory and write initial files
-Create `runs/<run-id>/` directory.
+### Step 6 — Create the program directory and original-input
+Create `runs/<program-id>/`.
 
-Write `runs/<run-id>/raw-input.md`:
+Write `runs/<program-id>/original-input.md`:
 ```markdown
-# Raw Input
-Run ID: <run-id>
+# Original Input
+Program ID: <program-id>
 Captured: <YYYY-MM-DD HH:MM>
 
 <user's requirement verbatim — do not paraphrase or edit>
 ```
 
-Write `runs/<run-id>/state.json`:
+Write `runs/<program-id>/program.json`:
 ```json
 {
-  "run_id": "<run-id>",
-  "branch": "agentic-sdlc/<run-id>",
+  "program_id": "<program-id>",
+  "parent_branch": "<PARENT_BRANCH>",
+  "src_paths": {
+    "backend": "<backend_src>",
+    "backend_test": "<backend_test>",
+    "frontend": "<frontend_src>"
+  },
+  "phase_plan": { "status": "pending", "phase_count": 0 },
+  "current_phase": 0,
+  "phases": []
+}
+```
+
+**Commit — program initialized:**
+```bash
+git add .gitignore runs/<program-id>/original-input.md runs/<program-id>/program.json
+git commit -m "chore(<program-id>): initialize program"
+```
+
+### Step 7 — Phase Planner loop (max 5 iterations)
+
+**On each iteration:**
+
+a. Invoke the `phase-planner` agent. Pass: program-id, path to
+   `runs/<program-id>/original-input.md`, revision notes (empty on first iteration).
+
+b. **Commit — Phase Planner draft/revision:**
+   ```bash
+   git add runs/<program-id>/phase-plan.md runs/<program-id>/program.json
+   # First iteration:
+   git commit -m "docs(<program-id>): phase plan draft"
+   # Subsequent iterations:
+   git commit -m "docs(<program-id>): phase plan revision (iter <n>)"
+   ```
+
+c. Invoke `phase-planner-validator`. Pass: program-id, paths to original-input.md
+   and phase-plan.md.
+
+d. Record the validation outcome in `program.json` `phase_plan.status`
+   (`in_progress` while looping).
+
+e. **Commit — Phase Planner validation outcome:**
+   ```bash
+   git add runs/<program-id>/program.json
+   # On pass:
+   git commit -m "docs(<program-id>): phase plan passed validation"
+   # On fail:
+   git commit -m "docs(<program-id>): phase plan failed validation (iter <n>)"
+   ```
+
+f. If `"status": "fail"`:
+   - Increment the iteration counter.
+   - If iterations < 5: re-invoke `phase-planner` with the validator's report as
+     revision notes. Repeat from (a).
+   - If iterations = 5: say to the user:
+     > "The Phase Planner failed validation 5 times. Here is the report. Provide
+     > guidance and I will try again, or use /agentic-sdlc:cancel-run to cancel."
+     Wait for guidance.
+
+g. If `"status": "pass"`: proceed to Step 8.
+
+### Step 8 — User review gate: phase plan
+Read and display `runs/<program-id>/phase-plan.md` in full.
+
+Say:
+> "The Phase Planner proposes **<N> phase(s)** (Version <n>). Reply **'approve'**
+> to freeze the plan and begin Phase 1, or describe what to change."
+
+Wait for response:
+- **"approve"** (case-insensitive):
+  1. Set `program.json` `phase_plan.status = "frozen"`, `phase_plan.phase_count =
+     <N>`, `current_phase = 1`, and populate `phases` from the plan — one entry per
+     phase:
+     ```json
+     { "phase": 1, "folder": "phase-01", "title": "<phase 1 title>", "status": "in_progress" }
+     ```
+     (Phases 2..N get `"status": "pending"` and `"folder": "phase-0N"`.)
+  2. Create `runs/<program-id>/phase-01/`.
+  3. Write `runs/<program-id>/phase-01/raw-input.md` containing **only Phase 1's
+     scope**, extracted from the phase plan:
+     ```markdown
+     # Raw Input
+     Run ID: <program-id>/phase-01
+     Phase: 1 of <N>
+     Captured: <YYYY-MM-DD HH:MM>
+
+     <Phase 1 goal + scope, copied from phase-plan.md Phase 1>
+     ```
+  4. Write `runs/<program-id>/phase-01/state.json` (see schema below).
+  5. **Commit — phase plan frozen, Phase 1 created:**
+     ```bash
+     git add runs/<program-id>/program.json runs/<program-id>/phase-01/
+     git commit -m "docs(<program-id>): phase plan frozen — Phase 1 started"
+     ```
+  6. Proceed to Step 9 (BA loop).
+- **Any other response**: treat as revision notes. Re-invoke `phase-planner` with
+  those notes. Repeat from Step 7. (User revision counts toward the 5-iteration
+  limit.)
+
+### Phase 1 state.json schema
+```json
+{
+  "run_id": "<program-id>/phase-01",
+  "program_id": "<program-id>",
+  "phase_number": 1,
+  "phase_plan_path": "runs/<program-id>/phase-plan.md",
+  "branch": "agentic-sdlc/<program-id>/phase-01",
   "parent_branch": "<PARENT_BRANCH>",
   "current_stage": "ba",
   "spec_frozen": false,
@@ -148,13 +260,7 @@ Write `runs/<run-id>/state.json`:
 }
 ```
 
-**Commit — run initialized:**
-```bash
-git add .gitignore runs/<run-id>/
-git commit -m "chore(<run-id>): initialize run"
-```
-
-### Step 7 — BA loop (max 5 iterations)
+### Step 9 — BA loop (max 5 iterations)
 
 **On each iteration:**
 
@@ -192,7 +298,7 @@ f. If `"status": "fail"`:
 g. If `"status": "pass"`:
    - Update state.json: `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
 
-### Step 8 — User review gate
+### Step 10 — User review gate
 Read and display `runs/<run-id>/req-spec.md` in full.
 
 Say:
@@ -207,7 +313,7 @@ Wait for response:
     git commit -m "docs(<run-id>): requirement spec approved"
     ```
   - Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its instructions. Do NOT tell the user to run any command — continue the pipeline without pausing.
-- **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 7. (User revision counts toward the 5-iteration limit.)
+- **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 9. (User revision counts toward the 5-iteration limit.)
 
 ## Spec freeze
 Do not set `spec_frozen` here. That happens after Tech Lead approval in /advance-stage.
