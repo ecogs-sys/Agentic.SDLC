@@ -77,10 +77,12 @@ will pick it up.>
 **Deferred to later phases:** ...
 ```
 
+For the last (or only) phase, set **Deferred to later phases:** to "none".
+
 ## Quality checklist (self-check before finishing)
-- [ ] Every requirement in `original-input.md` is assigned to exactly one phase.
-- [ ] No requirement appears in two phases.
-- [ ] Phases are ordered so each depends only on earlier phases.
-- [ ] Each phase has a clear "independently shippable" justification.
-- [ ] A single-phase plan was used unless the sizing rules justify splitting.
-- [ ] Status is "draft".
+- [ ] Every requirement in `original-input.md` is assigned to exactly one phase
+- [ ] No requirement appears in two phases
+- [ ] Phases are ordered so each depends only on earlier phases
+- [ ] Each phase has a clear "independently shippable" justification
+- [ ] A single-phase plan was used unless the sizing rules justify splitting
+- [ ] Status is "draft"
