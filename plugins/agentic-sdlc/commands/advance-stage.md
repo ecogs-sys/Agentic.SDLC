@@ -11,7 +11,9 @@ Read state.json, determine next action, invoke agent(s), update state.
 
 ## Finding the active run
 1. Scan `runs/` for the most recent `runs/<program-id>/program.json` (highest
-   sequence) whose program is not fully delivered.
+   sequence) whose program is not fully delivered. A program is **fully delivered**
+   when `phase_plan.status == "frozen"` AND `current_phase == phase_plan.phase_count`
+   AND the `phases[]` entry at `current_phase` has `status: "complete"`.
 2. Read `current_phase` from program.json; the active phase folder is the matching
    `phases[]` entry's `folder` (e.g. `phase-02`).
 3. The active run is `runs/<program-id>/<phase-folder>/`; its `state.json` drives
