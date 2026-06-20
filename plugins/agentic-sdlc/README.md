@@ -8,6 +8,7 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 
 | Stage | Agent | Validator |
 |---|---|---|
+| Phase planning | Phase Planner | Phase Planner Validator |
 | Requirements | Business Analyst | BA Validator |
 | Architecture | Architect | Architect Validator |
 | Story breakdown | Tech Lead | Tech Lead Validator |
@@ -20,7 +21,18 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 ```mermaid
 flowchart TD
     Start(["🚀 /start-run — user provides requirement"])
-    Start --> BA
+    Start --> PP
+
+    subgraph PHASE ["⓪ Phase Planning"]
+        PP["🤖 Phase Planner<br/>writes phase-plan.md"] --> PPV["🔍 Phase Planner Validator"]
+        PPV -- "fail / iter < 5<br/>re-run with report" --> PP
+        PPV -- "fail / iter = 5" --> ESC0["⚠️ Escalate to User"]
+        ESC0 -- "user guidance" --> PP
+    end
+
+    PPV -- pass --> RG0{{"👤 User Review Gate<br/>phase-plan.md"}}
+    RG0 -- "request changes" --> PP
+    RG0 -- "approve · freeze plan" --> BA
 
     subgraph REQ ["① Requirements"]
         BA["🤖 BA Agent<br/>writes req-spec.md"] --> BAV["🔍 BA Validator"]
@@ -107,6 +119,8 @@ flowchart TD
     end
 
     DVR -- DONE --> COMPLETE(["🎉 Run Complete!<br/>Open PR: agentic-sdlc/run-id → main"])
+
+    COMPLETE -. "/next-phase (if more phases)" .-> PP
 ```
 
 ## Core principles
@@ -141,6 +155,8 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 ## Pipeline order
 
 ```
+/start-run          → Phase Planner → Validator (loop) → [user review phase plan]
+                    → freeze plan → create Phase 1 run → BA → … (below)
 /start-run          → detect src paths → git branch agentic-sdlc/<run-id>
                     → BA → BA Validator (loop) → [user review req spec]
 /advance-stage      → Architect → Architect Validator (loop) → [user review tech spec]
@@ -155,6 +171,16 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 
 After you approve the stories, `req-spec.md`, `tech-spec.md`, and everything under `runs/<run-id>/stories/` are **frozen**. No agent can modify them. To make upstream changes: `/agentic-sdlc:cancel-run` and start a new run.
 
+## Phases
+
+A large requirement is split by the Phase Planner into ordered, independently
+shippable phases. Each phase is its own run under `runs/<program-id>/phase-0N/`,
+ships on its own branch `agentic-sdlc/<program-id>/phase-0N`, and opens its own PR.
+Phases are strictly sequential: after a phase's PR is merged, run
+`/agentic-sdlc:next-phase` to start the next one (which branches from the updated
+default branch and builds on the shipped code). A small requirement yields a
+single-phase plan and behaves like one ordinary run.
+
 ## Where artifacts live
 
 Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifacts stay in `runs/`, generated code goes into your source tree.
@@ -162,15 +188,16 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 ```
 <your-workspace>/                       ← workspace root (git repo)
 ├── runs/
-│   └── run-YYYY-MM-DD-001/             ← SDLC audit trail only
-│       ├── state.json                  ← run state machine
-│       ├── raw-input.md                ← your original requirement (verbatim)
-│       ├── req-spec.md                 ← BA output
-│       ├── tech-spec.md                ← Architect output
-│       └── stories/                    ← Tech Lead output
-│           ├── index.md                ← overview, execution-plan diagram, story table
-│           ├── STORY-001.md            ← one self-contained file per story
-│           └── STORY-002.md
+│   └── program-YYYY-MM-DD-001/         ← one big requirement
+│       ├── program.json                ← program state machine (phases, current_phase)
+│       ├── original-input.md           ← full requirement, verbatim
+│       ├── phase-plan.md               ← Phase Planner output (frozen)
+│       └── phase-01/                   ← a full run, scoped to Phase 1
+│           ├── state.json              ← per-phase state machine
+│           ├── raw-input.md            ← this phase's scope
+│           ├── req-spec.md             ← BA output
+│           ├── tech-spec.md            ← Architect output
+│           └── stories/                ← Tech Lead output
 │
 ├── src/backend/                        ← generated .NET source (default)
 │   ├── AppName.sln
@@ -198,6 +225,7 @@ At the end of the run, open a PR from `agentic-sdlc/<run-id>` → `main` to ship
 |---|---|
 | `/agentic-sdlc:show-run-status` | Show current stage and artifact status |
 | `/agentic-sdlc:cancel-run` | Cancel and clean up the current run |
+| `/agentic-sdlc:next-phase` | Start the next phase once the current one is merged |
 
 ## Troubleshooting
 

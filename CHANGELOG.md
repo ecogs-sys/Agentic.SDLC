@@ -2,6 +2,28 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## 0.7.0 — 2026-06-20
+
+### Added
+- **Phase planning.** A new pre-BA Phase Planner agent (+ validator) splits a large
+  requirement into ordered, independently shippable phases. Each phase is its own
+  run under `runs/<program-id>/phase-0N/`, ships on its own branch, and opens its
+  own PR.
+- `/agentic-sdlc:next-phase` command to start the next phase (lazy creation;
+  requires the prior phase merged; optional replan of remaining phases).
+- `write-phase-plan` skill — phase-plan template and sizing/coverage conventions.
+
+### Changed
+- `/start-run` now creates a program, runs the Phase Planner loop + phase-plan
+  review gate, then creates the Phase 1 run.
+- `/advance-stage` and `/show-run-status` are program/phase-aware.
+- `/cancel-run` now cancels the current in-progress phase only; completed phases and
+  the program survive.
+
+### Notes
+- Clean break: the program/phase run layout is the only supported layout. Finish
+  any in-flight flat runs on 0.6.x before upgrading.
+
 ## [0.6.5] - 2026-06-14
 
 ### Changed
