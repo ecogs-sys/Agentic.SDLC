@@ -13,16 +13,35 @@ phase's artifacts and branch. Completed phases and the program itself survive.
 ## Process
 
 ### Step 1 — Find the active program and current phase
-Scan `runs/` for the active `runs/<program-id>/program.json`. If none, say: "No
-active program to cancel." and stop.
+Scan `runs/` for the most recent program that is not fully delivered
+(`runs/<program-id>/program.json`). If none, say: "No active program to cancel."
+and stop.
 
-Read `current_phase`, `parent_branch`, and the active phase entry from `phases[]`
-(its `folder` = `<phase-folder>`). The phase branch is
-`agentic-sdlc/<program-id>/<phase-folder>`. Read that phase's
-`runs/<program-id>/<phase-folder>/state.json` for `current_stage`.
+Read `current_phase`, `parent_branch`, and `phases`. Then determine which case
+applies:
+
+- **Planning-stage case** — if `phases` is empty OR `current_phase == 0`, the
+  program is still in the Phase Planner stage (the phase plan was never approved),
+  so no phase folder exists yet. The only branch to clean up is
+  `agentic-sdlc/<program-id>/phase-01` (created by `/start-run` before planning).
+  Skip to Step 2 (planning-stage path).
+- **Phase case** — otherwise, read the active phase entry from `phases[]` (its
+  `folder` = `<phase-folder>`). The phase branch is
+  `agentic-sdlc/<program-id>/<phase-folder>`. Read that phase's
+  `runs/<program-id>/<phase-folder>/state.json` for `current_stage`. Use the
+  phase path below.
 
 ### Step 2 — Confirm
-Say:
+
+**Planning-stage path** — say:
+> "This program is still in phase planning (no phase plan approved yet). This will
+> cancel program `<program-id>` entirely and permanently delete:
+> - `runs/<program-id>/` (the whole program directory)
+> - Branch `agentic-sdlc/<program-id>/phase-01`
+>
+> Type **'yes'** to confirm, or anything else to abort."
+
+**Phase path** — say:
 > "This will cancel Phase <current_phase> of program `<program-id>` (current stage:
 > `<current_stage>`, branch: `agentic-sdlc/<program-id>/<phase-folder>`) and
 > permanently delete:
@@ -34,6 +53,10 @@ Say:
 
 Wait for response. If not "yes" (case-insensitive): say "Cancellation aborted." and
 stop.
+
+Below, `<cancel-branch>` means `agentic-sdlc/<program-id>/phase-01` for the
+planning-stage path, or `agentic-sdlc/<program-id>/<phase-folder>` for the phase
+path.
 
 ### Step 3 — Clean up git branch and generated code
 If the workspace is a git repository:
@@ -55,12 +78,12 @@ elif git rev-parse --verify master >/dev/null 2>&1; then
 else
   echo "ERROR: no parent_branch in program.json and neither main nor master exists."
   echo "Manually checkout your default branch and re-run /agentic-sdlc:cancel-run, or"
-  echo "delete branch agentic-sdlc/<program-id>/<phase-folder> yourself with: git branch -D agentic-sdlc/<program-id>/<phase-folder>"
+  echo "delete branch <cancel-branch> yourself with: git branch -D <cancel-branch>"
   exit 1
 fi
 
 # Delete the phase branch (we are guaranteed to be on a different branch now)
-git branch -D agentic-sdlc/<program-id>/<phase-folder>
+git branch -D <cancel-branch>
 ```
 
 If git is not available or the branch doesn't exist, skip git steps and continue.
@@ -73,6 +96,11 @@ folder. If `runs/<program-id>/<phase-folder>/` is still present (e.g. it was nev
 committed), delete it.
 
 ### Step 5 — Handle the program
+- **Planning-stage path:** delete `runs/<program-id>/` if still present (its files
+  lived only on the deleted `phase-01` branch, so after the branch switch they are
+  gone too). Say:
+  > "Program `<program-id>` cancelled (it was still in phase planning and had no
+  > shipped phases). Use /agentic-sdlc:start-run to begin a new program."
 - If the cancelled phase was **Phase 1** (no earlier phase ever merged), the
   program has no delivered phases. Its program-level files lived only on the
   deleted branch, so they are gone too. Say:

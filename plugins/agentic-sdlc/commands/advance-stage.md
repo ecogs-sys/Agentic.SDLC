@@ -410,13 +410,23 @@ f. Read reviewer's `**Routing decision:**`:
    - If devops iterations = 5: escalate to user.
 
 ### Completion announcement
-> "Run <run-id> is complete!
+Read `parent_branch` from `program.json` (the branch the program was started from —
+the PR target). Announce:
+> "Phase <phase_number> (run <run-id>) is complete!
 >
 > Branch `agentic-sdlc/<run-id>` is ready for review. To ship:
-> 1. Open a pull request from `agentic-sdlc/<run-id>` → `main`
+> 1. Open a pull request from `agentic-sdlc/<run-id>` → `<parent_branch>`
 > 2. Review the generated code in `<backend_src>/` and `<frontend_src>/`
 >
 > To run the app locally now:
 > 1. Copy `.env.example` to `.env` and fill in passwords
 > 2. `docker compose up --build`
 > 3. Open the frontend at the FRONTEND_PORT given in `tech-spec.md` (e.g. http://localhost:3000)"
+
+Then add the program-level next step:
+- If this was the **last** phase (`current_phase == phase_plan.phase_count`):
+  > "All <phase_plan.phase_count> phase(s) of `<program-id>` are now delivered. Once
+  > this final PR merges, the program is complete."
+- Otherwise (more phases remain):
+  > "Once this phase's PR is merged to `<parent_branch>`, run
+  > `/agentic-sdlc:next-phase` to start Phase <current_phase + 1>."

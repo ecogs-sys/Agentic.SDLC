@@ -14,7 +14,8 @@ drive it up to the requirement-spec review gate.
 ## Process
 
 ### Step 1 — Find the active program and current phase
-Scan `runs/` for the active `runs/<program-id>/program.json`. If none, say:
+Scan `runs/` for the most recent program that is not fully delivered
+(`runs/<program-id>/program.json`). If none, say:
 "No active program. Use /agentic-sdlc:start-run to begin." and stop.
 
 Read `current_phase`, `phase_count` (i.e. `phase_plan.phase_count`), `phases`,
@@ -46,7 +47,16 @@ git pull
 This brings in the merged code from the prior phase plus the program-level files
 (program.json, phase-plan.md) which travelled to <parent_branch> with that merge.
 
-### Step 4 — Offer a replan of remaining phases
+### Step 4 — Determine the next phase and create its branch
+Let `N = current_phase + 1`. Read the Phase N entry from `phases[]` (folder
+`phase-0N`, title). Branch from the updated parent **now**, before any commits, so
+that everything below (including a replan) lands on the phase branch rather than on
+`<parent_branch>`:
+```bash
+git checkout -b agentic-sdlc/<program-id>/phase-0N
+```
+
+### Step 5 — Offer a replan of remaining phases
 Say:
 > "Optionally, I can re-open the Phase Planner to revise the **remaining** phases
 > (Phases <current_phase + 1>..<phase_count>) using what Phase <current_phase>
@@ -59,7 +69,7 @@ Say:
      a note that only phases > current_phase may change. Set
      `phase_plan.status = "in_progress"` and `phase_plan.iterations = 0` at the
      start of the replan; on the user's approval it returns to `"frozen"`.
-  2. Commit the revision:
+  2. Commit the revision (lands on the phase branch created in Step 4):
      ```bash
      git add runs/<program-id>/phase-plan.md runs/<program-id>/program.json
      git commit -m "docs(<program-id>): phase plan replan (after phase <current_phase>)"
@@ -68,17 +78,10 @@ Say:
      start-run Step 7. On pass, display the revised remaining phases and ask the
      user to **approve**. On **approve**, update `phase_count`
      (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
-     continue to Step 5. On **any other response**, treat it as revision notes and
+     continue to Step 6. On **any other response**, treat it as revision notes and
      re-invoke `phase-planner` (repeat the replan loop).
 - **"keep"**: proceed with the existing plan.
 - **anything else**: treat as `keep` — proceed with the existing plan.
-
-### Step 5 — Determine the next phase
-Let `N = current_phase + 1`. Read the Phase N entry from `phases[]` (folder
-`phase-0N`, title). Branch from the updated parent:
-```bash
-git checkout -b agentic-sdlc/<program-id>/phase-0N
-```
 
 ### Step 6 — Create the Phase N run
 1. Create `runs/<program-id>/phase-0N/`.

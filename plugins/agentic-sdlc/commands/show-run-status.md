@@ -15,7 +15,12 @@ Read state.json and display a clear status summary.
    programs found. Use /agentic-sdlc:start-run to begin."
 2. Read program.json: `phase_plan`, `current_phase`, `phase_count`
    (`phase_plan.phase_count`), `phases`, `src_paths`.
-3. The active phase is the `phases[]` entry whose `phase` field equals `current_phase`; its run dir is
+3. If `phases` is empty OR `current_phase == 0`, the program is still in the Phase
+   Planner stage — no phase has been finalized. Skip the per-phase detail (steps 4–5
+   and the PLANNING/DEVELOPMENT/DEVOPS/ARTIFACTS blocks); show the header, the
+   `Phase plan` line, and a PHASE LADDER reading "Phase planning in progress (no
+   phases finalized yet)". Otherwise, the active phase is the `phases[]` entry whose
+   `phase` field equals `current_phase`; its run dir is
    `runs/<program-id>/<phase-folder>/` and its state.json drives the per-stage
    detail below.
 4. For each artifact (req-spec.md, tech-spec.md, stories/index.md) **under the
@@ -40,8 +45,9 @@ Read state.json and display a clear status summary.
 
   PHASE LADDER
   ─────────────────────────────────────────
-  <for each entry in program.json phases:>
-  Phase 1 [phase-01] <title>   [pending | in_progress | complete | escalated | cancelled]
+  <for each entry in program.json phases; or "Phase planning in progress
+   (no phases finalized yet)" if phases is empty:>
+  Phase 1 [phase-01] <title>   [pending | in_progress | complete]
   Phase 2 [phase-02] <title>   [in_progress]  ◀ active
 
   PLANNING PHASE

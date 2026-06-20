@@ -118,7 +118,7 @@ flowchart TD
         ESC5 -- "user guidance" --> DVE
     end
 
-    DVR -- DONE --> COMPLETE(["🎉 Run Complete!<br/>Open PR: agentic-sdlc/run-id → main"])
+    DVR -- DONE --> COMPLETE(["🎉 Run Complete!<br/>Open PR: agentic-sdlc/run-id → default branch"])
 
     COMPLETE -. "/next-phase (if more phases)" .-> PP
 ```
@@ -150,7 +150,7 @@ Paste your requirement when prompted. Then:
 /agentic-sdlc:advance-stage
 ```
 
-Repeat `/advance-stage` after each approval. You'll be asked to review and approve at three gates (requirement spec, technical spec, stories).
+Repeat `/advance-stage` after each approval. You'll be asked to review and approve at four gates (phase plan, requirement spec, technical spec, stories).
 
 ## Pipeline order
 
@@ -217,7 +217,7 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 
 Source paths are detected from your existing repo layout at `/start-run` time and stored in `state.json`. If you already have a `backend/` and `frontend/` at the root, or a different `src/` layout, the plugin uses those paths instead.
 
-At the end of the run, open a PR from `agentic-sdlc/<run-id>` → `main` to ship the generated code through your normal review process.
+At the end of each phase, open a PR from `agentic-sdlc/<run-id>` → your default branch (the branch you started the run from, recorded as `parent_branch`) to ship the generated code through your normal review process.
 
 ## Other commands
 
