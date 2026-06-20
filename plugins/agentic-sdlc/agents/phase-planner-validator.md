@@ -23,7 +23,7 @@ orchestrator reads your response).
 ## Process
 1. Read both files fully.
 2. Note every distinct requirement, feature, or constraint in original-input.md.
-3. Apply the validate-traceability skill:
+3. Use the validate-traceability skill's *methodology* (read both artifacts fully, then diff the source against the derived). This validator **extends** the skill's default schema: emit the Output format below — with `duplicated`, `misordered`, and `not_shippable` — and do NOT emit the skill's `altered` array. The methodology produces:
    - `missing`: requirements in original-input not assigned to any phase.
    - `duplicated`: requirements assigned to more than one phase.
    - `added_without_source`: phase scope items with no traceable origin in

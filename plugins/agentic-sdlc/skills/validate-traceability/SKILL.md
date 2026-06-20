@@ -1,6 +1,6 @@
 ---
 name: validate-traceability
-description: How to compare two artifacts and produce a structured diff report. Used by all Validator agents (BA Validator, Architect Validator, Tech Lead Validator).
+description: How to compare two artifacts and produce a structured diff report. Used by all Validator agents (Phase Planner Validator, BA Validator, Architect Validator, Tech Lead Validator).
 ---
 
 # Validate Traceability
