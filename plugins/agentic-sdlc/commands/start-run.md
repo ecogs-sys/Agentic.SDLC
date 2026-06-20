@@ -22,7 +22,7 @@ so the BA, Architect, Tech Lead, and development agents need no changes.
 ### Step 0 — Refuse if a program is already active
 Scan `runs/` for any `runs/<program-id>/program.json`. A program is **active**
 unless it is fully delivered (`phase_plan.status == "frozen"` AND `current_phase
-== phase_count` AND the phase at `current_phase` has status `complete`). If an
+== phase_plan.phase_count` AND the phase at `current_phase` has status `complete`). If an
 active program exists, do NOT start a new one — say:
 
 > "A program is already active: `<program-id>` (phase `<current_phase>` of
@@ -78,7 +78,7 @@ If the workspace is a git repository, first capture the current branch (this is 
 PARENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git checkout -b agentic-sdlc/<program-id>/phase-01
 ```
-Record `PARENT_BRANCH` — it goes into `state.json` (see Step 6). If the branch already exists or git is unavailable, warn the user but continue.
+Record `PARENT_BRANCH` — it goes into `program.json` (Step 6) and each phase `state.json` (Step 8). If the branch already exists or git is unavailable, warn the user but continue.
 
 ### Step 5 — Ensure .gitignore covers generated artifacts
 Check if `.gitignore` exists at the workspace root.
@@ -135,7 +135,7 @@ Write `runs/<program-id>/program.json`:
     "backend_test": "<backend_test>",
     "frontend": "<frontend_src>"
   },
-  "phase_plan": { "status": "pending", "phase_count": 0 },
+  "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
   "current_phase": 0,
   "phases": []
 }
@@ -166,8 +166,9 @@ b. **Commit — Phase Planner draft/revision:**
 c. Invoke `phase-planner-validator`. Pass: program-id, paths to original-input.md
    and phase-plan.md.
 
-d. Record the validation outcome in `program.json` `phase_plan.status`
-   (`in_progress` while looping).
+d. Keep `program.json` `phase_plan.status = "in_progress"` while the loop runs. Do
+   NOT store the validator's pass/fail in `phase_plan.status` (that field tracks plan
+   lifecycle: pending → in_progress → frozen → escalated).
 
 e. **Commit — Phase Planner validation outcome:**
    ```bash
@@ -179,13 +180,15 @@ e. **Commit — Phase Planner validation outcome:**
    ```
 
 f. If `"status": "fail"`:
-   - Increment the iteration counter.
-   - If iterations < 5: re-invoke `phase-planner` with the validator's report as
-     revision notes. Repeat from (a).
-   - If iterations = 5: say to the user:
+   - Increment `program.json` `phase_plan.iterations`.
+   - If `phase_plan.iterations` < 5: re-invoke `phase-planner` with the validator's
+     report as revision notes. Repeat from (a).
+   - If `phase_plan.iterations` = 5: set `program.json` `phase_plan.status =
+     "escalated"` and say to the user:
      > "The Phase Planner failed validation 5 times. Here is the report. Provide
      > guidance and I will try again, or use /agentic-sdlc:cancel-run to cancel."
-     Wait for guidance.
+     Wait for guidance. If guidance is provided, re-invoke `phase-planner` with it
+     (the counter does not reset). If the user cancels, stop.
 
 g. If `"status": "pass"`: proceed to Step 8.
 
@@ -223,9 +226,9 @@ Wait for response:
      git commit -m "docs(<program-id>): phase plan frozen — Phase 1 started"
      ```
   6. Proceed to Step 9 (BA loop).
-- **Any other response**: treat as revision notes. Re-invoke `phase-planner` with
-  those notes. Repeat from Step 7. (User revision counts toward the 5-iteration
-  limit.)
+- **Any other response**: treat as revision notes. Increment `program.json`
+  `phase_plan.iterations`, then re-invoke `phase-planner` with those notes. Repeat
+  from Step 7. (User revision counts toward the 5-iteration limit.)
 
 ### Phase 1 state.json schema
 ```json
