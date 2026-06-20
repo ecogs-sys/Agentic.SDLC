@@ -156,8 +156,8 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 
 ```
 /start-run          → Phase Planner → Validator (loop) → [user review phase plan]
-                    → freeze plan → create Phase 1 run → BA → … (below)
-/start-run          → detect src paths → git branch agentic-sdlc/<run-id>
+                    → freeze plan → create Phase 1 run → detect src paths
+                    → git branch agentic-sdlc/<program-id>/phase-01
                     → BA → BA Validator (loop) → [user review req spec]
 /advance-stage      → Architect → Architect Validator (loop) → [user review tech spec]
 /advance-stage      → Tech Lead → Tech Lead Validator (loop) → [user review stories]
@@ -197,7 +197,7 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 │           ├── raw-input.md            ← this phase's scope
 │           ├── req-spec.md             ← BA output
 │           ├── tech-spec.md            ← Architect output
-│           └── stories/                ← Tech Lead output
+│           └── stories/                ← Tech Lead output (index.md + STORY-N.md)
 │
 ├── src/backend/                        ← generated .NET source (default)
 │   ├── AppName.sln

@@ -2,7 +2,7 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
-## 0.7.0 — 2026-06-20
+## [0.7.0] - 2026-06-20
 
 ### Added
 - **Phase planning.** A new pre-BA Phase Planner agent (+ validator) splits a large
