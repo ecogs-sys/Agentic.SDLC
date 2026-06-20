@@ -15,13 +15,13 @@ Read state.json and display a clear status summary.
    programs found. Use /agentic-sdlc:start-run to begin."
 2. Read program.json: `phase_plan`, `current_phase`, `phase_count`
    (`phase_plan.phase_count`), `phases`, `src_paths`.
-3. The active phase is the `phases[]` entry at `current_phase`; its run dir is
+3. The active phase is the `phases[]` entry whose `phase` field equals `current_phase`; its run dir is
    `runs/<program-id>/<phase-folder>/` and its state.json drives the per-stage
    detail below.
 4. For each artifact (req-spec.md, tech-spec.md, stories/index.md) **under the
    active phase dir**, check existence and read its `Version:` line. If the file
    exists but has no `Version:` line, report version as `?`.
-5. Check existence of: `<backend_src>/` (from state.src_paths.backend), `<backend_test>/` (from state.src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (from state.src_paths.frontend), `docker-compose.yml` at workspace root.
+5. Check existence of: `<backend_src>/` (from src_paths.backend), `<backend_test>/` (from src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (from src_paths.frontend), `docker-compose.yml` at workspace root.
 6. Display:
 
 ```
@@ -41,9 +41,8 @@ Read state.json and display a clear status summary.
   PHASE LADDER
   ─────────────────────────────────────────
   <for each entry in program.json phases:>
-  Phase 1 [phase-01] <title>   [pending | in_progress | complete]
-  Phase 2 [phase-02] <title>   [pending | in_progress | complete]
-  ◀ active: Phase <current_phase>
+  Phase 1 [phase-01] <title>   [pending | in_progress | complete | escalated | cancelled]
+  Phase 2 [phase-02] <title>   [in_progress]  ◀ active
 
   PLANNING PHASE
   ─────────────────────────────────────────
