@@ -9,6 +9,7 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 | Stage | Agent | Validator |
 |---|---|---|
 | Phase planning | Phase Planner | Phase Planner Validator |
+| Codebase survey (brownfield) | Code Surveyor | Code Surveyor Validator |
 | Requirements | Business Analyst | BA Validator |
 | Architecture | Architect | Architect Validator |
 | Story breakdown | Tech Lead | Tech Lead Validator |
@@ -131,6 +132,49 @@ flowchart TD
 4. **Single-language tracks.** .NET and React develop in parallel (logically).
 5. **Runnable definition of done.** Complete only when `docker compose up` produces a working app.
 
+## Brownfield mode
+
+When `/start-run` detects an existing codebase (a `.csproj`/`.sln` or `package.json`
+in the source paths), it switches from the greenfield program/phase flow to a
+right-sized **brownfield change run** (`runs/change-YYYY-MM-DD-NNN/`, branch
+`agentic-sdlc/change-YYYY-MM-DD-NNN`). A **Code Surveyor** agent first writes a shared
+`codebase-context.md` (stack, conventions, architecture, impact map, test baseline,
+infra assessment) and proposes a **tier** at a triage gate. The tier picks a
+right-sized pipeline:
+
+| Tier | Stages | Gates |
+|---|---|---|
+| **bug-fix** | survey(shallow) → development (TDD; a failing test reproduces the bug first) → devops? | 1 (triage) |
+| **small-change** | survey(med) → change-spec (BA-lite) → stories → development → devops? | 3 (triage, change-spec, stories) |
+| **new-feature** | survey(deep) → BA → Architect → stories → development → devops? | 4 (triage, req, tech, stories) |
+
+DevOps runs only when the change needs infra changes (new service, env var, port,
+dependency). The brownfield done-gate keeps the repo's **full existing test suite**
+green — no new failures versus the surveyor's baseline — plus new tests covering the
+change. Pre-existing failures are surfaced, never hidden.
+
+A **new-feature** that spans several features can be **split** at the triage gate
+into a brownfield *program*: it runs the Phase Planner loop and ships one PR per
+phase via `/agentic-sdlc:next-phase`, with every phase brownfield-aware (reads
+`codebase-context.md`, works the delta, conditional DevOps).
+
+```mermaid
+flowchart TD
+    S(["🚀 /start-run — detects existing code"]) --> SV["🤖 Code Surveyor (shallow)<br/>writes codebase-context.md"]
+    SV --> SVV["🔍 Surveyor Validator"]
+    SVV -- "loop" --> SV
+    SVV --> TG{{"👤 Triage gate<br/>confirm tier"}}
+    TG -- "bug_fix" --> D1["Development<br/>(synthesized story)"]
+    TG -- "small_change" --> D2["Change-spec → Stories → Development"]
+    TG -- "new_feature" --> D3["Deep survey → BA → Architect → Stories → Development"]
+    D1 --> IC{"infra change?"}
+    D2 --> IC
+    D3 --> IC
+    IC -- "yes" --> DO["DevOps<br/>(update existing infra)"]
+    IC -- "no" --> PR(["🎉 Open PR → parent branch"])
+    DO --> PR
+```
+
 ## Install
 
 ```
@@ -165,6 +209,13 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 /advance-stage      → .NET stories (Engineer → Reviewer → Test Engineer → Test Reviewer → git commit)
                     → React stories (Engineer → Reviewer → Test Engineer → Test Reviewer → git commit)
 /advance-stage      → DevOps Engineer → DevOps Reviewer → git commit → open PR
+
+# Brownfield (existing code detected at /start-run):
+/start-run  → Code Surveyor (shallow) → [triage gate · confirm tier]
+            → bug_fix      → development → [devops if infra change] → PR
+            → small_change → change-spec → stories → development → [devops?] → PR
+            → new_feature  → Surveyor (deep) → BA → Architect → stories
+                           → development → [devops?] → PR
 ```
 
 ## Spec freeze rule
@@ -218,6 +269,8 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 Source paths are detected from your existing repo layout at `/start-run` time and stored in `state.json`. If you already have a `backend/` and `frontend/` at the root, or a different `src/` layout, the plugin uses those paths instead.
 
 At the end of each phase, open a PR from `agentic-sdlc/<run-id>` → your default branch (the branch you started the run from, recorded as `parent_branch`) to ship the generated code through your normal review process.
+
+**Brownfield runs** use a flat `runs/change-YYYY-MM-DD-NNN/` directory (not nested under a program) containing `state.json`, `raw-input.md`, and `codebase-context.md` (written by the Code Surveyor). Depending on tier, this directory may also contain `change-spec.md` (small-change tier) or `req-spec.md`, `tech-spec.md`, and `stories/` (new-feature tier). Generated code changes go directly into your existing source tree on branch `agentic-sdlc/change-YYYY-MM-DD-NNN`.
 
 ## Other commands
 

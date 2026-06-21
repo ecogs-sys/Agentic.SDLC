@@ -1,5 +1,5 @@
-<svg width="100%" viewBox="0 0 706.94 2000" role="img" xmlns="http://www.w3.org/2000/svg" style="">
-<title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Agentic SDLC with phase planning and DevOps</title>
+<svg width="100%" viewBox="0 0 706.94 2480" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+<title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Agentic SDLC with phase planning, brownfield mode, and DevOps</title>
 <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">A Phase Planner and validator first split a large requirement into independently shippable phases; Lifecycle showing planning phase with paired creator and validator agents above a spec freeze line, then parallel .NET and React tracks for development and testing, merging into a DevOps Engineer and Reviewer loop that produces a runnable application. Cross-track bug back-edges route failures from the DevOps phase to the relevant track's engineer. At the technical-spec review, the user can also route a requirements change back to the Business Analyst, re-running the full planning chain.</desc>
 <defs>
 <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
@@ -265,6 +265,79 @@
 <rect x="220" y="1762" width="240" height="56" rx="8" stroke-width="0.5" style="fill:rgb(234, 243, 222);stroke:rgb(59, 109, 17);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 <text x="340" y="1784" text-anchor="middle" dominant-baseline="central" style="fill:rgb(39, 80, 10);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central">Runnable application</text>
 <text x="340" y="1802" text-anchor="middle" dominant-baseline="central" style="fill:rgb(59, 109, 17);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Builds, boots, tests pass</text>
+</g>
+
+<line x1="20" y1="1844" x2="686" y2="1844" stroke="rgb(180,178,172)" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="60" y="1864" font-weight="500" fill="#3C3489" font-family="Anthropic Sans, sans-serif" font-size="12">Brownfield mode — existing codebase (alternative entry at /start-run)</text>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="240" y="1878" width="200" height="48" rx="8" fill="rgb(241,239,232)" stroke="rgb(95,94,90)" stroke-width="0.5"/>
+<text x="340" y="1898" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(68,68,65)">/start-run</text>
+<text x="340" y="1914" text-anchor="middle" font-size="12" fill="rgb(95,94,90)">Detects existing code</text>
+</g>
+
+<line x1="340" y1="1926" x2="340" y2="1948" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="130" y="1950" width="180" height="56" rx="8" fill="rgb(238,237,254)" stroke="rgb(83,74,183)" stroke-width="0.5"/>
+<text x="220" y="1972" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(60,52,137)">Code Surveyor</text>
+<text x="220" y="1990" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">Writes codebase-context</text>
+</g>
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="370" y="1950" width="180" height="56" rx="8" fill="rgb(238,237,254)" stroke="rgb(83,74,183)" stroke-width="0.5"/>
+<text x="460" y="1972" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(60,52,137)">Surveyor Validator</text>
+<text x="460" y="1990" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">Sanity-checks survey</text>
+</g>
+<line x1="310" y1="1978" x2="370" y2="1978" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<path d="M 460 2006 Q 460 2032 340 2032 Q 220 2032 220 2006" fill="none" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<text x="340" y="2050" text-anchor="middle" font-family="Anthropic Sans, sans-serif" font-size="12" fill="rgb(61,61,58)">Loop until tier is clear</text>
+
+<line x1="340" y1="2058" x2="340" y2="2086" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="245" y="2088" width="190" height="44" rx="8" fill="rgb(250,238,218)" stroke="rgb(133,79,11)" stroke-width="0.5"/>
+<text x="340" y="2114" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(99,56,6)">Triage gate — confirm tier</text>
+</g>
+
+<line x1="340" y1="2132" x2="129" y2="2156" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<line x1="340" y1="2132" x2="340" y2="2156" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<line x1="340" y1="2132" x2="551" y2="2156" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="37" y="2158" width="180" height="68" rx="8" fill="rgb(238,237,254)" stroke="rgb(83,74,183)" stroke-width="0.5"/>
+<text x="127" y="2180" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(60,52,137)">bug-fix</text>
+<text x="127" y="2198" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">survey → development</text>
+<text x="127" y="2214" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">1 gate</text>
+</g>
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="250" y="2158" width="180" height="68" rx="8" fill="rgb(238,237,254)" stroke="rgb(83,74,183)" stroke-width="0.5"/>
+<text x="340" y="2180" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(60,52,137)">small-change</text>
+<text x="340" y="2198" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">change-spec → stories → dev</text>
+<text x="340" y="2214" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">3 gates</text>
+</g>
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="463" y="2158" width="180" height="68" rx="8" fill="rgb(238,237,254)" stroke="rgb(83,74,183)" stroke-width="0.5"/>
+<text x="553" y="2180" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(60,52,137)">new-feature</text>
+<text x="553" y="2198" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">deep survey → BA → Arch</text>
+<text x="553" y="2214" text-anchor="middle" font-size="12" fill="rgb(83,74,183)">→ stories → dev · 4 gates</text>
+</g>
+
+<line x1="127" y1="2226" x2="318" y2="2268" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<line x1="340" y1="2226" x2="340" y2="2268" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+<line x1="553" y1="2226" x2="362" y2="2268" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="220" y="2270" width="240" height="56" rx="8" fill="rgb(250,238,218)" stroke="rgb(133,79,11)" stroke-width="0.5"/>
+<text x="340" y="2292" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(99,56,6)">Conditional DevOps</text>
+<text x="340" y="2310" text-anchor="middle" font-size="12" fill="rgb(133,79,11)">Only if infra changes</text>
+</g>
+
+<line x1="340" y1="2326" x2="340" y2="2352" marker-end="url(#arrow)" stroke="rgb(115,114,108)" stroke-width="1.5"/>
+
+<g font-family="Anthropic Sans, sans-serif">
+<rect x="225" y="2354" width="230" height="56" rx="8" fill="rgb(234,243,222)" stroke="rgb(59,109,17)" stroke-width="0.5"/>
+<text x="340" y="2376" text-anchor="middle" font-size="14" font-weight="500" fill="rgb(39,80,10)">Open PR → parent branch</text>
+<text x="340" y="2394" text-anchor="middle" font-size="12" fill="rgb(59,109,17)">Existing suite stays green</text>
 </g>
 
 </svg>

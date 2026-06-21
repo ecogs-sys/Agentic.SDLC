@@ -87,6 +87,9 @@ Version: <n>
 <Concrete ports, environment variables, network names, service dependencies>
 <Example: Backend on port 5000, Frontend on port 3000, PostgreSQL on port 5432>
 <All environment variables required: DATABASE_URL, CORS_ORIGIN, etc.>
+
+**Infra change:** none | required — <what changes: new service / port / env var / dependency>
+<brownfield: whether docker-compose.yml, .env.example, Dockerfile(s), or nginx.conf must change vs the existing setup. greenfield: always `required` (the whole stack is new).>
 ```
 
 ## Quality checklist (self-check before finishing)
@@ -95,6 +98,7 @@ Version: <n>
 - [ ] Every backend TECH declares a valid `Layer` (Domain | Application | Infrastructure | Api) and no `Depends on` crosses a layer boundary outward
 - [ ] **TECH-HEALTH (`/health` endpoint) is present** (Layer: Api)
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
+- [ ] Deployment topology includes the `**Infra change:**` line (`none`, or `required — <what>`)
 - [ ] Stack section matches the fixed stack above
 - [ ] Status is "draft"
 - [ ] CSS framework is specified in the Stack section

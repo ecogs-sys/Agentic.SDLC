@@ -85,3 +85,13 @@ Routing decisions:
 - `BACK_TO_DOTNET_ENGINEER <story-id>`: .NET runtime bug traceable to a story
 - `BACK_TO_REACT_ENGINEER <story-id>`: React runtime bug traceable to a story
 - `HUMAN_REVIEW_REQUIRED`: API contract mismatch with no clear correct side — do not auto-route
+
+## Brownfield mode
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode`
+skill. Read ports/topology from `runs/<run-id>/codebase-context.md` (and
+`change-spec.md`/`tech-spec.md` if present) rather than assuming a `tech-spec.md`
+exists. The app already existed, so a regression in a previously-passing area is a
+real failure — route it `BACK_TO_*_ENGINEER`. Compare test results to the surveyor's
+`## Test baseline`: only **new** failures block; pre-existing baseline failures are
+reported, not auto-fixed.

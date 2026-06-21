@@ -59,3 +59,11 @@ A structured review report printed to your response.
 ```
 
 PASS requires: build passes AND no CRITICAL issues.
+
+## Brownfield mode
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.

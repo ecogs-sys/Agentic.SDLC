@@ -195,5 +195,17 @@ Implement exactly what the assigned story asks for in `<frontend_src>`. Nothing 
 - If the dotnet API isn't ready yet: stub with a mock return value. Leave comment: `// TODO: remove mock when STORY-XXX is complete`. Implement the component as if the API were live.
 - If `npm run build` fails after 3 fix attempts: report the error to the orchestrator.
 
+## Brownfield mode
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.
+
+**Engineers:** in brownfield mode the source tree already exists — never scaffold a
+new solution/project. Edit existing files in place, follow the existing layer/folder
+placement, and only add new files where the change genuinely needs them.
+
 ## Spec-freeze guardrail
 You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.

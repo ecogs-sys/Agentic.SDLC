@@ -2,6 +2,29 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.8.0] - 2026-06-21
+
+### Added
+- **Brownfield mode.** `/start-run` now auto-detects an existing codebase and runs a
+  right-sized, tiered pipeline (bug-fix / small-change / new-feature) as a standalone
+  `change-*` run, alongside the unchanged greenfield program/phase flow.
+- **Code Surveyor** agent (+ validator) produces a shared `codebase-context.md`
+  (stack, conventions, architecture, impact map, test baseline, infra assessment) and
+  proposes a tier at a new triage gate; depth scales by tier.
+- New skills: `brownfield-mode`, `write-codebase-context`, `write-change-spec`.
+- **Multi-feature brownfield programs.** A new-feature that is really several
+  features can be **split** at the triage gate into a brownfield *program* that
+  reuses the Phase Planner loop and ships one PR per phase via `/next-phase`; every
+  phase stays brownfield-aware (reads `codebase-context.md`, works the delta).
+
+### Changed
+- BA, Architect, Tech Lead, engineers, reviewers, and test reviewers are now
+  brownfield-aware (delta-only work; reuse existing conventions).
+- DevOps runs only when the change needs infra changes; brownfield done-gate keeps
+  the full existing suite green (no new failures vs baseline) plus new tests.
+- `advance-stage`, `cancel-run`, `show-run-status`, and `next-phase` recognize
+  `change-*` runs.
+
 ## [0.7.1] - 2026-06-21
 
 ### Changed

@@ -14,6 +14,13 @@ drive it up to the requirement-spec review gate.
 ## Process
 
 ### Step 1 — Find the active program and current phase
+If the active run is a brownfield change run (`runs/change-*/state.json` with
+`current_stage != "complete"`), say:
+> "`/agentic-sdlc:next-phase` is for greenfield programs. Brownfield changes aren't
+> phased — continue this change with `/agentic-sdlc:advance-stage`, or start a new
+> change with `/agentic-sdlc:start-run`."
+and stop.
+
 Scan `runs/` for the most recent program that is not fully delivered
 (`runs/<program-id>/program.json`). If none, say:
 "No active program. Use /agentic-sdlc:start-run to begin." and stop.
@@ -75,8 +82,8 @@ Say:
      git commit -m "docs(<program-id>): phase plan replan (after phase <current_phase>)"
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
-     start-run Step 7. On pass, display the revised remaining phases and ask the
-     user to **approve**. On **approve**, update `phase_count`
+     start-run Step 7. On pass, state the path **`runs/<program-id>/phase-plan.md`**
+     and display the revised remaining phases, then ask the user to **approve**. On **approve**, update `phase_count`
      (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
      continue to Step 6. On **any other response**, treat it as revision notes and
      re-invoke `phase-planner` (repeat the replan loop).
@@ -106,6 +113,10 @@ Say:
    Phase 1 state.json in start-run, with `run_id = "<program-id>/phase-0N"`,
    `phase_number = N`, `branch = "agentic-sdlc/<program-id>/phase-0N"`,
    `current_stage = "ba"`, `spec_frozen = false`, and the program's `src_paths`.
+   **If `program.json` `mode == "brownfield"`,** also copy `mode: "brownfield"`,
+   `codebase_context_path`, `infra_change_required`, and `test_baseline` from
+   `program.json` into the phase `state.json` so the phase runs brownfield-aware (its
+   agents read `codebase-context.md` and work the delta against the existing system).
 4. Set `program.json` `current_phase = N` and the Phase N `phases[]` entry
    `status = "in_progress"`.
 5. **Commit — Phase N started:**

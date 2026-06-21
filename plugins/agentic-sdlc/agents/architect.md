@@ -35,7 +35,7 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 3. List all REQ-IDs you must implement.
 4. Design components: decide backend (dotnet) vs frontend (react) split for each REQ. For every backend TECH, assign a **Clean Architecture layer** (Domain | Application | Infrastructure | Api) and ensure its `Depends on` never points outward (see write-tech-spec skill, "Backend architecture: Clean Architecture"). Keep EF Core / `DbContext` concerns in the Infrastructure layer; expose them to other layers only through Application-layer interfaces.
 5. Follow the write-tech-spec skill format.
-6. Write the deployment topology section with concrete ports, env vars, service names.
+6. Write the deployment topology section with concrete ports, env vars, service names. Include the `**Infra change:**` line: for **greenfield**, set it to `required` (the whole stack is new); for **brownfield**, assess whether the change needs `docker-compose.yml`/`.env.example`/Dockerfile/`nginx.conf` changes vs the existing setup — `none` if it fits the current infra, or `required — <what>` (new service, port, env var, or dependency). The orchestrator reads this line to decide whether the DevOps stage runs.
 7. Write to `runs/<run-id>/tech-spec.md`.
 8. Self-check: confirm every REQ-ID appears in at least one TECH's Implements list.
 9. If revising: increment Version; do not change existing TECH IDs.
@@ -54,6 +54,14 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 - If a REQ is underspecified: make a reasonable assumption and note it in the TECH description.
 - If two REQs conflict technically: implement both defensively and flag the conflict in a TECH note.
 - Never halt — always produce a complete tech-spec.md.
+
+## Brownfield mode
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.
 
 ## Spec-freeze guardrail
 After Tech Lead approval, `req-spec.md` and `tech-spec.md` are frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit either file.
