@@ -14,6 +14,13 @@ drive it up to the requirement-spec review gate.
 ## Process
 
 ### Step 1 — Find the active program and current phase
+If the active run is a brownfield change run (`runs/change-*/state.json` with
+`current_stage != "complete"`), say:
+> "`/agentic-sdlc:next-phase` is for greenfield programs. Brownfield changes aren't
+> phased — continue this change with `/agentic-sdlc:advance-stage`, or start a new
+> change with `/agentic-sdlc:start-run`."
+and stop.
+
 Scan `runs/` for the most recent program that is not fully delivered
 (`runs/<program-id>/program.json`). If none, say:
 "No active program. Use /agentic-sdlc:start-run to begin." and stop.
