@@ -10,6 +10,15 @@ You are the Agentic SDLC orchestrator.
 Read state.json, determine next action, invoke agent(s), update state.
 
 ## Finding the active run
+
+### Brownfield change runs
+Before the program scan, check for an active brownfield run: any
+`runs/change-*/state.json` with `mode == "brownfield"` and `current_stage !=
+"complete"`. If one exists, it is the active run — skip the program/phase discovery
+and use the **Brownfield driver** section below instead of the greenfield stages.
+(Concurrency is already prevented by `/start-run`, so at most one active run of
+either kind exists.)
+
 1. Scan `runs/` for the most recent `runs/<program-id>/program.json` (highest
    sequence) whose program is not fully delivered. A program is **fully delivered**
    when `phase_plan.status == "frozen"` AND `current_phase == phase_plan.phase_count`
@@ -72,7 +81,80 @@ Before invoking any agent: if `spec_frozen = true` and the current stage would m
 
 ---
 
+## Brownfield driver (mode == "brownfield")
+
+Drive the run by its `pipeline` array instead of the fixed greenfield sequence.
+
+1. Read `mode`, `tier`, `pipeline`, `current_stage`, `infra_change_required`,
+   `src_paths`, and `test_baseline` from state.json.
+2. Run the handler for `current_stage` (table below). Always pass `mode =
+   brownfield`, the run-id, and `runs/<run-id>/codebase-context.md` to every agent
+   so they follow the brownfield-mode skill.
+3. On a stage's completion, set `current_stage` to the **next** entry in `pipeline`;
+   commit state. If the next entry is a `user_review_*` gate, run that gate (pause
+   for the user) before continuing. If `current_stage` was the last entry, the run
+   is complete (handler `devops` finalizes — see below).
+4. Reuse the existing greenfield loop bodies for shared stages — same agents,
+   commit discipline, 5-iteration caps, and escalation. The only differences are
+   listed per handler.
+
+| pipeline stage | handler |
+|---|---|
+| `change_spec` / `change_spec_validation` / `user_review_change_spec` | NEW — Brownfield change-spec handler (below) |
+| `ba` / `ba_validation` / `user_review_req` | reuse Stage: ba (brownfield notes below) |
+| `architect` / `architect_validation` / `user_review_tech` | reuse Stage: architect |
+| `tech_lead` / `tech_lead_validation` / `user_review_stories` | reuse Stage: tech_lead |
+| `development` | reuse Stage: development (brownfield notes below) |
+| `devops` | reuse Stage: devops, gated by `infra_change_required` (below) |
+
+### Brownfield change-spec handler (small_change tier)
+Identical shape to the BA loop, but the artifact is `change-spec.md`:
+a. Invoke `ba`. Pass: run-id, `runs/<run-id>/raw-input.md`,
+   `runs/<run-id>/codebase-context.md`, `mode = brownfield`, and the instruction to
+   follow the **write-change-spec** skill and write `runs/<run-id>/change-spec.md`.
+b. Commit `runs/<run-id>/change-spec.md` + state (`docs(<run-id>): change-spec
+   draft/revision (iter <n>)`).
+c. Invoke `ba-validator`. Pass: run-id, raw-input.md, change-spec.md,
+   codebase-context.md. (Validator compares request+impact-map → change-spec per the
+   validate-traceability schema.) Update `stages.change_spec_validation`; commit.
+d. fail/pass loop and 5-cap exactly as the BA loop.
+e. **user_review_change_spec gate:** display `change-spec.md`; "approve" → mark
+   complete, advance; other → revision notes, re-run the change-spec loop.
+
+### Brownfield notes for reused stages
+- **ba / architect / tech_lead:** pass `codebase-context.md` and `mode =
+  brownfield`. The BA writes a normal `req-spec.md` (new_feature tier only). All
+  follow the brownfield-mode skill (delta only).
+- **tech_lead user_review_stories gate (small_change + new_feature):** on approve,
+  set `spec_frozen = true` and populate `state.stories` exactly as greenfield.
+- **development:** identical to greenfield Stage: development, with these
+  differences: stories already exist (bug_fix synthesized them at the triage gate);
+  engineers run in brownfield mode (edit in place, no scaffold); the **test reviewer
+  runs the full existing suite and compares to `test_baseline`** — only NEW failures
+  fail the gate; pre-existing failures are reported, not fixed.
+- **devops (conditional):** if `infra_change_required == false`, set
+  `stages.devops.status = "skipped"` and go straight to completion. If `true`, run
+  the existing DevOps loop but instruct the DevOps Engineer to **modify existing**
+  infra files (compose/.env/Dockerfile) rather than regenerate them, following
+  brownfield-mode.
+
+### Brownfield completion
+When the last pipeline stage finishes: set `current_stage = "complete"`, commit
+`chore(<run-id>): change run complete`. Announce:
+> "Brownfield change `<run-id>` (tier <tier>) is complete!
+>
+> Branch `agentic-sdlc/<run-id>` is ready for review. Open a PR from
+> `agentic-sdlc/<run-id>` → `<parent_branch>`. The full existing test suite is green
+> (no new failures vs the baseline) and new tests cover the change."
+If there were pre-existing baseline failures, list them so the user knows they
+predate this change.
+
+---
+
 ## Stage: ba
+
+> Greenfield only. Brownfield runs are driven by the **Brownfield driver** section
+> above and never fall through to these fixed greenfield stages.
 
 This stage runs only when the run was sent **back** to the Business Analyst — either by a "Requirements change" route from the tech-spec review gate (see Stage: architect) or because `current_stage = "ba"` in state.json. (The *first* BA pass of a run is driven by `/agentic-sdlc:start-run`, not here.)
 
