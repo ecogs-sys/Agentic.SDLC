@@ -270,7 +270,54 @@ Source paths are detected from your existing repo layout at `/start-run` time an
 
 At the end of each phase, open a PR from `agentic-sdlc/<run-id>` → your default branch (the branch you started the run from, recorded as `parent_branch`) to ship the generated code through your normal review process.
 
-**Brownfield runs** use a flat `runs/change-YYYY-MM-DD-NNN/` directory (not nested under a program) containing `state.json`, `raw-input.md`, and `codebase-context.md` (written by the Code Surveyor). Depending on tier, this directory may also contain `change-spec.md` (small-change tier) or `req-spec.md`, `tech-spec.md`, and `stories/` (new-feature tier). Generated code changes go directly into your existing source tree on branch `agentic-sdlc/change-YYYY-MM-DD-NNN`.
+### Brownfield change run (existing repo → bug-fix / small-change / single new-feature)
+
+A standalone run — no program/phase nesting. Code is edited in place in your existing
+source tree; infra files change only when the Architect's `Infra change` line is `required`.
+
+```
+<your-workspace>/
+├── runs/
+│   └── change-YYYY-MM-DD-001/           ← one change run
+│       ├── state.json                   ← mode:brownfield · tier · pipeline · test_baseline · infra_change_required
+│       ├── raw-input.md                 ← your change request, verbatim
+│       ├── codebase-context.md          ← Code Surveyor (stack, conventions, impact map, baseline)
+│       ├── change-spec.md               ← small-change tier only (BA-lite)
+│       ├── req-spec.md  tech-spec.md    ← new-feature tier only
+│       └── stories/                     ← index.md + STORY-N.md (bug-fix: one synthesized story)
+│
+└── (your existing src tree — edited in place)
+```
+
+Which artifacts appear depends on tier:
+
+| Tier | codebase-context.md | change-spec.md | req-spec / tech-spec | stories/ |
+|---|---|---|---|---|
+| bug-fix | shallow | — | — | synthesized |
+| small-change | shallow | ✅ | — | ✅ |
+| new-feature (single) | deep | — | ✅ | ✅ |
+
+Branch `agentic-sdlc/change-YYYY-MM-DD-001` → one PR.
+
+### Brownfield program (existing repo → new-feature split into several features)
+
+Reuses the program/phase machinery, brownfield-flagged. The Code Surveyor runs once at
+the program level (shared `codebase-context.md`); each phase ships its own branch + PR
+via `/agentic-sdlc:next-phase`.
+
+```
+<your-workspace>/
+└── runs/
+    └── program-YYYY-MM-DD-002/
+        ├── program.json                 ← mode:brownfield · codebase_context_path · infra_change_required · test_baseline
+        ├── original-input.md            ← the change request
+        ├── codebase-context.md          ← program-level survey (shared by all phases)
+        ├── phase-plan.md                ← Phase Planner (features added to the existing system)
+        ├── phase-01/                    ← mode:brownfield (no survey/triage stage)
+        │   ├── state.json  raw-input.md  req-spec.md  tech-spec.md
+        │   └── stories/
+        └── phase-02/ …                  ← created by /next-phase, its own branch + PR
+```
 
 ## Other commands
 
