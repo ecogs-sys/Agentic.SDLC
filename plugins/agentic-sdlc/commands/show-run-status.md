@@ -11,8 +11,10 @@ Read state.json and display a clear status summary.
 
 ## Process
 
-1. Find the most recent `runs/<program-id>/program.json`. If none: say "No
-   programs found. Use /agentic-sdlc:start-run to begin."
+1. First apply step 1b below (brownfield check). If there is no active brownfield
+   change run, find the most recent `runs/<program-id>/program.json`. If neither a
+   brownfield run nor a program exists: say "No programs found. Use
+   /agentic-sdlc:start-run to begin."
 1b. Before the program scan, check for a brownfield run: the most recent
     `runs/change-*/state.json` with `mode == "brownfield"`. If one exists and it is
     not superseded by a newer active program, render the **Brownfield status**

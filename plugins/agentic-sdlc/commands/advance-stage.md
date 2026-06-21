@@ -122,6 +122,21 @@ e. **user_review_change_spec gate:** display `change-spec.md`; "approve" → mar
    complete, advance; other → revision notes, re-run the change-spec loop.
 
 ### Brownfield notes for reused stages
+- **The driver owns transitions and completion.** The reused greenfield handlers
+  end with greenfield-specific tails — they update `runs/<program-id>/program.json`,
+  say "proceed to Stage: X", and emit the phase-completion announcement. In
+  brownfield mode IGNORE those tails: when a handler's work is done, return to this
+  driver, advance `current_stage` to the next `pipeline` entry, and at the end use
+  **Brownfield completion** below. Brownfield runs have no `program.json` — never
+  read or write it; `parent_branch` comes from `state.json`.
+- **Spec-input substitution.** Brownfield tiers may not produce a `tech-spec.md`.
+  Wherever a reused handler (tech_lead, development engineers, devops) expects
+  `runs/<run-id>/tech-spec.md`, substitute the spec the tier actually has:
+  - **new_feature** → `tech-spec.md` exists (Architect ran) — use it.
+  - **small_change** → use `runs/<run-id>/change-spec.md` + `codebase-context.md`
+    (no tech-spec.md is produced).
+  - **bug_fix** → use the synthesized story + `codebase-context.md` (no req/tech/
+    change spec).
 - **ba / architect / tech_lead:** pass `codebase-context.md` and `mode =
   brownfield`. The BA writes a normal `req-spec.md` (new_feature tier only). All
   follow the brownfield-mode skill (delta only).
@@ -132,11 +147,14 @@ e. **user_review_change_spec gate:** display `change-spec.md`; "approve" → mar
   engineers run in brownfield mode (edit in place, no scaffold); the **test reviewer
   runs the full existing suite and compares to `test_baseline`** — only NEW failures
   fail the gate; pre-existing failures are reported, not fixed.
-- **devops (conditional):** if `infra_change_required == false`, set
-  `stages.devops.status = "skipped"` and go straight to completion. If `true`, run
-  the existing DevOps loop but instruct the DevOps Engineer to **modify existing**
-  infra files (compose/.env/Dockerfile) rather than regenerate them, following
-  brownfield-mode.
+- **devops (conditional):** when `development` finishes, do NOT follow its greenfield
+  "proceed to Stage: devops" tail — return to the driver and advance to the `devops`
+  pipeline entry. There, if `infra_change_required == false`, set
+  `stages.devops.status = "skipped"` and go to **Brownfield completion**. If `true`,
+  run the existing DevOps loop but instruct the DevOps Engineer to **modify
+  existing** infra files (compose/.env/Dockerfile) rather than regenerate them,
+  following brownfield-mode; on the reviewer's `DONE`, do NOT perform the greenfield
+  `program.json`/phase update or announcement — go to **Brownfield completion**.
 
 ### Brownfield completion
 When the last pipeline stage finishes: set `current_stage = "complete"`, commit
