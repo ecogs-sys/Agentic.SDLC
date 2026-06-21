@@ -210,6 +210,16 @@ the `brownfield-mode` skill, gated on `mode == "brownfield"` in its context.
 - `plugins/agentic-sdlc/.claude-plugin/plugin.json` — version bump;
   `CHANGELOG.md` — matching entry (per project release rules).
 
+**Documentation — done as the final implementation step, after the pipeline works**
+- `docs/agentic-sdlc-pipeline.svg` — update the pipeline diagram to show the
+  brownfield branch (detection → triage gate → tier profiles → conditional
+  DevOps) alongside the existing greenfield flow.
+- `README.md` (root) — refresh prose and the embedded SVG reference for
+  brownfield support.
+- `plugins/agentic-sdlc/README.md` — update the stage/agent tables, the mermaid
+  workflow diagram, the "What it does" / pipeline-order sections, and add a
+  brownfield section covering tiers, the Surveyor, and detection.
+
 ## Open items resolved during brainstorming
 
 - **Surveyor validator:** included (creator+validator parity).
