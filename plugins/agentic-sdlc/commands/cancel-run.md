@@ -13,6 +13,24 @@ phase's artifacts and branch. Completed phases and the program itself survive.
 ## Process
 
 ### Step 1 — Find the active program and current phase
+
+#### Brownfield change run case
+First check for an active brownfield run: `runs/change-*/state.json` with
+`current_stage != "complete"`. If one exists, cancel IT (do not touch programs):
+- Read `parent_branch` and `branch` from its state.json.
+- Confirm:
+  > "This will cancel brownfield change `<run-id>` (tier `<tier>`, stage
+  > `<current_stage>`) and permanently delete `runs/<run-id>/` and branch
+  > `agentic-sdlc/<run-id>`. Any generated code on that branch is discarded. Type
+  > **'yes'** to confirm, or anything else to abort."
+- On "yes": run the same git cleanup as Step 3 with `<cancel-branch> =
+  agentic-sdlc/<run-id>` and `<parent_branch>` from state.json, then delete
+  `runs/<run-id>/` if still present. Say: "Brownfield change `<run-id>` cancelled.
+  Use /agentic-sdlc:start-run to begin again."
+- Then stop (skip the program logic below).
+
+If no active change run exists, continue with the program logic below.
+
 Scan `runs/` for the most recent program that is not fully delivered
 (`runs/<program-id>/program.json`). If none, say: "No active program to cancel."
 and stop.
