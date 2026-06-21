@@ -35,7 +35,7 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 3. List all REQ-IDs you must implement.
 4. Design components: decide backend (dotnet) vs frontend (react) split for each REQ. For every backend TECH, assign a **Clean Architecture layer** (Domain | Application | Infrastructure | Api) and ensure its `Depends on` never points outward (see write-tech-spec skill, "Backend architecture: Clean Architecture"). Keep EF Core / `DbContext` concerns in the Infrastructure layer; expose them to other layers only through Application-layer interfaces.
 5. Follow the write-tech-spec skill format.
-6. Write the deployment topology section with concrete ports, env vars, service names.
+6. Write the deployment topology section with concrete ports, env vars, service names. Include the `**Infra change:**` line: for **greenfield**, set it to `required` (the whole stack is new); for **brownfield**, assess whether the change needs `docker-compose.yml`/`.env.example`/Dockerfile/`nginx.conf` changes vs the existing setup — `none` if it fits the current infra, or `required — <what>` (new service, port, env var, or dependency). The orchestrator reads this line to decide whether the DevOps stage runs.
 7. Write to `runs/<run-id>/tech-spec.md`.
 8. Self-check: confirm every REQ-ID appears in at least one TECH's Implements list.
 9. If revising: increment Version; do not change existing TECH IDs.

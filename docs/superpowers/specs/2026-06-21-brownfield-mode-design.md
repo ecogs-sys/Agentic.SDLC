@@ -211,8 +211,11 @@ the `brownfield-mode` skill, gated on `mode == "brownfield"` in its context.
   done-gate = **no *new* failures** (pre-existing red is surfaced to the user,
   never hidden or auto-fixed) **+ new tests green**. Test reviewers run the
   **full existing suite** in brownfield (not just the change's tests).
-- **DevOps conditional.** The Surveyor (and the Architect, for new-feature) sets
-  `infra_change_required` with a rationale. The `devops` handler in
+- **DevOps conditional.** The Surveyor sets an initial `infra_change_required` with a
+  rationale. For new-feature, the Architect records a machine-readable
+  `**Infra change:**` line in `tech-spec.md`'s Deployment topology
+  (`none` | `required — <what>`); the orchestrator reads it after the Architect stage
+  and updates `infra_change_required`, overriding the survey's initial value. The `devops` handler in
   `advance-stage` runs the DevOps Engineer/Reviewer only when the flag is true;
   otherwise it marks devops skipped and completes the run.
 

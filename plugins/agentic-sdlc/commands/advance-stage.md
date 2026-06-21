@@ -61,11 +61,11 @@ only handles `change-*` runs). When the active phase's `state.json` has
   true`; otherwise set `stages.devops.status = "skipped"` and proceed to the normal
   program completion (the `program.json` phase-complete update + announcement happen
   as usual — it IS a program).
-- **A phase may raise `infra_change_required`.** It defaults from the program-level
-  survey, but if this phase's `tech-spec.md` introduces a new service, port, env var,
-  or dependency, set the phase's `state.infra_change_required = true` (after the
-  Architect stage) so this phase's devops stage runs even if the program default was
-  `false`.
+- **The phase's tech-spec sets `infra_change_required`.** After the Architect stage,
+  read the `**Infra change:**` line from the phase's `tech-spec.md` and set the
+  phase's `state.infra_change_required` (`required …` → `true`, `none` → `false`).
+  This overrides the program-level default, so a phase that introduces new infra runs
+  its devops stage even if the program default was `false`.
 
 ## Git commit discipline
 Commit after **every** step that produces or updates files. The pattern is always:
@@ -161,7 +161,10 @@ e. **user_review_change_spec gate:** display `change-spec.md`; "approve" → mar
     change spec).
 - **ba / architect / tech_lead:** pass `codebase-context.md` and `mode =
   brownfield`. The BA writes a normal `req-spec.md` (new_feature tier only). All
-  follow the brownfield-mode skill (delta only).
+  follow the brownfield-mode skill (delta only). After the **architect** stage
+  (new_feature tier), read the tech-spec's `**Infra change:**` line and set
+  `state.infra_change_required` accordingly — it overrides the surveyor's initial
+  assessment.
 - **tech_lead user_review_stories gate (small_change + new_feature):** on approve,
   set `spec_frozen = true` and populate `state.stories` exactly as greenfield.
 - **development:** identical to greenfield Stage: development, with these
