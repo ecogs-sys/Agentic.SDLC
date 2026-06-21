@@ -2,6 +2,13 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.8.1] - 2026-06-21
+
+### Changed
+- Docs: documented the brownfield **change-run** and **brownfield-program** folder
+  layouts in the plugin README ("Where artifacts live"), with a per-tier
+  artifact table.
+
 ## [0.8.0] - 2026-06-21
 
 ### Added
