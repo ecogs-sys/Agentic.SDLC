@@ -162,6 +162,11 @@ slow on Linux/CI, and full stack traces waste the agent's context budget.
   ```
   The single authoritative full-solution run with coverage belongs to the Test Reviewer's gate,
   not to iteration.
+- **At most one `dotnet test` in flight against a given project/DB.** Never launch a run while
+  another is still active — concurrent runs share the same build output, test database, and ports,
+  producing SQL deadlocks, `database is locked`, port-in-use, and net *slowdown* (more processes
+  fighting the same cores and disk), never a speedup. Run the suite once per change and let it
+  finish before starting another.
 - **Reuse binaries only when safe (`--no-build` / `--no-restore`).** After a successful build in
   the same invocation with nothing changed since, you may re-run tests with `dotnet test
   --no-build` to save time. Force a clean build (drop the flags) whenever a `.csproj`, project

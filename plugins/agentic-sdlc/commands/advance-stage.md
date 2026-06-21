@@ -49,6 +49,24 @@ Always include `runs/<run-id>/state.json` when state was updated. Commit message
 - `fix(STORY-XXX)` — bug fix in production code
 - `chore` — devops, config, tooling
 
+## Test execution discipline
+
+The suite is verified **once per change**, never re-run concurrently. Concurrent agents share one
+source tree, build output, test project, and backing store (DB, ports) — so two `dotnet test` /
+`npm test` runs at once cause SQL deadlocks, `database is locked`, port-in-use, and net *slowdown*,
+never a speedup. Enforce:
+
+- **Serialize the development stage.** Drive **one story at a time** through its full
+  engineer → reviewer → test-engineer → test-reviewer chain before starting the next story. **Waves
+  express dependency order, not permission to parallelize** — within a wave, process stories in
+  story-ID order, one at a time. Never invoke two development/test agents concurrently.
+- **One authoritative full-suite run per change**, owned by the **test-reviewer** (plus the single
+  end-of-run devops-reviewer pass). Engineers and reviewers build/compile only; the test-engineer
+  uses focused `--filter` / `npm test -- --run <path>` runs. No other agent runs the full suite.
+- **At most one suite run in flight.** An agent never launches a test run while another is still
+  active against the same project/DB. See the dotnet-conventions / react-conventions
+  "Build & test execution discipline" sections.
+
 ## Spec freeze check
 Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or any file under `runs/<run-id>/stories/` — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
 

@@ -2,6 +2,19 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.7.1] - 2026-06-21
+
+### Changed
+- **Test execution guardrails: serialize and run once per change.** Made the implicit
+  "one authoritative run" rule explicit and enforceable to stop concurrent `dotnet test` /
+  `npm test` storms (SQL deadlocks, `database is locked`, port-in-use, and net slowdown from
+  oversubscribed cores). Added a "Test execution discipline" section to `/advance-stage`
+  mandating strictly sequential story processing — waves express dependency order, not
+  permission to parallelize — with the test-reviewer (plus the single end-of-run
+  devops-reviewer pass) as the sole owner of the full-suite run. Added a one-suite-in-flight
+  concurrency clause to `dotnet-conventions`, and a new "Build & test execution discipline"
+  section to `react-conventions` mirroring it.
+
 ## [0.7.0] - 2026-06-20
 
 ### Added
