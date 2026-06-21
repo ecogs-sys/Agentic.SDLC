@@ -13,6 +13,10 @@ Read state.json and display a clear status summary.
 
 1. Find the most recent `runs/<program-id>/program.json`. If none: say "No
    programs found. Use /agentic-sdlc:start-run to begin."
+1b. Before the program scan, check for a brownfield run: the most recent
+    `runs/change-*/state.json` with `mode == "brownfield"`. If one exists and it is
+    not superseded by a newer active program, render the **Brownfield status**
+    layout below and stop.
 2. Read program.json: `phase_plan`, `current_phase`, `phase_count`
    (`phase_plan.phase_count`), `phases`, `src_paths`.
 3. If `phases` is empty OR `current_phase == 0`, the program is still in the Phase
@@ -86,3 +90,40 @@ Read state.json and display a clear status summary.
 ```
 
 Status legend: pending | in_progress | complete | escalated | cancelled
+
+## Brownfield status layout
+
+```
+═══════════════════════════════════════════
+  Agentic SDLC — Brownfield Change Status
+═══════════════════════════════════════════
+  Run ID:        <run-id>
+  Mode:          brownfield
+  Tier:          <tier>
+  Branch:        <branch>
+  Current stage: <current_stage>
+  Spec frozen:   yes | no
+  Infra change:  required | not required
+  Backend src:   <src_paths.backend>
+  Frontend src:  <src_paths.frontend>
+
+  PIPELINE  (from state.pipeline, in order)
+  ─────────────────────────────────────────
+  <for each stage in pipeline: "<stage>  [<stages[stage].status or '-'>]"; mark ◀ active at current_stage>
+
+  DEVELOPMENT  (if state.stories non-empty)
+  ─────────────────────────────────────────
+  <STORY-XXX [track] [status] per story>
+
+  ARTIFACTS
+  ─────────────────────────────────────────
+  runs/<run-id>/raw-input.md           exists | missing
+  runs/<run-id>/codebase-context.md    exists (v<n>) | missing
+  runs/<run-id>/change-spec.md         exists (v<n>) | n/a (tier)
+  runs/<run-id>/req-spec.md            exists (v<n>) | n/a (tier)
+  runs/<run-id>/tech-spec.md           exists (v<n>) | n/a (tier)
+  runs/<run-id>/stories/index.md       exists (v<n>) | n/a (tier)
+═══════════════════════════════════════════
+```
+
+Status legend: pending | in_progress | complete | skipped | escalated | cancelled
