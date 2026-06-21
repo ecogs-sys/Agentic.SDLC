@@ -433,7 +433,9 @@ Resolve the confirmed `tier`:
 Then set `state.tier`, set `state.pipeline` to the confirmed tier's profile, mark
 `survey`/`survey_validation`/`user_review_triage` complete, and initialize a
 `stages` entry (`status: "pending"`, `iterations: 0` where applicable) for every
-remaining pipeline stage. Set `current_stage` to the first remaining stage.
+remaining pipeline stage. Set `current_stage` to the first remaining stage. (If the
+user picks the new_feature **split** option below, this flat pipeline is discarded
+when the run is converted to a program — see Brownfield program flow.)
 
 **Tier profiles (the `pipeline` array):**
 ```text
@@ -458,7 +460,16 @@ Tier-specific finalization at the gate:
   map's files under an `Implements`/`Touches` note, and acceptance criteria derived
   from the request; set `track` and `wave: 1`. Populate `state.stories` accordingly.
 - **new_feature:** re-survey at depth = `deep` (one `code-surveyor` call, then
-  commit) so the architecture map is filled before the BA/Architect run.
+  commit) so the architecture map is filled. Then decide single vs. multi-feature:
+  > "This is a new feature. Is it **one** feature, or **several** features to add
+  > together? (If the survey flagged multiple distinct features, say so here.) Reply
+  > **single** for one combined change run (one PR), or **split** to plan it as
+  > ordered phases that each ship as their own PR."
+  - **single** (default) → continue with the flat change-run new_feature pipeline
+    below.
+  - **split** → do NOT set a flat pipeline. Convert this run to a brownfield program
+    and run the Phase Planner — go to **Brownfield program flow** below and stop the
+    flat change-run path here.
 - **small_change:** no extra work here.
 
 - **Commit:**
@@ -471,3 +482,76 @@ Tier-specific finalization at the gate:
 Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
 instructions (it will detect the brownfield run and drive the pipeline). Do NOT ask
 the user to run a command — continue without pausing.
+
+---
+
+## Brownfield program flow (multi-feature new-feature)
+
+Entered from Step B4 when the user chose **split**. Converts the provisional
+`change-*` run into a brownfield **program** and runs the Phase Planner, so each
+feature ships as its own phase PR. The program reuses the greenfield program/phase
+machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried on
+`program.json` and every phase `state.json`.
+
+### Step BP1 — Convert the change run into a program
+1. Generate a program id `program-YYYY-MM-DD-NNN` (scan `runs/` for `program-*`).
+2. Create `runs/<program-id>/`. Move `codebase-context.md` there:
+   `runs/<change-run-id>/codebase-context.md` → `runs/<program-id>/codebase-context.md`.
+3. Write `runs/<program-id>/original-input.md` in the standard greenfield
+   `original-input.md` format (see Step 6 — `# Original Input` / `Program ID:` /
+   `Captured:` header), with the change request body copied verbatim from the change
+   run's `raw-input.md`.
+4. Rename the branch:
+   ```bash
+   git branch -m agentic-sdlc/<change-run-id> agentic-sdlc/<program-id>/phase-01
+   ```
+5. Write `runs/<program-id>/program.json` (brownfield program — read `parent_branch`,
+   `infra_change_required`, and `test_baseline` from the change run's `state.json`
+   **before** deleting it in step 6, and copy them in):
+   ```json
+   {
+     "program_id": "<program-id>",
+     "mode": "brownfield",
+     "parent_branch": "<PARENT_BRANCH>",
+     "codebase_context_path": "runs/<program-id>/codebase-context.md",
+     "infra_change_required": false,
+     "test_baseline": { "captured": true, "preexisting_failures": [] },
+     "src_paths": { "backend": "<backend_src>", "backend_test": "<backend_test>", "frontend": "<frontend_src>" },
+     "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
+     "current_phase": 0,
+     "phases": []
+   }
+   ```
+6. Delete the migrated `runs/<change-run-id>/` directory (the flat run is superseded).
+7. **Commit:**
+   ```bash
+   git add -A
+   git commit -m "chore(<program-id>): convert brownfield change to program"
+   ```
+
+### Step BP2 — Phase Planner loop, then phase-plan gate
+Run the greenfield **Step 7 (Phase Planner loop)** and **Step 8 (phase-plan gate)**
+exactly as written, with these brownfield deltas:
+- Pass `runs/<program-id>/codebase-context.md` and `mode = brownfield` to the
+  `phase-planner`. The planner plans phases as features **added to the existing
+  system** — it must not re-plan existing functionality. (The
+  `phase-planner-validator` runs unchanged — it checks plan ↔ original-input
+  coverage.)
+- The requirement source is `runs/<program-id>/original-input.md` (already written).
+
+### Step BP3 — Create the Phase 1 run (brownfield)
+At Step 8's "approve" branch, create `runs/<program-id>/phase-01/state.json` with the
+**Phase 1 state.json schema** (above), plus these brownfield fields:
+`"mode": "brownfield"`, `"codebase_context_path":
+"runs/<program-id>/codebase-context.md"`, `"infra_change_required": <from
+program.json>`, and `"test_baseline": <from program.json>`. There is **no**
+survey/triage stage in the phase — the program-level survey already ran;
+`current_stage = "ba"`.
+
+### Step BP4 — BA loop + hand off
+Run the greenfield **Step 9 (BA loop)** and **Step 10 (req-spec gate)** exactly as
+written (the BA reads `codebase-context.md` and writes a normal `req-spec.md` in
+brownfield mode). On approval, hand off to `agentic-sdlc:advance-stage`, which finds
+the program via the normal program scan and drives each phase's brownfield-aware
+greenfield sequence. Subsequent phases are started with `/agentic-sdlc:next-phase`
+after each phase's PR merges.

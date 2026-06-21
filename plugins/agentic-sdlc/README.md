@@ -153,6 +153,11 @@ dependency). The brownfield done-gate keeps the repo's **full existing test suit
 green — no new failures versus the surveyor's baseline — plus new tests covering the
 change. Pre-existing failures are surfaced, never hidden.
 
+A **new-feature** that spans several features can be **split** at the triage gate
+into a brownfield *program*: it runs the Phase Planner loop and ships one PR per
+phase via `/agentic-sdlc:next-phase`, with every phase brownfield-aware (reads
+`codebase-context.md`, works the delta, conditional DevOps).
+
 ```mermaid
 flowchart TD
     S(["🚀 /start-run — detects existing code"]) --> SV["🤖 Code Surveyor (shallow)<br/>writes codebase-context.md"]

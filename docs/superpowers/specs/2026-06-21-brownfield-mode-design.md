@@ -99,8 +99,38 @@ regression = full suite stays green + new tests; DevOps conditional.
   `codebase-context.md`.
 - **new-feature** keeps the full creator chain, but every creator runs in
   **brownfield mode** (specs describe the *delta* against the existing system).
-- **Phase planning is not used for brownfield** by default. Phasing a very large
-  brownfield feature is a future option, out of scope for this design.
+- **Multi-feature new-feature → brownfield program (phase planning).** When a
+  new-feature request is really *several* features added at once, it can start from
+  the **Phase Planner loop** and ship per-phase PRs. See §2a.
+
+## 2a. Brownfield programs (multi-feature new-feature)
+
+A flat `change-*` run ships one PR. When a new-feature is several features, the user
+can instead run it as a **brownfield program** that reuses the existing greenfield
+program/phase machinery — one PR per phase via `/next-phase`.
+
+- **Trigger.** At the triage gate, when the confirmed tier is `new-feature`, the
+  Surveyor flags whether it sees multiple distinct features. The user chooses
+  **single** (flat change run, §3) or **split** (brownfield program).
+- **Composition.** A brownfield program is an ordinary greenfield program with two
+  differences: `program.json` carries `mode: "brownfield"` and a program-level
+  `codebase_context_path`, and **every phase's `state.json` carries `mode:
+  "brownfield"`**. Because the creator/reviewer agents are already brownfield-aware
+  (they read `codebase-context.md` and work the delta when `mode == brownfield`), the
+  greenfield per-phase sequence (BA → Architect → Tech Lead → development → devops)
+  becomes brownfield-aware with no separate driver.
+- **Survey once.** The deep Code Surveyor runs once at program creation, writing the
+  program-level `codebase-context.md` shared by all phases. Later phases also get the
+  greenfield "already shipped (do not re-build)" context for prior phases.
+- **Conditional devops + regression** apply per phase exactly as in §5 (devops runs
+  only when `infra_change_required`; the done-gate keeps the full existing suite
+  green vs. the baseline).
+- **Phase Planner is brownfield-aware:** it reads `codebase-context.md` and plans
+  phases as features *added to the existing system*.
+- **Reconciliation:** the survey/triage runs in the provisional `change-*` run; on
+  **split**, that run is converted to a program (branch renamed to
+  `agentic-sdlc/<program-id>/phase-01`, `codebase-context.md` moved to the program
+  dir) before the Phase Planner loop. Single-feature flow is unchanged.
 
 ## 3. State / run model
 

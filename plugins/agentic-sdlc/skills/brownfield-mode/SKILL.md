@@ -6,8 +6,9 @@ description: Shared rules for working against an existing codebase (brownfield c
 # Brownfield Mode
 
 You are modifying an **existing** system, not building from scratch. These rules
-apply whenever your context says `mode = brownfield` (the run id looks like
-`change-YYYY-MM-DD-NNN`). They are additive to your normal process.
+apply whenever your context says `mode = brownfield` — a `change-*` run **or** a
+brownfield program phase (`<program-id>/phase-0N`). They are additive to your normal
+process.
 
 ## Always start from the survey
 1. Read `runs/<run-id>/codebase-context.md` fully before anything else. It is the

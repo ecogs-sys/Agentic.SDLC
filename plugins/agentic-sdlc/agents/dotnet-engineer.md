@@ -81,8 +81,8 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 - If `dotnet build` still fails after 3 fix attempts: report the build error to the orchestrator; do not loop further. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — do not paste the full trace.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (the run id looks like
-`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
 addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
 first, reuse its documented conventions, and produce/implement only the **delta**
 against the existing system — never re-scaffold or re-specify code that already

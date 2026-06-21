@@ -61,5 +61,16 @@ Produce all Docker and docker-compose configuration so the full app starts with 
 - If solution name is ambiguous: read the .sln file to find the exact project name.
 - If `docker compose build` fails after 3 attempts: report the error; do not loop further.
 
+## Brownfield mode
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode`
+skill. The infra already exists: **read and modify the existing `docker-compose.yml`,
+`.env.example`, Dockerfile(s), and `nginx.conf` in place** — do NOT regenerate them
+from scratch. Make only the delta the change requires (e.g. add a service, env var,
+port, or dependency), preserving existing services, networks, volumes, and settings.
+There may be no `tech-spec.md`; use `runs/<run-id>/codebase-context.md` (and
+`change-spec.md` if present) for topology. You are invoked only when the change
+actually needs an infra change.
+
 ## Spec-freeze guardrail
 You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during the DevOps phase.

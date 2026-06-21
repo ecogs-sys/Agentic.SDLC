@@ -12,6 +12,10 @@ All notable changes to the agentic-sdlc plugin are documented here.
   (stack, conventions, architecture, impact map, test baseline, infra assessment) and
   proposes a tier at a new triage gate; depth scales by tier.
 - New skills: `brownfield-mode`, `write-codebase-context`, `write-change-spec`.
+- **Multi-feature brownfield programs.** A new-feature that is really several
+  features can be **split** at the triage gate into a brownfield *program* that
+  reuses the Phase Planner loop and ships one PR per phase via `/next-phase`; every
+  phase stays brownfield-aware (reads `codebase-context.md`, works the delta).
 
 ### Changed
 - BA, Architect, Tech Lead, engineers, reviewers, and test reviewers are now

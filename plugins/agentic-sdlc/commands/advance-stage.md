@@ -45,6 +45,28 @@ frontend_src = state.src_paths.frontend       (e.g. "src/frontend")
 Pass these paths to agents wherever a code directory is needed. .NET test code lives under
 `backend_test` (never under `backend_src`); React tests are co-located inside `frontend_src`.
 
+## Brownfield programs (mode == "brownfield" with a program)
+A brownfield **program** (created by `/start-run` when a new-feature is split into
+multiple features) is found by the normal program scan, and its phases run the
+**greenfield** stage sequence below — NOT the flat-run Brownfield driver (that driver
+only handles `change-*` runs). When the active phase's `state.json` has
+`mode == "brownfield"`:
+- Read `codebase_context_path` and pass `codebase-context.md` + `mode = brownfield`
+  to every agent (they follow the brownfield-mode skill: read the survey, work the
+  delta, no scaffolding).
+- In **Stage: development**, the test-reviewer runs the repo's full existing suite
+  and compares to `state.test_baseline` — only NEW failures fail the gate;
+  pre-existing failures are reported, not fixed.
+- In **Stage: devops**, run the DevOps loop only if `state.infra_change_required ==
+  true`; otherwise set `stages.devops.status = "skipped"` and proceed to the normal
+  program completion (the `program.json` phase-complete update + announcement happen
+  as usual — it IS a program).
+- **A phase may raise `infra_change_required`.** It defaults from the program-level
+  survey, but if this phase's `tech-spec.md` introduces a new service, port, env var,
+  or dependency, set the phase's `state.infra_change_required = true` (after the
+  Architect stage) so this phase's devops stage runs even if the program default was
+  `false`.
+
 ## Git commit discipline
 Commit after **every** step that produces or updates files. The pattern is always:
 ```bash

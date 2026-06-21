@@ -43,8 +43,8 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 - If a TECH is too vague to story-ize: create a story, note "needs clarification". Never halt.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (the run id looks like
-`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
+program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
 addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
 first, reuse its documented conventions, and produce/implement only the **delta**
 against the existing system — never re-scaffold or re-specify code that already

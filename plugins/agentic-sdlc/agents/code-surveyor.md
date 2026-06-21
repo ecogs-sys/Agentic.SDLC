@@ -36,7 +36,10 @@ write-codebase-context skill for the exact format.
    exists, record "suite missing".
 5. **Assess infra.** Decide whether the change needs compose/env/port/dependency
    changes; set `infra_change_required` with a rationale.
-6. **Propose a tier** using the rubric in write-codebase-context.
+6. **Propose a tier** using the rubric in write-codebase-context. When you propose
+   `new_feature`, also note in the Proposed tier rationale whether the request
+   contains **multiple distinct features** (a candidate for splitting into phases) or
+   is a single cohesive feature.
 7. **Depth:** for `shallow`, leave `## Architecture map` as `(not surveyed —
    shallow)`. For `deep`, additionally map modules/layers and responsibilities.
 8. Write `runs/<run-id>/codebase-context.md`. If revising, increment Version.

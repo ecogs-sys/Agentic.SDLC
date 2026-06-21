@@ -113,6 +113,10 @@ Say:
    Phase 1 state.json in start-run, with `run_id = "<program-id>/phase-0N"`,
    `phase_number = N`, `branch = "agentic-sdlc/<program-id>/phase-0N"`,
    `current_stage = "ba"`, `spec_frozen = false`, and the program's `src_paths`.
+   **If `program.json` `mode == "brownfield"`,** also copy `mode: "brownfield"`,
+   `codebase_context_path`, `infra_change_required`, and `test_baseline` from
+   `program.json` into the phase `state.json` so the phase runs brownfield-aware (its
+   agents read `codebase-context.md` and work the delta against the existing system).
 4. Set `program.json` `current_phase = N` and the Phase N `phases[]` entry
    `status = "in_progress"`.
 5. **Commit — Phase N started:**
