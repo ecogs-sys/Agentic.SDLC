@@ -101,6 +101,12 @@ never a speedup. Enforce:
 ## Spec freeze check
 Before invoking any agent: if `spec_frozen = true` and the current stage would modify req-spec.md, tech-spec.md, or any file under `runs/<run-id>/stories/` — do NOT proceed. Say: "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and start a new run."
 
+## User-review gate convention
+At **every** user-review gate, before asking the user to approve: (1) tell them the
+exact artifact path under review — e.g. "Reviewing **`runs/<run-id>/req-spec.md`**";
+(2) show the file's full contents; (3) then ask for approval. Never ask for approval
+without naming the path and showing the file.
+
 ---
 
 ## Brownfield driver (mode == "brownfield")
@@ -140,8 +146,9 @@ c. Invoke `ba-validator`. Pass: run-id, raw-input.md, change-spec.md,
    codebase-context.md. (Validator compares request+impact-map → change-spec per the
    validate-traceability schema.) Update `stages.change_spec_validation`; commit.
 d. fail/pass loop and 5-cap exactly as the BA loop.
-e. **user_review_change_spec gate:** display `change-spec.md`; "approve" → mark
-   complete, advance; other → revision notes, re-run the change-spec loop.
+e. **user_review_change_spec gate:** state the path **`runs/<run-id>/change-spec.md`**
+   and display its full contents; "approve" → mark complete, advance; other → revision
+   notes, re-run the change-spec loop.
 
 ### Brownfield notes for reused stages
 - **The driver owns transitions and completion.** The reused greenfield handlers
@@ -231,7 +238,7 @@ f. If fail + iterations < 5: increment `stages.ba.iterations`, re-invoke `ba` wi
    If pass: update `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
 
 ### User review gate — req-spec
-Display `runs/<run-id>/req-spec.md`.
+State the path **`runs/<run-id>/req-spec.md`** to the user, then display its full contents.
 > "The Business Analyst has produced the requirement spec (Version <n>). Reply **'approve'** to continue, or describe what to change."
 
 - **approve:**
@@ -281,7 +288,7 @@ f. If fail + iterations < 5: re-invoke architect with diff. Repeat from (a).
    If pass: update `stages.architect.status = "complete"`, `stages.architect_validation.status = "complete"`.
 
 ### User review gate — tech-spec
-Display `runs/<run-id>/tech-spec.md`.
+State the path **`runs/<run-id>/tech-spec.md`** to the user, then display its full contents.
 > "The Architect has produced the technical spec (Version <n>). Reply **'approve'** to continue, or describe what to change."
 
 - **approve:**
@@ -353,7 +360,7 @@ f. If fail + iterations < 5: re-invoke tech-lead with diff. Repeat from (a).
    If pass: update stages to complete.
 
 ### User review gate + SPEC FREEZE
-Display `runs/<run-id>/stories/index.md` (the execution-plan diagram and story table). Offer to show any individual `STORY-XXX.md` on request.
+State the path **`runs/<run-id>/stories/index.md`** to the user, then display it (the execution-plan diagram and story table). Offer to show any individual `STORY-XXX.md` (name its path) on request.
 > "The Tech Lead has produced the stories (Version <n>). Reply **'approve'** to freeze the spec and begin development, or describe what to change."
 
 - **approve:**

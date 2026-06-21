@@ -17,6 +17,13 @@ Each phase is a normal run whose `run_id` is the composite `<program-id>/phase-0
 This makes every `runs/<run-id>/…` path resolve to `runs/<program-id>/phase-0N/…`,
 so the BA, Architect, Tech Lead, and development agents need no changes.
 
+## User-review gate convention
+At **every** user-review gate (phase plan, requirement spec, triage, and any gate
+reached from here), before asking the user to approve: (1) tell them the exact
+artifact path under review — e.g. "Reviewing **`runs/<program-id>/phase-plan.md`**";
+(2) show the file's full contents; (3) then ask for approval. Never ask for approval
+without naming the path and showing the file.
+
 ## Process
 
 ### Step 0 — Refuse if a program is already active
@@ -220,7 +227,7 @@ f. If `"status": "fail"`:
 g. If `"status": "pass"`: proceed to Step 8.
 
 ### Step 8 — User review gate: phase plan
-Read and display `runs/<program-id>/phase-plan.md` in full.
+State the path **`runs/<program-id>/phase-plan.md`** to the user, then read and display it in full.
 
 Say:
 > "The Phase Planner proposes **<N> phase(s)** (Version <n>). Reply **'approve'**
@@ -329,7 +336,7 @@ g. If `"status": "pass"`:
    - Update state.json: `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
 
 ### Step 10 — User review gate
-Read and display `runs/<run-id>/req-spec.md` in full.
+State the path **`runs/<run-id>/req-spec.md`** to the user, then read and display it in full.
 
 Say:
 > "The Business Analyst has produced the following requirement spec (Version <n>). Please review it and reply **'approve'** to continue, or describe what needs to change."
@@ -419,8 +426,8 @@ d. On `fail` + iterations < 5: increment `stages.survey.iterations`, re-invoke w
    continue to B4.
 
 ### Step B4 — Triage gate
-Display the `## Impact map`, `## Test baseline`, and `## Proposed tier` from
-`codebase-context.md`. Say:
+State the path **`runs/<run-id>/codebase-context.md`** to the user, then display its
+`## Impact map`, `## Test baseline`, and `## Proposed tier` sections. Say:
 > "Survey complete. Proposed tier: **<tier>** — <one-line rationale>. Reply
 > **'approve'** to proceed at this tier, or name a different tier (`bug_fix`,
 > `small_change`, `new_feature`)."

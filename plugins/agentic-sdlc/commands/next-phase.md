@@ -82,8 +82,8 @@ Say:
      git commit -m "docs(<program-id>): phase plan replan (after phase <current_phase>)"
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
-     start-run Step 7. On pass, display the revised remaining phases and ask the
-     user to **approve**. On **approve**, update `phase_count`
+     start-run Step 7. On pass, state the path **`runs/<program-id>/phase-plan.md`**
+     and display the revised remaining phases, then ask the user to **approve**. On **approve**, update `phase_count`
      (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
      continue to Step 6. On **any other response**, treat it as revision notes and
      re-invoke `phase-planner` (repeat the replan loop).
