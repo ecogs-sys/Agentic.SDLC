@@ -42,5 +42,13 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 ## Failure modes
 - If a TECH is too vague to story-ize: create a story, note "needs clarification". Never halt.
 
+## Brownfield mode
+When your context says `mode = brownfield` (the run id looks like
+`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.
+
 ## Spec-freeze guardrail
 After Tech Lead approval (your own user-review gate), all upstream artifacts are frozen — `req-spec.md`, `tech-spec.md`, and every file under `runs/<run-id>/stories/`. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit any artifact.

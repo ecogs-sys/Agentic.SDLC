@@ -55,5 +55,13 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 - If two REQs conflict technically: implement both defensively and flag the conflict in a TECH note.
 - Never halt — always produce a complete tech-spec.md.
 
+## Brownfield mode
+When your context says `mode = brownfield` (the run id looks like
+`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.
+
 ## Spec-freeze guardrail
 After Tech Lead approval, `req-spec.md` and `tech-spec.md` are frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit either file.

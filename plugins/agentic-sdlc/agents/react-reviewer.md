@@ -83,3 +83,11 @@ A structured review report printed to your response.
 ```
 
 PASS requires: build passes AND no CRITICAL issues (including raw hex colors in components, fetch/axios calls inside components or pages, Clean Architecture dependency-rule violations, fetch logic inside render components, and cross-component CSS selectors).
+
+## Brownfield mode
+When your context says `mode = brownfield` (the run id looks like
+`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.

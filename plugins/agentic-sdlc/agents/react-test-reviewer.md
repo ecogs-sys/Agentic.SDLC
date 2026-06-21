@@ -51,3 +51,17 @@ Routing:
 - `DONE`: all tests pass AND coverage ≥ threshold
 - `BACK_TO_TEST_ENGINEER`: tests wrong, coverage not met, or testing implementation details
 - `BACK_TO_ENGINEER`: tests expose a real bug in production code
+
+## Brownfield mode
+When your context says `mode = brownfield` (the run id looks like
+`change-YYYY-MM-DD-NNN`), follow the `agentic-sdlc:brownfield-mode` skill in
+addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
+first, reuse its documented conventions, and produce/implement only the **delta**
+against the existing system — never re-scaffold or re-specify code that already
+exists.
+
+**Test reviewers (brownfield done-gate):** run the repo's FULL existing test suite
+(not just this change's tests). Compare results to the `## Test baseline` in
+`codebase-context.md`. The gate FAILS only on **new** failures introduced by this
+change; report any pre-existing failures to the orchestrator unchanged — do not try
+to fix them. New tests covering the change must pass.
