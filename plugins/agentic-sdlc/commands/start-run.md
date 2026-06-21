@@ -20,10 +20,22 @@ so the BA, Architect, Tech Lead, and development agents need no changes.
 ## Process
 
 ### Step 0 — Refuse if a program is already active
-Scan `runs/` for any `runs/<program-id>/program.json`. A program is **active**
-unless it is fully delivered (`phase_plan.status == "frozen"` AND `current_phase
-== phase_plan.phase_count` AND the phase at `current_phase` has status `complete`). If an
-active program exists, do NOT start a new one — say:
+Scan `runs/` for any active work. Two kinds block a new start:
+- **Programs** — any `runs/<program-id>/program.json` that is not fully delivered
+  (as defined next).
+- **Change runs** — any `runs/change-*/state.json` whose `current_stage` is not
+  `"complete"`.
+
+A program is **active** unless it is fully delivered (`phase_plan.status ==
+"frozen"` AND `current_phase == phase_plan.phase_count` AND the phase at
+`current_phase` has status `complete`). If an active **change run** exists, do NOT
+start a new one — say:
+
+> "A brownfield change run is already active: `<run-id>` (tier `<tier>`, stage
+> `<current_stage>`). Continue it with `/agentic-sdlc:advance-stage`, or cancel it
+> with `/agentic-sdlc:cancel-run`. Concurrent runs are not supported."
+
+Then stop. If an active **program** exists, do NOT start a new one — say:
 
 > "A program is already active: `<program-id>` (phase `<current_phase>` of
 > `<phase_count>`).
@@ -71,6 +83,21 @@ Announce the detected paths:
 Wait for response:
 - **Enter / empty / "ok" / "yes"**: proceed with detected paths.
 - **Any other text**: treat as space-separated backend and frontend paths. Use those.
+
+### Step 3b — Decide greenfield vs brownfield
+Inspect the detected source paths for real, existing application code:
+- **Backend has code** if Glob finds `<backend_src>/**/*.csproj` (or any `*.sln`).
+- **Frontend has code** if Glob finds `<frontend_src>/**/package.json`.
+
+- If **neither** side has code → **greenfield**. Continue with the existing flow
+  (Step 4 onward: program init → Phase Planner → ...). Nothing else changes.
+- If **either** side has code → **brownfield**. Announce and confirm:
+  > "I detected existing code, so I'll run in **brownfield** mode (right-sized for a
+  > bug fix / small change / new feature on this codebase). Reply **Enter** to
+  > continue, or type `greenfield` to force a from-scratch build instead."
+  - `greenfield` → fall through to the existing greenfield flow.
+  - otherwise → go to **Step B1 (Brownfield flow)** below and do NOT run the
+    greenfield Steps 4–10.
 
 ### Step 4 — Create git branch
 If the workspace is a git repository, first capture the current branch (this is the parent branch we'll return to on cancel):
@@ -320,3 +347,127 @@ Wait for response:
 
 ## Spec freeze
 Do not set `spec_frozen` here. That happens after Tech Lead approval in /advance-stage.
+
+---
+
+## Brownfield flow
+
+Entered from Step 3b when existing code is detected and the user did not force
+greenfield. A brownfield change is a standalone run — it does NOT use the
+program/phase model.
+
+### Step B1 — Create the change id and branch
+- `run_id = change-YYYY-MM-DD-NNN` (today's date; scan `runs/change-*` for the next
+  zero-padded sequence, else `001`).
+- Capture the parent branch and create the run branch:
+  ```bash
+  PARENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  git checkout -b agentic-sdlc/<run-id>
+  ```
+- Ensure `.gitignore` covers generated artifacts exactly as in the greenfield Step 5
+  (reuse that list).
+
+### Step B2 — Create the run directory and capture the request
+- Create `runs/<run-id>/`.
+- Write `runs/<run-id>/raw-input.md`:
+  ```markdown
+  # Raw Input
+  Run ID: <run-id>
+  Mode: brownfield
+  Captured: <YYYY-MM-DD HH:MM>
+
+  <user's change request verbatim>
+  ```
+- Write `runs/<run-id>/state.json` with the **pre-triage** shape:
+  ```json
+  {
+    "run_id": "<run-id>",
+    "mode": "brownfield",
+    "tier": null,
+    "parent_branch": "<PARENT_BRANCH>",
+    "branch": "agentic-sdlc/<run-id>",
+    "src_paths": { "backend": "<backend_src>", "backend_test": "<backend_test>", "frontend": "<frontend_src>" },
+    "codebase_context_path": "runs/<run-id>/codebase-context.md",
+    "infra_change_required": false,
+    "test_baseline": { "captured": false, "preexisting_failures": [] },
+    "spec_frozen": false,
+    "current_stage": "survey",
+    "pipeline": [],
+    "stages": { "survey": { "status": "in_progress", "iterations": 0 }, "survey_validation": { "status": "pending", "iterations": 0 }, "user_review_triage": { "status": "pending" } },
+    "stories": {}
+  }
+  ```
+- **Commit:**
+  ```bash
+  git add .gitignore runs/<run-id>/raw-input.md runs/<run-id>/state.json
+  git commit -m "chore(<run-id>): initialize brownfield change run"
+  ```
+
+### Step B3 — Surveyor shallow recon (triage) + validator loop (max 5)
+On each iteration:
+a. Invoke `code-surveyor`. Pass: run-id, the request, src paths, depth = `shallow`,
+   plus validator notes on later iterations.
+b. **Commit:** `git add runs/<run-id>/codebase-context.md runs/<run-id>/state.json`
+   then `git commit -m "docs(<run-id>): codebase survey (recon)"`.
+c. Invoke `code-surveyor-validator`. Pass: run-id, request, codebase-context.md.
+   Update `stages.survey_validation`. Commit the state change.
+d. On `fail` + iterations < 5: increment `stages.survey.iterations`, re-invoke with
+   the report. On `fail` + iterations = 5: set `stages.survey.status = "escalated"`,
+   escalate to the user, wait for guidance. On `pass`: set `stages.survey.status =
+   "complete"`, also copy `infra_change_required` and the baseline into state
+   (`test_baseline.captured = true`, `preexisting_failures` from the survey), commit,
+   continue to B4.
+
+### Step B4 — Triage gate
+Display the `## Impact map`, `## Test baseline`, and `## Proposed tier` from
+`codebase-context.md`. Say:
+> "Survey complete. Proposed tier: **<tier>** — <one-line rationale>. Reply
+> **'approve'** to proceed at this tier, or name a different tier (`bug_fix`,
+> `small_change`, `new_feature`)."
+
+Resolve the confirmed `tier`:
+- `approve` → use the proposed tier.
+- a tier name → use that tier.
+- anything else → treat as revision notes for the surveyor; re-run B3.
+
+Then set `state.tier`, set `state.pipeline` to the confirmed tier's profile, mark
+`survey`/`survey_validation`/`user_review_triage` complete, and initialize a
+`stages` entry (`status: "pending"`, `iterations: 0` where applicable) for every
+remaining pipeline stage. Set `current_stage` to the first remaining stage.
+
+**Tier profiles (the `pipeline` array):**
+```text
+bug_fix      = ["survey","survey_validation","user_review_triage",
+                "development","devops"]
+small_change = ["survey","survey_validation","user_review_triage",
+                "change_spec","change_spec_validation","user_review_change_spec",
+                "tech_lead","tech_lead_validation","user_review_stories",
+                "development","devops"]
+new_feature  = ["survey","survey_validation","user_review_triage",
+                "ba","ba_validation","user_review_req",
+                "architect","architect_validation","user_review_tech",
+                "tech_lead","tech_lead_validation","user_review_stories",
+                "development","devops"]
+```
+
+Tier-specific finalization at the gate:
+- **bug_fix:** there is no later spec gate, so freeze the diagnosis now — set
+  `spec_frozen = true`. Synthesize the change brief into stories: for each affected
+  track in the impact map, write `runs/<run-id>/stories/STORY-001.md`
+  (and `STORY-002.md` if both tracks) with the request as description, the impact
+  map's files under an `Implements`/`Touches` note, and acceptance criteria derived
+  from the request; set `track` and `wave: 1`. Populate `state.stories` accordingly.
+- **new_feature:** re-survey at depth = `deep` (one `code-surveyor` call, then
+  commit) so the architecture map is filled before the BA/Architect run.
+- **small_change:** no extra work here.
+
+- **Commit:**
+  ```bash
+  git add runs/<run-id>/state.json runs/<run-id>/codebase-context.md runs/<run-id>/stories/
+  git commit -m "docs(<run-id>): tier <tier> confirmed — pipeline set"
+  ```
+
+### Step B5 — Hand off to advance-stage
+Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
+instructions (it will detect the brownfield run and drive the pipeline). Do NOT ask
+the user to run a command — continue without pausing.
