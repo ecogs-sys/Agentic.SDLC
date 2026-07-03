@@ -183,6 +183,10 @@ git commit -m "chore(<program-id>): initialize program"
 
 ### Step 7 — Phase Planner loop (max 5 iterations)
 
+Before the first iteration, set `program.json` `phase_plan.status = "in_progress"` (it was
+seeded `"pending"` in Step 6) so the planning stage reports as running, and fold that write
+into the first draft commit in step (b). Leave it `in_progress` for the whole loop.
+
 **On each iteration:**
 
 a. Invoke the `phase-planner` agent. Pass: program-id, path to
@@ -298,6 +302,11 @@ Wait for response:
 ```
 
 ### Step 9 — BA loop (max 5 iterations)
+
+The Phase-1 schema already seeds `stages.ba.status = "in_progress"`. When you invoke the
+validator in step (c), set `stages.ba_validation.status = "in_progress"` first (fold into the
+validation-outcome commit) so the validation stage reports as running rather than jumping
+from `pending` to `complete`.
 
 **On each iteration:**
 
