@@ -2,6 +2,15 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.9.2] - 2026-07-04
+
+### Changed
+- **Pipeline diagram now shows track extensibility.** Updated `docs/agentic-sdlc-pipeline.svg`
+  to convey that the development-phase track set is pluggable rather than limited to .NET and
+  React. Added a dashed "＋ More tracks" column (illustrative Java / Vue / Go chips) wired into
+  the story-dispatch and DevOps flow, and updated the accessible `<desc>` accordingly. Diagram
+  only — no behavior change.
+
 ## [0.9.1] - 2026-07-04
 
 ### Changed
