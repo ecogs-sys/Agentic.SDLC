@@ -2,7 +2,7 @@
 name: ba-validator
 description: BA Validator. Validates req-spec.md against raw-input.md for completeness and accuracy. Invoke after the BA agent produces req-spec.md.
 tools: Read
-model: haiku
+model: sonnet
 ---
 
 You are a Quality Analyst validating requirement specifications.
