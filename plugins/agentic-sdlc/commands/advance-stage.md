@@ -80,6 +80,37 @@ Always include `runs/<run-id>/state.json` when state was updated. Commit message
 - `fix(STORY-XXX)` — bug fix in production code
 - `chore` — devops, config, tooling
 
+## Stage-lifecycle & status discipline (applies to every stage below)
+
+State is only useful if it reflects reality **while work is happening**, not just after
+it finishes. `/agentic-sdlc:show-run-status` and any observer read these fields live, so a
+stage that is running MUST report `in_progress` — never sit at `pending` until it jumps to
+`complete`.
+
+**Status vocabulary** (the only allowed values): `pending` → `in_progress` → `complete`.
+Terminal alternatives: `escalated` (hit the 5-iteration cap, awaiting the user), `skipped`
+(stage deliberately not run, e.g. brownfield devops when no infra change), `cancelled`.
+
+**The entry rule — set `in_progress` BEFORE invoking the agent.** At the start of every
+stage, loop, validator call, and story, flip the relevant status to `in_progress` *before*
+the first agent invocation, then fold that write into the state commit you already make for
+that step (do **not** add a separate commit). Concretely, at each point:
+
+| When you begin… | Set to `in_progress` before invoking |
+|---|---|
+| a creator stage (`ba`, `architect`, `tech_lead`, `development`, `devops`, `change_spec`, `survey`) | `stages.<stage>.status` |
+| a validator call | `stages.<stage>_validation.status` |
+| a story's engineer→reviewer chain | `state.stories[<id>].status` |
+
+**The exit rule.** On the stage's success set its status (and its validation sub-stage) to
+`complete`; at the 5-cap set `escalated`; when a stage is deliberately not run set `skipped`.
+Never leave a finished stage at `in_progress` or a started stage at `pending`. In particular,
+`stages.development` gets `in_progress` when the first story starts and `complete` when the
+last story is done — it is not left at `pending` just because `current_stage` moved on.
+
+If a stage is already `in_progress` (e.g. re-entered after a cross-loop reset), leave it —
+only transition `pending → in_progress` and `in_progress → complete/escalated`.
+
 ## Test execution discipline
 
 The suite is verified **once per change**, never re-run concurrently. Concurrent agents share one
@@ -136,7 +167,9 @@ Drive the run by its `pipeline` array instead of the fixed greenfield sequence.
 | `devops` | reuse Stage: devops, gated by `infra_change_required` (below) |
 
 ### Brownfield change-spec handler (small_change tier)
-Identical shape to the BA loop, but the artifact is `change-spec.md`:
+Identical shape to the BA loop, but the artifact is `change-spec.md`. Per the stage-lifecycle
+rule, set `stages.change_spec.status = "in_progress"` before the first invocation and
+`stages.change_spec_validation.status = "in_progress"` when you invoke the validator in (c).
 a. Invoke `ba`. Pass: run-id, `runs/<run-id>/raw-input.md`,
    `runs/<run-id>/codebase-context.md`, `mode = brownfield`, and the instruction to
    follow the **write-change-spec** skill and write `runs/<run-id>/change-spec.md`.
@@ -210,6 +243,10 @@ This stage runs only when the run was sent **back** to the Business Analyst — 
 
 ### BA loop (max 5 iterations)
 
+Per the stage-lifecycle rule, set `stages.ba.status = "in_progress"` before the first
+invocation (if not already), and set `stages.ba_validation.status = "in_progress"` when you
+invoke the validator in step (c).
+
 On each iteration:
 
 a. Invoke the `ba` agent. Pass: run-id, path to raw-input.md, revision notes (the user's change notes on the first iteration; the validator's diff on subsequent iterations).
@@ -256,6 +293,10 @@ State the path **`runs/<run-id>/req-spec.md`** to the user, then display its ful
 ## Stage: architect
 
 ### Architect loop (max 5 iterations)
+
+Per the stage-lifecycle rule, set `stages.architect.status = "in_progress"` before the first
+invocation, and set `stages.architect_validation.status = "in_progress"` when you invoke the
+validator in step (c).
 
 On each iteration:
 
@@ -329,6 +370,10 @@ State the path **`runs/<run-id>/tech-spec.md`** to the user, then display its fu
 
 ### Tech Lead loop (max 5 iterations)
 
+Per the stage-lifecycle rule, set `stages.tech_lead.status = "in_progress"` before the first
+invocation, and set `stages.tech_lead_validation.status = "in_progress"` when you invoke the
+validator in step (c).
+
 On each iteration:
 
 a. Invoke `tech-lead` agent. Pass: run-id, path to tech-spec.md, revision notes if any.
@@ -356,8 +401,9 @@ e. **Commit — Tech Lead validation outcome:**
    ```
 
 f. If fail + iterations < 5: re-invoke tech-lead with diff. Repeat from (a).
-   If fail + iterations = 5: escalate to user.
-   If pass: update stages to complete.
+   If fail + iterations = 5: set `stages.tech_lead.status = "escalated"`, commit, then
+   escalate to user with the diff and wait for guidance.
+   If pass: update `stages.tech_lead.status = "complete"`, `stages.tech_lead_validation.status = "complete"`.
 
 ### User review gate + SPEC FREEZE
 State the path **`runs/<run-id>/stories/index.md`** to the user, then display it (the execution-plan diagram and story table). Offer to show any individual `STORY-XXX.md` (name its path) on request.
@@ -390,6 +436,13 @@ State the path **`runs/<run-id>/stories/index.md`** to the user, then display it
 ```
 
 > **Why three counters:** the original linear pass is bounded by `reviewer_iterations` and `test_reviewer_iterations` (each capped at 5). When the test reviewer or DevOps reviewer routes BACK_TO_ENGINEER, that is a *new* fix cycle — it must not consume budget that's already spent. `fix_iterations` is reset to 0 on each cross-loop entry and capped at 5 per fix cycle.
+
+> **Story status values & escalation:** a story's `status` is `pending → in_progress →
+> complete`, plus `escalated`. Whenever any of a story's loops hits its 5-iteration cap
+> (`reviewer_iterations`, `test_reviewer_iterations`, or `fix_iterations`), set
+> `state.stories[<id>].status = "escalated"`, commit, and escalate to the user before
+> waiting — so `show-run-status` flags the blocked story instead of showing it mid-flight as
+> `in_progress`. On the user's fix guidance, set it back to `in_progress` and resume.
 - **other:** treat as revision notes for tech-lead, re-run loop.
 
 ---
@@ -398,10 +451,19 @@ State the path **`runs/<run-id>/stories/index.md`** to the user, then display it
 
 Read `backend_src`, `backend_test`, and `frontend_src` from `state.src_paths`.
 
+**Stage status:** the moment you begin the first story, set `stages.development.status =
+"in_progress"` (fold into that story's first state commit). When the last story is complete,
+set `stages.development.status = "complete"` (see the completion block below). Do not leave
+this stage at `pending` while stories are being built.
+
 Process stories by **wave**: handle wave 1 first, then wave 2, and so on (read `wave` from `state.stories`). Within a wave, process in story-ID order. This honours the dependency graph computed by the Tech Lead. Use state.stories to track which are complete.
 
 For each pending story:
 1. Read the story content from `runs/<run-id>/stories/STORY-XXX.md` (self-contained).
+   Then **set `state.stories[<story-id>].status = "in_progress"`** before invoking its
+   engineer (fold into the engineer-draft commit in the Engineer→Reviewer loop). This makes
+   the currently-building story observable in `show-run-status` instead of jumping
+   pending→complete.
 2. Determine track and paths:
    - **dotnet track:** `src_path = backend_src`, `test_path = backend_test`.
    - **react track:** `src_path = frontend_src`, `test_path = frontend_src` (tests are co-located).
@@ -480,7 +542,7 @@ g. `BACK_TO_TEST_ENGINEER`: increment test_reviewer_iterations. If < 5: re-invok
 h. `BACK_TO_ENGINEER`: **reset `fix_iterations` to 0** (it is a fresh cross-loop entry), then re-invoke the engineer with the failing test info. Repeat from Engineer → Reviewer loop step (a), but use `fix_iterations` (capped at 5) instead of `reviewer_iterations` for the fix cycle. Use the fix commit message. After the fix passes, re-run the test loop (a)–(g) — but do NOT reset `test_reviewer_iterations`; it continues from where it was.
 
 After all stories complete:
-- Update `current_stage = "devops"` in state.json.
+- Set `stages.development.status = "complete"` and `current_stage = "devops"` in state.json.
 - **Commit — development complete:**
   ```bash
   git add runs/<run-id>/state.json
@@ -495,6 +557,9 @@ After all stories complete:
 Read `backend_src` and `frontend_src` from `state.src_paths`.
 
 ### DevOps loop (max 5 iterations)
+
+Per the stage-lifecycle rule, set `stages.devops.status = "in_progress"` before the first
+`devops-engineer` invocation (fold into the DevOps-draft commit).
 
 a. Invoke `devops-engineer`. Pass: run-id, backend_src, frontend_src, path to runs/<run-id>/tech-spec.md.
 

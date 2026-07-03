@@ -53,6 +53,23 @@ is a hard failure.
 - `useContext` + `useReducer` for shared state.
 - Custom hooks for data-fetching: `useFoo()` → `{ data, isLoading, error }`.
 
+## Robustness essentials (mandatory)
+
+Quality bars the reviewer enforces on every story:
+
+- **Always render the three data states.** A component consuming a data hook must handle
+  `isLoading` and `error`, not just the happy path — show a loading indicator and a visible
+  error message. Never render a component that silently blanks on failure.
+- **Accessibility.** Use semantic elements (`<button>`, `<nav>`, `<main>`, `<label>`) over
+  click-handling `<div>`s; every form control has an associated `<label>` (or `aria-label`);
+  interactive elements are keyboard-reachable. Images have `alt`.
+- **Stable list keys.** Keys come from stable domain IDs, never the array index (and never
+  `Math.random()`), so list reconciliation is correct.
+- **App-level error boundary.** The app is wrapped in a React error boundary so a render-time
+  throw shows a fallback instead of a white screen.
+- **No secrets in the bundle.** Only `VITE_`-prefixed, non-sensitive config is read from
+  `import.meta.env`. Anything secret stays server-side.
+
 ## TypeScript style
 - Strict mode enabled (`"strict": true` in tsconfig).
 - No `any` types — use `unknown` and narrow, or define proper types.

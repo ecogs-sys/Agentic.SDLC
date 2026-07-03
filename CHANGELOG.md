@@ -2,6 +2,36 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.9.0] - 2026-07-04
+
+### Fixed
+- **Live `in_progress` status.** Stages no longer sit at `pending` until they jump to
+  `complete` — the orchestrator now flips each stage, validator sub-stage, and story to
+  `in_progress` *before* invoking its agent. Previously only `stages.ba` (seeded
+  `in_progress` in the schema) ever looked "running"; `architect`, `tech_lead`,
+  `development`, `devops`, all `*_validation` sub-stages, and per-story status were
+  unobservable while running.
+- `stages.development` is now closed out to `complete` (it was permanently stuck at
+  `pending`), and the program-level `phase_plan` is set to `in_progress` at the start of the
+  Phase Planner loop.
+
+### Added
+- **Stage-lifecycle & status discipline** convention in `advance-stage` — a single canonical
+  status vocabulary (`pending → in_progress → complete`; `escalated`/`skipped`/`cancelled`)
+  and entry/exit rules that every stage references, so status transitions can't drift.
+- **Escalation & failure visibility** in `show-run-status`: `◀ NEEDS ATTENTION` on any
+  `escalated` stage/story, `◀ active` on the current stage/story, a `⚠ …escalated…` banner,
+  per-story rework counters, and the development/devops aggregate status.
+- Consistent `escalated` status is now written for the Tech Lead stage and for any story that
+  hits a 5-iteration cap (new `escalated` story status), so blocked work surfaces instead of
+  showing as mid-flight `in_progress`.
+- **.NET robustness essentials** (dotnet-conventions): nullable reference types + warnings-as-
+  errors, boundary input validation, `ILogger<T>` structured logging, `CancellationToken`
+  propagation, options-pattern config, and a global exception handler.
+- **React robustness essentials** (react-conventions): render loading/error states,
+  accessibility (semantic elements, labels, alt), stable list keys, app-level error boundary,
+  and no secrets in the bundle.
+
 ## [0.8.1] - 2026-06-21
 
 ### Changed

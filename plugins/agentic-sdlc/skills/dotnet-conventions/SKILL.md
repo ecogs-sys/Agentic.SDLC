@@ -131,9 +131,34 @@ Tests exercise the **application's runtime behavior** through its own types. The
   Testcontainers requiring a Docker daemon. CI/Ubuntu agents have none of these, so such tests
   hang on connect-retry.
 
+## Robustness essentials (mandatory)
+
+These are non-negotiable quality bars the reviewer enforces on every story:
+
+- **Nullable reference types on.** Every project sets `<Nullable>enable</Nullable>` and
+  `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` (in `Directory.Build.props` or each
+  `.csproj`). No `#nullable disable`. Model optionality in the type, not with `!`.
+- **Validate input at the boundary.** Controllers are annotated `[ApiController]` so invalid
+  models return `400` automatically; request DTOs carry DataAnnotations (`[Required]`,
+  `[Range]`, `[MaxLength]`) — or FluentValidation where rules are non-trivial. Never trust a
+  request body straight into the domain.
+- **Structured logging via `ILogger<T>`.** Inject `ILogger<T>`; log at the service/controller
+  boundary with message templates (`_logger.LogInformation("Fetched {Count} todos", n)`) —
+  never string interpolation into the message, never `Console.WriteLine`. Do not log secrets
+  or full request bodies.
+- **Propagate `CancellationToken`.** Controller actions accept a `CancellationToken` and pass
+  it through service → repository → EF (`ToListAsync(ct)`, `SaveChangesAsync(ct)`), so
+  requests cancel cleanly.
+- **Configuration via the options pattern.** Bind settings to typed options
+  (`IOptions<T>`); read secrets/connection strings from configuration/environment — never
+  hard-code them.
+
 ## Error handling
 - Use `ProblemDetails` for API error responses (ASP.NET Core default).
 - `404 NotFound()` for missing resources, `400 BadRequest()` for validation, `500` for unhandled.
+- Register a global exception handler (`app.UseExceptionHandler` / `IExceptionHandler`) so no
+  raw exception or stack trace leaks to the client; unhandled failures become a `500`
+  `ProblemDetails`. Do not wrap every action in try/catch — let the handler centralize it.
 
 ## Required: `/health` endpoint
 Every backend MUST expose `GET /health` that returns HTTP 200 with `{"status":"ok"}`. This is what the docker-compose readiness check and the DevOps reviewer's smoke test hit. Implement it in `Program.cs` using `app.MapGet("/health", () => Results.Ok(new { status = "ok" }))` or as a `HealthController`. Do not require auth or a DB connection for this endpoint — it must succeed even before DB migrations run.

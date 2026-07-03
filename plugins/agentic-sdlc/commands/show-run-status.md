@@ -68,15 +68,17 @@ Read state.json and display a clear status summary.
   Tech Lead Validation     [<status>] iter: <n>
   User Review (Stories)    [<status>]
 
-  DEVELOPMENT PHASE
+  DEVELOPMENT PHASE            [<stages.development.status>]
   ─────────────────────────────────────────
-  <for each story in state.stories:>
+  <for each story in state.stories, in wave then story-ID order. Append rework
+   counters only when non-zero, e.g. "(rev 2, test 1, fix 1)" from
+   reviewer_iterations / test_reviewer_iterations / fix_iterations:>
   STORY-001 [dotnet] [pending | in_progress | complete]
-  STORY-002 [react]  [pending | in_progress | complete]
+  STORY-002 [react]  [in_progress] (rev 2)   ◀ active
 
   DEVOPS PHASE
   ─────────────────────────────────────────
-  DevOps                   [<status>]
+  DevOps                   [<status>] iter: <n>
 
   ARTIFACTS
   ─────────────────────────────────────────
@@ -91,7 +93,17 @@ Read state.json and display a clear status summary.
 ═══════════════════════════════════════════
 ```
 
-Status legend: pending | in_progress | complete | escalated | cancelled
+Status legend: pending | in_progress | complete | escalated | skipped | cancelled
+
+**Highlight anything that needs the user.** After rendering, scan every stage and story status:
+- Append **` ◀ NEEDS ATTENTION`** to any line whose status is `escalated` (a 5-iteration cap
+  was hit and the run is waiting on the user).
+- Mark the line matching `current_stage` (and the single in-progress story) with **` ◀ active`**.
+- If any stage is `escalated`, add a one-line banner under the header:
+  `⚠ <stage> escalated after 5 iterations — provide guidance or /agentic-sdlc:cancel-run.`
+
+An `escalated` or long-stalled `in_progress` stage is the signal that the run is not
+progressing on its own — surface it, don't bury it in the ladder.
 
 ## Brownfield status layout
 
@@ -129,3 +141,7 @@ Status legend: pending | in_progress | complete | escalated | cancelled
 ```
 
 Status legend: pending | in_progress | complete | skipped | escalated | cancelled
+
+Apply the same highlighting as the greenfield layout: `◀ NEEDS ATTENTION` on any `escalated`
+stage/story, `◀ active` on the `current_stage` and in-progress story, and the `⚠ …escalated…`
+banner under the header when any stage is escalated.
