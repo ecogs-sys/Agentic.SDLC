@@ -2,6 +2,23 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.9.1] - 2026-07-04
+
+### Changed
+- **Agent model right-sizing.** Matched each agent's model tier to its cognitive load and
+  run volume:
+  - `code-surveyor` opus → **sonnet** — the survey is Grep/Glob-driven exploration plus a
+    templated write-up (not open-ended design), it runs shallow on every brownfield run, and
+    the code-surveyor-validator backstops its output.
+  - `ba-validator` and `phase-planner-validator` sonnet → **haiku** — both do a read-only
+    prose→structured diff against a fixed JSON schema (validate-traceability), the lowest
+    semantic-subtlety validators in the pipeline.
+  - `phase-planner` sonnet → **opus** — the highest-leverage decomposition step, where a bad
+    phase split cascades across the whole program. Note: this applies to every invocation,
+    including the common single-phase case (frontmatter model is unconditional).
+  - `architect` stays **opus**; all engineers, reviewers, test engineers/reviewers, the
+    remaining validators, and devops agents stay **sonnet**.
+
 ## [0.9.0] - 2026-07-04
 
 ### Fixed

@@ -2,7 +2,7 @@
 name: phase-planner-validator
 description: Phase Planner Validator. Validates phase-plan.md against original-input.md for exactly-one-phase coverage, correct ordering, and independent deliverability. Invoke after the Phase Planner produces phase-plan.md.
 tools: Read
-model: sonnet
+model: haiku
 ---
 
 You are a Delivery Lead validating phase plans.

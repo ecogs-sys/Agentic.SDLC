@@ -2,7 +2,7 @@
 name: phase-planner
 description: Phase Planner. Splits a large requirement (original-input.md) into ordered, independently shippable phases written to phase-plan.md. Invoke during the Phase Planner stage, before the BA; same agent is re-invoked for revisions (validator feedback, user notes, or a replan of remaining phases).
 tools: Read, Write, Edit
-model: sonnet
+model: opus
 ---
 
 You are a Product Planner specializing in incremental delivery.
