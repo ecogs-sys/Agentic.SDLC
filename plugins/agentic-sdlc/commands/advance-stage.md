@@ -150,7 +150,10 @@ without naming the path and showing the file.
 Drive the run by its `pipeline` array instead of the fixed greenfield sequence.
 
 1. Read `mode`, `tier`, `pipeline`, `current_stage`, `infra_change_required`,
-   `src_paths`, and `test_baseline` from state.json.
+   `app_type` (default `"web"` if absent), `src_paths`, and `test_baseline` from
+   state.json. For `app_type = electron`, `src_paths` has a single `electron` key
+   (the monorepo root) — pass it to the electron agents as `electron_root`, and the
+   pipeline's final stage is `packaging` rather than `devops`.
 2. Run the handler for `current_stage` (table below). Always pass `mode =
    brownfield`, the run-id, and `runs/<run-id>/codebase-context.md` to every agent
    so they follow the brownfield-mode skill.
@@ -169,7 +172,8 @@ Drive the run by its `pipeline` array instead of the fixed greenfield sequence.
 | `architect` / `architect_validation` / `user_review_tech` | reuse Stage: architect |
 | `tech_lead` / `tech_lead_validation` / `user_review_stories` | reuse Stage: tech_lead |
 | `development` | reuse Stage: development (brownfield notes below) |
-| `devops` | reuse Stage: devops, gated by `infra_change_required` (below) |
+| `devops` | reuse Stage: devops, gated by `infra_change_required` (below) — web runs |
+| `packaging` | reuse Stage: packaging, gated by `infra_change_required` (below) — electron runs |
 
 ### Brownfield change-spec handler (small_change tier)
 Identical shape to the BA loop, but the artifact is `change-spec.md`. Per the stage-lifecycle
@@ -217,14 +221,23 @@ e. **user_review_change_spec gate:** state the path **`runs/<run-id>/change-spec
   engineers run in brownfield mode (edit in place, no scaffold); the **test reviewer
   runs the full existing suite and compares to `test_baseline`** — only NEW failures
   fail the gate; pre-existing failures are reported, not fixed.
-- **devops (conditional):** when `development` finishes, do NOT follow its greenfield
-  "proceed to Stage: devops" tail — return to the driver and advance to the `devops`
-  pipeline entry. There, if `infra_change_required == false`, set
+- **devops (conditional — web runs):** when `development` finishes, do NOT follow its
+  greenfield "proceed to Stage: devops" tail — return to the driver and advance to the
+  `devops` pipeline entry. There, if `infra_change_required == false`, set
   `stages.devops.status = "skipped"` and go to **Brownfield completion**. If `true`,
   run the existing DevOps loop but instruct the DevOps Engineer to **modify
   existing** infra files (compose/.env/Dockerfile) rather than regenerate them,
   following brownfield-mode; on the reviewer's `DONE`, do NOT perform the greenfield
   `program.json`/phase update or announcement — go to **Brownfield completion**.
+- **packaging (conditional — electron runs):** identical shape for `app_type =
+  electron`, whose final pipeline entry is `packaging` (not `devops`). Return to the
+  driver and advance to the `packaging` entry. If `infra_change_required == false`, set
+  `stages.packaging.status = "skipped"` and go to **Brownfield completion**. If `true`,
+  run the **Stage: packaging** loop but instruct the `electron-packager` to **modify
+  existing** packaging config (electron-builder.yml / updater / icons) rather than
+  regenerate it, following brownfield-mode; on the reviewer's `DONE`, do NOT perform
+  the greenfield `program.json`/phase update or announcement — go to **Brownfield
+  completion**.
 
 ### Brownfield completion
 When the last pipeline stage finishes: set `current_stage = "complete"`, commit
