@@ -467,7 +467,7 @@ State the path **`runs/<run-id>/stories/index.md`** to the user, then display it
 
 ## Stage: development
 
-Read `backend_src`, `backend_test`, and `frontend_src` from `state.src_paths`.
+Read the archetype's source paths from `state.src_paths` (by `app_type`): web runs read `backend_src`, `backend_test`, and `frontend_src`; electron runs read `electron` as `electron_root`.
 
 **Stage status:** the moment you begin the first story, set `stages.development.status =
 "in_progress"` (fold into that story's first state commit). When the last story is complete,

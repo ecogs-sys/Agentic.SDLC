@@ -21,6 +21,16 @@ All notable changes to the agentic-sdlc plugin are documented here.
 - `write-tech-spec`, `write-stories`, `tech-lead`, and `advance-stage` now branch on
   `app_type` — the electron stack, the single `electron` track, and Packager-vs-DevOps
   routing. Web runs are unchanged.
+- `next-phase` carries `app_type` into later phases, and both the brownfield change-run
+  driver and brownfield-program storage are electron-aware, so multi-phase and brownfield
+  electron runs route to the packaging done-gate.
+- `show-run-status` now renders by `app_type` — electron runs show the Electron root, the
+  Packaging phase, and the monorepo/electron-builder artifacts instead of the web
+  backend/frontend/docker-compose lines.
+- **Pipeline diagram (`docs/agentic-sdlc-pipeline.svg`)** updated: the DevOps phase is
+  labelled the web archetype and a dashed "Electron archetype" note shows the Packager
+  (electron-builder + smoke-launch) replacing DevOps; `<title>`/`<desc>` updated for
+  accessibility.
 
 ## [0.9.2] - 2026-07-04
 

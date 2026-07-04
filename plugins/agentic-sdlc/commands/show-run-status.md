@@ -20,7 +20,8 @@ Read state.json and display a clear status summary.
     not superseded by a newer active program, render the **Brownfield status**
     layout below and stop.
 2. Read program.json: `phase_plan`, `current_phase`, `phase_count`
-   (`phase_plan.phase_count`), `phases`, `src_paths`.
+   (`phase_plan.phase_count`), `phases`, `app_type` (default `web` if absent),
+   `src_paths`.
 3. If `phases` is empty OR `current_phase == 0`, the program is still in the Phase
    Planner stage — no phase has been finalized. Skip the per-phase detail (steps 4–5
    and the PLANNING/DEVELOPMENT/DEVOPS/ARTIFACTS blocks); show the header, the
@@ -32,7 +33,9 @@ Read state.json and display a clear status summary.
 4. For each artifact (req-spec.md, tech-spec.md, stories/index.md) **under the
    active phase dir**, check existence and read its `Version:` line. If the file
    exists but has no `Version:` line, report version as `?`.
-5. Check existence of: `<backend_src>/` (from src_paths.backend), `<backend_test>/` (from src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (from src_paths.frontend), `docker-compose.yml` at workspace root.
+5. Check existence of the archetype's code paths (by `app_type`, default `web`):
+   - **web:** `<backend_src>/` (src_paths.backend), `<backend_test>/` (src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (src_paths.frontend), and `docker-compose.yml` at workspace root.
+   - **electron:** the monorepo root `<electron_root>/` (src_paths.electron), `<electron_root>/apps/desktop/`, and `<electron_root>/electron-builder.yml`.
 6. Display:
 
 ```
@@ -43,8 +46,12 @@ Read state.json and display a clear status summary.
   Branch:        <branch>
   Current stage: <current_stage>
   Spec frozen:   yes | no
+  App type:      <web | electron>
+  <web archetype:>
   Backend src:   <src_paths.backend>
   Frontend src:  <src_paths.frontend>
+  <electron archetype:>
+  Electron root: <src_paths.electron>
 
   Program:       <program-id>
   Phase plan:    <phase_plan.status> (<phase_count> phase(s))
@@ -76,9 +83,12 @@ Read state.json and display a clear status summary.
   STORY-001 [dotnet] [pending | in_progress | complete]
   STORY-002 [react]  [in_progress] (rev 2)   ◀ active
 
-  DEVOPS PHASE
+  FINAL PHASE  (web archetype)
   ─────────────────────────────────────────
-  DevOps                   [<status>] iter: <n>
+  DevOps                   [<stages.devops.status>] iter: <n>
+  FINAL PHASE  (electron archetype)
+  ─────────────────────────────────────────
+  Packager                 [<stages.packaging.status>] iter: <n>
 
   ARTIFACTS
   ─────────────────────────────────────────
@@ -86,10 +96,14 @@ Read state.json and display a clear status summary.
   runs/<program-id>/<phase-folder>/req-spec.md     exists (v<n>) | missing
   runs/<program-id>/<phase-folder>/tech-spec.md    exists (v<n>) | missing
   runs/<program-id>/<phase-folder>/stories/index.md  exists (v<n>) | missing
+  <web archetype:>
   <backend_src>/                exists | missing
   <backend_test>/               exists | missing
   <frontend_src>/               exists | missing
   docker-compose.yml            exists | missing
+  <electron archetype:>
+  <electron_root>/apps/desktop/          exists | missing
+  <electron_root>/electron-builder.yml   exists | missing
 ═══════════════════════════════════════════
 ```
 
@@ -117,11 +131,15 @@ progressing on its own — surface it, don't bury it in the ladder.
   Branch:        <branch>
   Current stage: <current_stage>
   Spec frozen:   yes | no
+  App type:      <web | electron>
   Infra change:  required | not required
+  <web archetype:>
   Backend src:   <src_paths.backend>
   Frontend src:  <src_paths.frontend>
+  <electron archetype:>
+  Electron root: <src_paths.electron>
 
-  PIPELINE  (from state.pipeline, in order)
+  PIPELINE  (from state.pipeline, in order — electron runs end in `packaging`, web runs in `devops`)
   ─────────────────────────────────────────
   <for each stage in pipeline: "<stage>  [<stages[stage].status or '-'>]"; mark ◀ active at current_stage>
 
