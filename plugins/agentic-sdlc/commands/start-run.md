@@ -63,7 +63,7 @@ number. If none, use `001`.
 
 ### Step 2 — Collect the requirement
 If the user didn't provide their requirement with the command, ask:
-> "I will generate a runnable application with the following fixed stack: **.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose**. If you need a different stack (Vue, Angular, Python, MongoDB, etc.), this plugin won't fit — let me know and we can stop here.
+> "I will generate a runnable application. Greenfield runs support two fixed archetypes: **web** (.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose) or **electron** (TypeScript + Electron + electron-vite + electron-builder desktop app). You'll pick which after describing the requirement. If you need something outside both (Vue web app, Python backend, native mobile, etc.), this plugin won't fit — let me know and we can stop here.
 >
 > Please describe what you want to build. Be as detailed as you like."
 
@@ -105,6 +105,26 @@ Inspect the detected source paths for real, existing application code:
   - `greenfield` → fall through to the existing greenfield flow.
   - otherwise → go to **Step B1 (Brownfield flow)** below and do NOT run the
     greenfield Steps 4–10.
+
+### Step 3c — Choose the application archetype (greenfield only)
+Greenfield runs build one of two archetypes. Ask:
+> "What kind of application is this?
+> - **web** (default) — .NET 8 Web API + React 18 + PostgreSQL, shipped with docker-compose.
+> - **electron** — a cross-platform Electron desktop app (TypeScript pnpm monorepo, electron-vite, electron-builder). No .NET backend or database.
+>
+> Reply **web** (or Enter) or **electron**."
+
+- **electron:** set `app_type = "electron"`. The generated code lives in an Electron
+  monorepo, so `src_paths` uses a single root: `{ "electron": "<electron_root>" }`
+  where `<electron_root>` defaults to the workspace root (`.`). Skip the .NET/React
+  path detection from Step 3 — announce: "This Electron app will be generated into
+  `<electron_root>/` (apps/desktop + packages/*). Reply with a different root or press
+  Enter to continue."
+- **web / Enter (default):** set `app_type = "web"` and keep the `src_paths`
+  (backend/backend_test/frontend) detected in Step 3.
+
+Carry `app_type` and the chosen `src_paths` into `program.json` (Step 6) and each
+phase `state.json` (Step 8).
 
 ### Step 4 — Create git branch
 If the workspace is a git repository, first capture the current branch (this is the parent branch we'll return to on cancel):
@@ -164,11 +184,8 @@ Write `runs/<program-id>/program.json`:
 {
   "program_id": "<program-id>",
   "parent_branch": "<PARENT_BRANCH>",
-  "src_paths": {
-    "backend": "<backend_src>",
-    "backend_test": "<backend_test>",
-    "frontend": "<frontend_src>"
-  },
+  "app_type": "<web | electron>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
   "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
   "current_phase": 0,
   "phases": []
@@ -279,11 +296,8 @@ Wait for response:
   "parent_branch": "<PARENT_BRANCH>",
   "current_stage": "ba",
   "spec_frozen": false,
-  "src_paths": {
-    "backend": "<backend_src>",
-    "backend_test": "<backend_test>",
-    "frontend": "<frontend_src>"
-  },
+  "app_type": "<web | electron>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
   "stages": {
     "ba": { "status": "in_progress", "iterations": 0 },
     "ba_validation": { "status": "pending", "iterations": 0 },
@@ -295,7 +309,8 @@ Wait for response:
     "tech_lead_validation": { "status": "pending", "iterations": 0 },
     "user_review_stories": { "status": "pending" },
     "development": { "status": "pending" },
-    "devops": { "status": "pending", "iterations": 0 }
+    "devops": { "status": "pending", "iterations": 0 },
+    "packaging": { "status": "pending", "iterations": 0 }
   },
   "stories": {}
 }
