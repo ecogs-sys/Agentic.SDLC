@@ -21,7 +21,7 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 
 ## Process
 1. Read `runs/<run-id>/tech-spec.md` fully.
-2. List all TECH-IDs and identify their track (dotnet or react).
+2. List all TECH-IDs and identify their track. Read `app_type` from state.json (passed in your context): for `web` runs the tracks are `dotnet`/`react`; for `electron` runs every story is the single `electron` track. Follow the write-stories skill's Track assignment section.
 3. Group related TECH-IDs into cohesive, independently deliverable stories.
 4. For each story: assign track, list TECH-IDs, write clear testable acceptance criteria, set a coverage threshold.
 5. Set dependencies: if a react story uses a dotnet API, add the dotnet story to `Depends on`.
