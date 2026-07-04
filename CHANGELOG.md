@@ -2,6 +2,26 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.10.0] - 2026-07-04
+
+### Added
+- **Electron desktop-app archetype.** A run can now build a secure-by-default Electron
+  desktop app via a new `app_type: electron` (default stays `web`). Adds one `electron`
+  development track — `electron-engineer` / `-reviewer` / `-test-engineer` /
+  `-test-reviewer` — plus an `electron-conventions` skill encoding industry-standard
+  security defaults (contextIsolation + sandbox on, nodeIntegration off,
+  contextBridge-only IPC validated with zod, strict CSP, node-pty confined to main).
+- **Packager stage for electron runs.** `electron-packager` (electron-builder +
+  electron-updater + icon generation) and `electron-packager-reviewer` (unpacked build
+  + smoke-launch) replace the DevOps/docker-compose done-gate when `app_type = electron`.
+
+### Changed
+- `/start-run` asks greenfield runs to pick an archetype (web | electron); the Code
+  Surveyor auto-detects electron for brownfield runs.
+- `write-tech-spec`, `write-stories`, `tech-lead`, and `advance-stage` now branch on
+  `app_type` — the electron stack, the single `electron` track, and Packager-vs-DevOps
+  routing. Web runs are unchanged.
+
 ## [0.9.2] - 2026-07-04
 
 ### Changed
