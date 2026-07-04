@@ -35,8 +35,12 @@ begin." If a program is found but its active phase is already `complete`, say: "
 current phase is complete. Use /agentic-sdlc:next-phase to start the next phase, or
 open its PR to ship it."
 
-## Reading src_paths
-At the start of every command invocation, read `src_paths` from state.json:
+## Reading app_type and src_paths
+At the start of every command invocation, read `app_type` (default `"web"` if absent — older runs) and `src_paths` from state.json.
+
+For `app_type = electron`, `src_paths` has a single key: `electron` = the monorepo root (e.g. `.`). Pass it to the electron agents as `electron_root`. The backend/frontend keys below apply to `web` runs only.
+
+For `app_type = web`, read `src_paths` from state.json:
 ```
 backend_src  = state.src_paths.backend       (e.g. "src/backend")
 backend_test = state.src_paths.backend_test   (e.g. "tests/backend"; default "tests/backend" if absent — older runs)
@@ -57,10 +61,11 @@ only handles `change-*` runs). When the active phase's `state.json` has
 - In **Stage: development**, the test-reviewer runs the repo's full existing suite
   and compares to `state.test_baseline` — only NEW failures fail the gate;
   pre-existing failures are reported, not fixed.
-- In **Stage: devops**, run the DevOps loop only if `state.infra_change_required ==
-  true`; otherwise set `stages.devops.status = "skipped"` and proceed to the normal
-  program completion (the `program.json` phase-complete update + announcement happen
-  as usual — it IS a program).
+- In the **final stage**, pick by `app_type`: web runs use **Stage: devops**, electron
+  runs use **Stage: packaging**. Run that stage's loop only if
+  `state.infra_change_required == true`; otherwise set the stage's status to
+  `"skipped"` and proceed to the normal program completion (the `program.json`
+  phase-complete update + announcement happen as usual — it IS a program).
 - **The phase's tech-spec sets `infra_change_required`.** After the Architect stage,
   read the `**Infra change:**` line from the phase's `tech-spec.md` and set the
   phase's `state.infra_change_required` (`required …` → `true`, `none` → `false`).
@@ -464,13 +469,16 @@ For each pending story:
    engineer (fold into the engineer-draft commit in the Engineer→Reviewer loop). This makes
    the currently-building story observable in `show-run-status` instead of jumping
    pending→complete.
-2. Determine track and paths:
-   - **dotnet track:** `src_path = backend_src`, `test_path = backend_test`.
-   - **react track:** `src_path = frontend_src`, `test_path = frontend_src` (tests are co-located).
+2. Determine track and paths from `app_type`:
+   - **web run** — the story's track is `dotnet` or `react`:
+     - **dotnet track:** `src_path = backend_src`, `test_path = backend_test`.
+     - **react track:** `src_path = frontend_src`, `test_path = frontend_src` (tests are co-located).
+   - **electron run** — every story's track is `electron`:
+     - `src_path = test_path = electron_root` (pass it to the agents as `electron_root`; tests are co-located).
 
 ### 3. Engineer → Reviewer loop (max 5 iterations)
 
-a. Invoke `dotnet-engineer` or `react-engineer`. Pass: run-id, story ID, story content, runs/<run-id>/tech-spec.md, src_path (and `test_path`/`backend_test` for the dotnet track — the first-story scaffold creates the test project there).
+a. Invoke the engineer for the story's track: `dotnet-engineer`, `react-engineer`, or (electron runs) `electron-engineer`. Pass: run-id, story ID, story content, runs/<run-id>/tech-spec.md, and the paths — `src_path` (and `test_path`/`backend_test` for the dotnet track; for electron pass `electron_root`).
 
 b. **Commit — Engineer draft/revision** (include `<test_path>` too — the dotnet scaffold creates the test project under it):
    ```bash
@@ -483,7 +491,7 @@ b. **Commit — Engineer draft/revision** (include `<test_path>` too — the dot
    git commit -m "fix(STORY-XXX): fix production bug — test failure (iter <n>)"
    ```
 
-c. Invoke `dotnet-reviewer` or `react-reviewer`. Pass: run-id, story ID, story content, modified files list, src_path.
+c. Invoke the reviewer for the story's track: `dotnet-reviewer`, `react-reviewer`, or `electron-reviewer`. Pass: run-id, story ID, story content, modified files list, src_path (electron: `electron_root`).
 
 d. Update `stages` and story reviewer_iterations in state.json.
 
@@ -502,7 +510,7 @@ f. If FAIL + reviewer_iterations < 5: increment, re-invoke engineer with reviewe
 
 ### 4. Test Engineer → Test Reviewer loop (max 5 iterations)
 
-a. Invoke `dotnet-test-engineer` or `react-test-engineer`. Pass: run-id, story ID, story content, src_path, test_path (for the dotnet track, `test_path = backend_test`; tests are written there).
+a. Invoke the test engineer for the story's track: `dotnet-test-engineer`, `react-test-engineer`, or `electron-test-engineer`. Pass: run-id, story ID, story content, src_path, test_path (dotnet: `test_path = backend_test`; electron: `electron_root`).
 
 b. **Commit — Test Engineer draft/revision:**
    ```bash
@@ -513,7 +521,7 @@ b. **Commit — Test Engineer draft/revision:**
    git commit -m "test(STORY-XXX): test engineer revision — coverage feedback (iter <n>)"
    ```
 
-c. Invoke `dotnet-test-reviewer` or `react-test-reviewer`. Pass: run-id, story ID, story content, src_path, test_path.
+c. Invoke the test reviewer for the story's track: `dotnet-test-reviewer`, `react-test-reviewer`, or `electron-test-reviewer`. Pass: run-id, story ID, story content, src_path, test_path (electron: `electron_root`).
 
 d. Update story test_reviewer_iterations in state.json.
 
@@ -542,13 +550,98 @@ g. `BACK_TO_TEST_ENGINEER`: increment test_reviewer_iterations. If < 5: re-invok
 h. `BACK_TO_ENGINEER`: **reset `fix_iterations` to 0** (it is a fresh cross-loop entry), then re-invoke the engineer with the failing test info. Repeat from Engineer → Reviewer loop step (a), but use `fix_iterations` (capped at 5) instead of `reviewer_iterations` for the fix cycle. Use the fix commit message. After the fix passes, re-run the test loop (a)–(g) — but do NOT reset `test_reviewer_iterations`; it continues from where it was.
 
 After all stories complete:
-- Set `stages.development.status = "complete"` and `current_stage = "devops"` in state.json.
+- Set `stages.development.status = "complete"` in state.json. Choose the final stage by `app_type`:
+  - **web:** set `current_stage = "devops"` and set `stages.packaging.status = "skipped"`.
+  - **electron:** set `current_stage = "packaging"` and set `stages.devops.status = "skipped"`.
 - **Commit — development complete:**
   ```bash
   git add runs/<run-id>/state.json
   git commit -m "docs(<run-id>): all stories complete"
   ```
-- Immediately proceed to Stage: devops below.
+- Immediately proceed to the chosen final stage: **Stage: devops** (web) or **Stage: packaging** (electron) below.
+
+---
+
+## Stage: packaging  *(electron runs only)*
+
+Runs instead of DevOps when `app_type = electron`. Read `electron_root` from `src_paths.electron`.
+
+### Packaging loop (max 5 iterations)
+
+Per the stage-lifecycle rule, set `stages.packaging.status = "in_progress"` before the first `electron-packager` invocation (fold into the packager-draft commit).
+
+a. Invoke `electron-packager`. Pass: run-id, `electron_root`, path to runs/<run-id>/tech-spec.md.
+
+b. **Commit — Packager draft/revision:**
+   ```bash
+   git add <electron_root> runs/<run-id>/state.json
+   # First iteration:
+   git commit -m "chore: electron packager draft"
+   # Subsequent iterations:
+   git commit -m "chore: electron packager revision — reviewer feedback (iter <n>)"
+   ```
+
+c. Invoke `electron-packager-reviewer`. Pass: run-id, `electron_root`, path to runs/<run-id>/tech-spec.md.
+
+d. Update `stages.packaging` in state.json.
+
+e. **Commit — Packager Reviewer outcome:**
+   ```bash
+   git add runs/<run-id>/state.json
+   # On DONE:
+   git commit -m "chore: electron packager reviewer PASS"
+   # On BACK_TO_PACKAGER:
+   git commit -m "chore: electron packager reviewer — needs revision (iter <n>)"
+   # On BACK_TO_ELECTRON_ENGINEER:
+   git commit -m "chore: electron packager reviewer — code fix required (iter <n>)"
+   # On HUMAN_REVIEW_REQUIRED:
+   git commit -m "chore: electron packager reviewer — awaiting human decision"
+   ```
+
+f. Read the reviewer's `**Routing decision:**`:
+   - `DONE`:
+     - `stages.packaging.status = "complete"`, `current_stage = "complete"`.
+     - **Commit — run complete:**
+       ```bash
+       git add runs/<run-id>/state.json
+       git commit -m "chore(<run-id>): run complete"
+       ```
+     - Update the matching `phases[]` entry in `runs/<program-id>/program.json` to `"status": "complete"` and commit:
+       ```bash
+       git add runs/<program-id>/program.json
+       git commit -m "docs(<program-id>): phase <phase_number> complete"
+       ```
+     - Do NOT start the next phase automatically. Announce completion (see the Electron completion announcement below).
+   - `BACK_TO_PACKAGER`: increment packaging iterations. If < 5: re-invoke electron-packager with reviewer issues. Repeat from (a).
+   - `BACK_TO_ELECTRON_ENGINEER <story-id>`:
+     - **Reset `state.stories[<story-id>].fix_iterations = 0`** (fresh cross-loop entry from packaging).
+     - Re-invoke `electron-engineer` for that story with the failing context (passing `electron_root`); commit the engineer fix (feat/fix commit pattern).
+     - Re-invoke `electron-reviewer`; commit the outcome. If it FAILs and fix_iterations < 5: increment, re-invoke engineer; loop. If = 5: escalate.
+     - Once the reviewer passes: re-invoke `electron-test-engineer`, commit; then `electron-test-reviewer`, commit. If all pass: re-invoke `electron-packager`.
+   - `HUMAN_REVIEW_REQUIRED`: present the ambiguity to the user, wait for the decision, and use it as context for the next electron-packager invocation.
+   - If packaging iterations = 5: set `stages.packaging.status = "escalated"`, commit, escalate to the user.
+
+### Electron completion announcement
+Read `parent_branch` from `program.json`. Announce:
+> "Phase <phase_number> (run <run-id>) is complete!
+>
+> Branch `agentic-sdlc/<run-id>` is ready for review. To ship:
+> 1. Open a pull request from `agentic-sdlc/<run-id>` → `<parent_branch>`
+> 2. Review the generated Electron app in `<electron_root>/` (apps/desktop + packages/*)
+>
+> To run the app locally now:
+> 1. `cd <electron_root> && pnpm install`
+> 2. `pnpm dev` to launch in development, or `pnpm package` to build distributables"
+
+Then add the same program-level next-step note used by the web completion announcement
+(last phase → "all phases delivered"; otherwise → "run /agentic-sdlc:next-phase").
+
+### Brownfield note
+When `mode = brownfield` and `app_type = electron`, the packaging stage is
+**conditional** exactly like devops: run it only if `state.infra_change_required ==
+true` (e.g. a new OS target, updater feed, or native dependency); otherwise set
+`stages.packaging.status = "skipped"` and go straight to completion. Instruct the
+packager to MODIFY existing packaging config rather than regenerate it.
 
 ---
 
