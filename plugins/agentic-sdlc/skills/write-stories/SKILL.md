@@ -20,11 +20,21 @@ runs/<run-id>/stories/
 - When revising: only add new IDs at the end; never delete a story file.
 
 ## Track assignment
+The valid track set depends on the run's `app_type` (from state.json):
+
+**Web runs (`app_type = web`, the default):**
 - `dotnet` track: backend API endpoints, services, data models, DB migrations.
 - `react` track: UI components, pages, state management, API calls from the frontend.
 - One story belongs to exactly one track. If a feature needs both frontend and
   backend, create two stories (one per track) with the react story listing the
   dotnet story in its `Depends on`.
+
+**Electron runs (`app_type = electron`):**
+- `electron` track: the entire desktop app — main process, preload bridge, renderer
+  UI, and shared packages. Every story is `electron`.
+- One story still belongs to exactly one track (`electron`). Note each story's
+  **process area** (main | preload | renderer | package) in its description so the
+  engineer knows where the code lands.
 
 ## Traceability rules
 - Every TECH-ID from the tech spec must be covered by at least one story.
@@ -102,7 +112,7 @@ The `Complexity` column copies each story's `**Estimated complexity:**` value (S
 
 ## Quality checklist (self-check before finishing)
 - [ ] Every TECH-ID from tech-spec.md appears in at least one story's Implements list
-- [ ] Each story belongs to exactly one track (dotnet or react)
+- [ ] Each story belongs to exactly one track (dotnet or react for web runs; electron for electron runs)
 - [ ] Acceptance criteria are specific enough to write a failing test for
 - [ ] `index.md` exists with the `## Execution plan` diagram and `## Story index` table
 - [ ] Every story in the index table has a matching `STORY-XXX.md` file, and vice-versa

@@ -5,12 +5,24 @@ description: Template and conventions for writing technical specs. Used by the A
 
 # Writing a Technical Spec
 
-## Stack (fixed for all runs)
+## Stack (depends on app_type)
+
+Read `app_type` from state.json. It selects one of two fixed stacks:
+
+**`app_type = web` (default):**
 - Backend: .NET 8, ASP.NET Core Web API
 - Frontend: React 18 + Vite + TypeScript
 - Database: PostgreSQL (via Docker)
 - Deployment: docker-compose
 - CSS framework: set by Architect during codebase discovery (Tailwind CSS | Bootstrap | CSS Modules | detected from existing project)
+
+**`app_type = electron`:**
+- Shell: Electron + TypeScript, pnpm workspaces monorepo (`apps/desktop`, `packages/*`), ESM throughout
+- Build: electron-vite (main/preload/renderer targets)
+- Packaging: electron-builder (win/mac/linux) + electron-updater
+- Tests: Vitest + @vitest/coverage-v8, jsdom for renderer
+- Security: contextIsolation + sandbox on, nodeIntegration off, zod-validated IPC (see the `agentic-sdlc:electron-conventions` skill)
+- There is **no** .NET backend, database, or docker-compose for electron runs. The `Backend architecture` and `Mandatory infrastructure components` sections below apply to `web` runs only.
 
 ## Backend architecture: Clean Architecture (mandatory)
 
@@ -41,8 +53,8 @@ mark them `Layer: Frontend`).
 - Every TECH must implement at least one REQ.
 - Every REQ must be implemented by at least one TECH.
 
-## Mandatory infrastructure components
-Every tech spec MUST include these regardless of user requirements (the DevOps Reviewer's smoke tests depend on them):
+## Mandatory infrastructure components *(web runs only — skip for `app_type = electron`)*
+Every **web** tech spec MUST include these regardless of user requirements (the DevOps Reviewer's smoke tests depend on them):
 
 - **TECH-HEALTH:** Backend `/health` endpoint returning HTTP 200 with a small JSON body (e.g. `{"status":"ok"}`). This is what `docker compose up`'s readiness check and the DevOps reviewer's smoke test hit. Mark it `Implements: [INFRA]` (no REQ traceback needed — it is infrastructure, not feature).
 
@@ -89,14 +101,14 @@ Version: <n>
 <All environment variables required: DATABASE_URL, CORS_ORIGIN, etc.>
 
 **Infra change:** none | required — <what changes: new service / port / env var / dependency>
-<brownfield: whether docker-compose.yml, .env.example, Dockerfile(s), or nginx.conf must change vs the existing setup. greenfield: always `required` (the whole stack is new).>
+<web brownfield: whether docker-compose.yml, .env.example, Dockerfile(s), or nginx.conf must change vs the existing setup. web greenfield: always `required` (the whole stack is new). For `app_type = electron`, this line describes packaging changes instead — new OS target, updater feed, or native dependency; greenfield electron is always `required` (packaging is new).>
 ```
 
 ## Quality checklist (self-check before finishing)
 - [ ] Every REQ-ID from req-spec.md appears in at least one TECH's Implements list
 - [ ] Every TECH has at least one REQ in its Implements list (or `[INFRA]` for infrastructure TECHs)
 - [ ] Every backend TECH declares a valid `Layer` (Domain | Application | Infrastructure | Api) and no `Depends on` crosses a layer boundary outward
-- [ ] **TECH-HEALTH (`/health` endpoint) is present** (Layer: Api)
+- [ ] **(web runs only) TECH-HEALTH (`/health` endpoint) is present** (Layer: Api). Electron runs omit it.
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
 - [ ] Deployment topology includes the `**Infra change:**` line (`none`, or `required — <what>`)
 - [ ] Stack section matches the fixed stack above

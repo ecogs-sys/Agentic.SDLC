@@ -2,6 +2,36 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.10.0] - 2026-07-04
+
+### Added
+- **Electron desktop-app archetype.** A run can now build a secure-by-default Electron
+  desktop app via a new `app_type: electron` (default stays `web`). Adds one `electron`
+  development track — `electron-engineer` / `-reviewer` / `-test-engineer` /
+  `-test-reviewer` — plus an `electron-conventions` skill encoding industry-standard
+  security defaults (contextIsolation + sandbox on, nodeIntegration off,
+  contextBridge-only IPC validated with zod, strict CSP, node-pty confined to main).
+- **Packager stage for electron runs.** `electron-packager` (electron-builder +
+  electron-updater + icon generation) and `electron-packager-reviewer` (unpacked build
+  + smoke-launch) replace the DevOps/docker-compose done-gate when `app_type = electron`.
+
+### Changed
+- `/start-run` asks greenfield runs to pick an archetype (web | electron); the Code
+  Surveyor auto-detects electron for brownfield runs.
+- `write-tech-spec`, `write-stories`, `tech-lead`, and `advance-stage` now branch on
+  `app_type` — the electron stack, the single `electron` track, and Packager-vs-DevOps
+  routing. Web runs are unchanged.
+- `next-phase` carries `app_type` into later phases, and both the brownfield change-run
+  driver and brownfield-program storage are electron-aware, so multi-phase and brownfield
+  electron runs route to the packaging done-gate.
+- `show-run-status` now renders by `app_type` — electron runs show the Electron root, the
+  Packaging phase, and the monorepo/electron-builder artifacts instead of the web
+  backend/frontend/docker-compose lines.
+- **Pipeline diagram (`docs/agentic-sdlc-pipeline.svg`)** updated: the DevOps phase is
+  labelled the web archetype and a dashed "Electron archetype" note shows the Packager
+  (electron-builder + smoke-launch) replacing DevOps; `<title>`/`<desc>` updated for
+  accessibility.
+
 ## [0.9.2] - 2026-07-04
 
 ### Changed

@@ -129,8 +129,25 @@ flowchart TD
 1. **Requirement spec is the source of truth.** Every artifact traces back to it.
 2. **Creator + Validator pattern.** Every agent that produces an artifact has a paired validator.
 3. **Spec freeze at story dispatch.** Once development begins, upstream specs are immutable.
-4. **Single-language tracks.** .NET and React develop in parallel (logically).
+4. **Single-language tracks.** Web runs develop `.NET` and `React` in parallel (logically); electron runs use one `electron` track.
 5. **Runnable definition of done.** Complete only when `docker compose up` produces a working app.
+
+## Application archetypes
+
+A run targets one **application archetype**, recorded as `app_type` in `state.json`:
+
+| `app_type` | Stack | Development tracks | Definition of done |
+|---|---|---|---|
+| `web` (default) | .NET 8 API + React 18 + PostgreSQL | `dotnet`, `react` | `docker compose up` serves a working app (DevOps stage) |
+| `electron` | Electron + TypeScript pnpm monorepo (electron-vite, node-pty, xterm) | `electron` (main/preload/renderer) | electron-builder packages the app and it smoke-launches (Packager stage) |
+
+Greenfield runs pick the archetype at `/start-run`; brownfield runs auto-detect it
+(the Code Surveyor flags `electron` when it sees `electron` in `package.json`, a
+`pnpm-workspace.yaml`, or an `electron.vite.config.*`). Electron runs replace the
+DevOps/containerization stage with a **Packager** stage
+(`electron-packager` → `electron-packager-reviewer`) and follow the
+`agentic-sdlc:electron-conventions` skill's secure-by-default rules (contextIsolation +
+sandbox on, nodeIntegration off, zod-validated IPC).
 
 ## Brownfield mode
 

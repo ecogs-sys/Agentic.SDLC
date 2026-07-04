@@ -63,7 +63,7 @@ number. If none, use `001`.
 
 ### Step 2 — Collect the requirement
 If the user didn't provide their requirement with the command, ask:
-> "I will generate a runnable application with the following fixed stack: **.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose**. If you need a different stack (Vue, Angular, Python, MongoDB, etc.), this plugin won't fit — let me know and we can stop here.
+> "I will generate a runnable application. Greenfield runs support two fixed archetypes: **web** (.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose) or **electron** (TypeScript + Electron + electron-vite + electron-builder desktop app). You'll pick which after describing the requirement. If you need something outside both (Vue web app, Python backend, native mobile, etc.), this plugin won't fit — let me know and we can stop here.
 >
 > Please describe what you want to build. Be as detailed as you like."
 
@@ -105,6 +105,26 @@ Inspect the detected source paths for real, existing application code:
   - `greenfield` → fall through to the existing greenfield flow.
   - otherwise → go to **Step B1 (Brownfield flow)** below and do NOT run the
     greenfield Steps 4–10.
+
+### Step 3c — Choose the application archetype (greenfield only)
+Greenfield runs build one of two archetypes. Ask:
+> "What kind of application is this?
+> - **web** (default) — .NET 8 Web API + React 18 + PostgreSQL, shipped with docker-compose.
+> - **electron** — a cross-platform Electron desktop app (TypeScript pnpm monorepo, electron-vite, electron-builder). No .NET backend or database.
+>
+> Reply **web** (or Enter) or **electron**."
+
+- **electron:** set `app_type = "electron"`. The generated code lives in an Electron
+  monorepo, so `src_paths` uses a single root: `{ "electron": "<electron_root>" }`
+  where `<electron_root>` defaults to the workspace root (`.`). Skip the .NET/React
+  path detection from Step 3 — announce: "This Electron app will be generated into
+  `<electron_root>/` (apps/desktop + packages/*). Reply with a different root or press
+  Enter to continue."
+- **web / Enter (default):** set `app_type = "web"` and keep the `src_paths`
+  (backend/backend_test/frontend) detected in Step 3.
+
+Carry `app_type` and the chosen `src_paths` into `program.json` (Step 6) and each
+phase `state.json` (Step 8).
 
 ### Step 4 — Create git branch
 If the workspace is a git repository, first capture the current branch (this is the parent branch we'll return to on cancel):
@@ -164,11 +184,8 @@ Write `runs/<program-id>/program.json`:
 {
   "program_id": "<program-id>",
   "parent_branch": "<PARENT_BRANCH>",
-  "src_paths": {
-    "backend": "<backend_src>",
-    "backend_test": "<backend_test>",
-    "frontend": "<frontend_src>"
-  },
+  "app_type": "<web | electron>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
   "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
   "current_phase": 0,
   "phases": []
@@ -279,11 +296,8 @@ Wait for response:
   "parent_branch": "<PARENT_BRANCH>",
   "current_stage": "ba",
   "spec_frozen": false,
-  "src_paths": {
-    "backend": "<backend_src>",
-    "backend_test": "<backend_test>",
-    "frontend": "<frontend_src>"
-  },
+  "app_type": "<web | electron>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
   "stages": {
     "ba": { "status": "in_progress", "iterations": 0 },
     "ba_validation": { "status": "pending", "iterations": 0 },
@@ -295,7 +309,8 @@ Wait for response:
     "tech_lead_validation": { "status": "pending", "iterations": 0 },
     "user_review_stories": { "status": "pending" },
     "development": { "status": "pending" },
-    "devops": { "status": "pending", "iterations": 0 }
+    "devops": { "status": "pending", "iterations": 0 },
+    "packaging": { "status": "pending", "iterations": 0 }
   },
   "stories": {}
 }
@@ -400,6 +415,7 @@ program/phase model.
     "run_id": "<run-id>",
     "mode": "brownfield",
     "tier": null,
+    "app_type": "web",
     "parent_branch": "<PARENT_BRANCH>",
     "branch": "agentic-sdlc/<run-id>",
     "src_paths": { "backend": "<backend_src>", "backend_test": "<backend_test>", "frontend": "<frontend_src>" },
@@ -446,12 +462,21 @@ Resolve the confirmed `tier`:
 - a tier name → use that tier.
 - anything else → treat as revision notes for the surveyor; re-run B3.
 
+**Resolve `app_type` from the survey.** Read the surveyor's proposed `app_type` from
+`runs/<run-id>/codebase-context.md` (its Stack section) and set `state.app_type`
+(`web` or `electron`). For an `electron` app_type, also collapse `state.src_paths` to
+a single monorepo root: `{ "electron": "<monorepo root, default '.'>" }` (the code is
+edited in place, so this is the existing repo root).
+
 Then set `state.tier`, set `state.pipeline` to the confirmed tier's profile, mark
 `survey`/`survey_validation`/`user_review_triage` complete, and initialize a
 `stages` entry (`status: "pending"`, `iterations: 0` where applicable) for every
-remaining pipeline stage. Set `current_stage` to the first remaining stage. (If the
-user picks the new_feature **split** option below, this flat pipeline is discarded
-when the run is converted to a program — see Brownfield program flow.)
+remaining pipeline stage. Set `current_stage` to the first remaining stage. **For
+`app_type = electron`, replace the profile's trailing `"devops"` entry with
+`"packaging"`** (the electron done-gate) before seeding stages, so the final stage is
+`packaging`. (If the user picks the new_feature **split** option below, this flat
+pipeline is discarded when the run is converted to a program — see Brownfield program
+flow.)
 
 **Tier profiles (the `pipeline` array):**
 ```text
@@ -522,17 +547,18 @@ machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried
    git branch -m agentic-sdlc/<change-run-id> agentic-sdlc/<program-id>/phase-01
    ```
 5. Write `runs/<program-id>/program.json` (brownfield program — read `parent_branch`,
-   `infra_change_required`, and `test_baseline` from the change run's `state.json`
-   **before** deleting it in step 6, and copy them in):
+   `app_type`, `infra_change_required`, and `test_baseline` from the change run's
+   `state.json` **before** deleting it in step 6, and copy them in):
    ```json
    {
      "program_id": "<program-id>",
      "mode": "brownfield",
+     "app_type": "<web | electron — from the change run's state.json>",
      "parent_branch": "<PARENT_BRANCH>",
      "codebase_context_path": "runs/<program-id>/codebase-context.md",
      "infra_change_required": false,
      "test_baseline": { "captured": true, "preexisting_failures": [] },
-     "src_paths": { "backend": "<backend_src>", "backend_test": "<backend_test>", "frontend": "<frontend_src>" },
+     "src_paths": "<from the change run's state.json — web: {backend, backend_test, frontend}; electron: {electron: <root>}>",
      "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
      "current_phase": 0,
      "phases": []
@@ -557,12 +583,14 @@ exactly as written, with these brownfield deltas:
 
 ### Step BP3 — Create the Phase 1 run (brownfield)
 At Step 8's "approve" branch, create `runs/<program-id>/phase-01/state.json` with the
-**Phase 1 state.json schema** (above), plus these brownfield fields:
-`"mode": "brownfield"`, `"codebase_context_path":
-"runs/<program-id>/codebase-context.md"`, `"infra_change_required": <from
-program.json>`, and `"test_baseline": <from program.json>`. There is **no**
-survey/triage stage in the phase — the program-level survey already ran;
-`current_stage = "ba"`.
+**Phase 1 state.json schema** (above), copying `app_type` and `src_paths` from
+`program.json`, plus these brownfield fields: `"mode": "brownfield"`,
+`"codebase_context_path": "runs/<program-id>/codebase-context.md"`,
+`"infra_change_required": <from program.json>`, and `"test_baseline": <from
+program.json>`. There is **no** survey/triage stage in the phase — the program-level
+survey already ran; `current_stage = "ba"`. (Carrying `app_type` here — and via
+`/agentic-sdlc:next-phase` for later phases — keeps an electron brownfield program on
+the `electron` track and the packaging done-gate.)
 
 ### Step BP4 — BA loop + hand off
 Run the greenfield **Step 9 (BA loop)** and **Step 10 (req-spec gate)** exactly as
