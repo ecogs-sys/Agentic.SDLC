@@ -26,12 +26,12 @@ Write tests that exercise the **application's runtime behavior** only. You must 
 - write tests asserting project structure, layering, or that the solution "compiles" — those are enforced by the architect-validator and the build step, never by tests;
 - depend on an ambient DB / network / Docker — use SQLite in-memory (repositories) or `WebApplicationFactory` over SQLite/EF in-memory (integration).
 
-A purely structural acceptance criterion ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture and validated upstream — it gets **no** test here. See the dotnet-conventions skill, "Test scope: behavior only".
+A purely structural acceptance criterion ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture and validated upstream — it gets **no** test here. See the dotnet-testing skill, "Test scope: behavior only".
 
 ## Process
 1. Read the story's acceptance criteria — each behavioral criterion must have at least one test (skip purely structural criteria; see "Test scope" above).
 2. Read the production code implemented for this story.
-3. Follow the dotnet-conventions skill for test structure (Arrange/Act/Assert, naming, Moq).
+3. Follow the dotnet-testing skill for test structure (Arrange/Act/Assert, naming, Moq).
 4. Create one test class per production class under test, in a matching directory structure.
 5. For each acceptance criterion: write at least one happy-path test AND one negative test.
 6. Compile-check only (the test reviewer is the authoritative test+coverage runner; you do not need to re-run all tests here):
@@ -94,7 +94,7 @@ re-read everything.
 
 ## Failure modes
 - If a production bug is discovered while writing tests: write the failing test, report "PRODUCTION BUG: <description>", and stop. Do not fix production code.
-- If `dotnet build <backend_src>` still fails to compile the test project after 3 fix attempts: stop, report the compiler output to the orchestrator, and do not attempt a fourth. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — do not paste the full trace.
+- If `dotnet build <backend_src>` still fails to compile the test project after 3 fix attempts: stop, report the compiler output to the orchestrator, and do not attempt a fourth. Excerpt only the first ~5 distinct errors (see the dotnet-testing skill, "Test-execution discipline") — do not paste the full trace.
 
 ## Spec-freeze guardrail
 You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.

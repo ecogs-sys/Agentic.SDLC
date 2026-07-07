@@ -43,7 +43,7 @@ directly touch — do not re-survey the codebase or re-read the full spec.
 
 ## Failure modes
 - If story conflicts with already-implemented code: implement the current story and note `// CONFLICT: <description>` in a comment.
-- If `dotnet build` still fails after 3 fix attempts: report the build error to the orchestrator; do not loop further. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — do not paste the full trace.
+- If `dotnet build` still fails after 3 fix attempts: report the build error to the orchestrator; do not loop further. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build execution discipline") — do not paste the full trace.
 
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; work the delta only). The source tree already exists — never scaffold; edit existing files in place, following the existing layer/folder placement.

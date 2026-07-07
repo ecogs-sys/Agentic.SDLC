@@ -22,7 +22,7 @@ Write tests co-located with components in `<frontend_src>/src/` that cover the s
 ## Process
 1. Read the story's acceptance criteria — each must have ≥1 test.
 2. Read the production components.
-3. Follow react-conventions skill for test structure.
+3. Follow the react-testing skill for test structure and mocking patterns.
 4. Create `<Component>.test.tsx` next to each `<Component>.tsx` under test.
 5. For each acceptance criterion: write ≥1 happy-path test AND ≥1 negative/edge-case test.
 6. Mock all API calls with `vi.mock()`.

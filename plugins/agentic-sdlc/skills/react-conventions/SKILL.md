@@ -1,6 +1,6 @@
 ---
 name: react-conventions
-description: Project-specific React coding conventions. Used by React Engineer, Reviewer, Test Engineer, and Test Reviewer.
+description: Project-specific React coding conventions (architecture, components, design system, CSS isolation). Used by the React Engineer and Reviewer. Test patterns and test-execution rules live in the react-testing skill.
 ---
 
 # React Conventions
@@ -147,42 +147,14 @@ export async function fetchTodos(): Promise<Todo[]> {
 - All fetch calls in `src/api/<resource>.ts` only — never inside a component, page, or hook body (hooks call the `api` layer; they do not `fetch` directly).
 - Base URL from `import.meta.env.VITE_API_URL`.
 
-## Vitest + React Testing Library patterns
-```typescript
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { vi, type Mock } from 'vitest';
-import * as todosApi from '../../api/todos';
-import { TodoList } from './TodoList';
-
-vi.mock('../../api/todos');
-
-describe('TodoList', () => {
-  it('renders todo items when loaded', async () => {
-    (todosApi.fetchTodos as Mock).mockResolvedValue([{ id: 1, title: 'Test todo' }]);
-    render(<TodoList />);
-    await waitFor(() => {
-      expect(screen.getByText('Test todo')).toBeInTheDocument();
-    });
-  });
-});
-```
+## Testing
+Test patterns (Vitest + RTL) and test-execution rules live in the
+**`agentic-sdlc:react-testing`** skill (used by the test engineer and test
+reviewer). One rule engineers must know: tests are co-located as
+`<Component>.test.tsx`, and **engineers and reviewers run `npm run build` only** —
+never the test suite; at most one build/test process in flight.
 
 ## Commands
 ```bash
 npm run build         # Expected: vite build succeeds, no TypeScript errors
-npm test -- --run     # Expected: all tests pass
 ```
-
-## Build & test execution discipline
-
-The suite is verified **once per change**, and only by the agent that owns that change:
-
-- **Engineers and reviewers run `npm run build` only** — they do not run the test suite.
-- **The test-engineer runs focused tests only:** `npm test -- --run <path/to/specific.test.tsx>`
-  for a quick sanity check. It does not run the full coverage pass.
-- **The test-reviewer is the sole owner of the full run:** `npm test -- --run --coverage`. No other
-  agent runs the full suite (the end-of-run devops-reviewer pass is the one exception).
-- **At most one `npm test` in flight at a time.** Never start a run while another is still active
-  against the same workspace — concurrent runs collide on fixed ports, temp files, and CPU,
-  producing flakiness and net *slowdown*, never a speedup. Run once per change and let it finish.
