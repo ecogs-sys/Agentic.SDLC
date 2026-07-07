@@ -13,15 +13,22 @@ threshold, and produce a routing decision.
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (acceptance criteria, `Coverage threshold`)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it: acceptance criteria, `Coverage threshold`)
 - `electron_root` — the monorepo root
+- `full_suite` — `true` when this story is the last of its wave, the run is brownfield, or this is a fix cycle routed back from Packaging; `false` otherwise
 
 ## Process
 1. Read the story and the `agentic-sdlc:coverage-report` skill (Vitest section) for how to run coverage and interpret it.
-2. Run the full suite with coverage ONCE (you own the single authoritative run — no other agent runs the full suite concurrently):
+2. Run tests with coverage ONCE, **scoped by the `full_suite` flag** (you own the single authoritative run — no other agent runs the suite concurrently):
    ```bash
+   # full_suite = true — the authoritative whole-suite run:
    cd <electron_root> && pnpm test -- --run --coverage
+   # full_suite = false — this story's test files only:
+   cd <electron_root> && pnpm test -- --run --coverage <path/to/story.test.ts> [...]
    ```
+   On a scoped run, judge the threshold against the **story's production files** in
+   the per-file coverage rows. Cross-story regressions are caught by the wave-end
+   full-suite run and the Packaging gate.
 3. Compare coverage to the story's `Coverage threshold`. Judge whether tests actually exercise the acceptance criteria (not just line coverage).
 4. Decide routing:
    - `DONE`: all tests pass AND coverage meets the threshold AND tests meaningfully cover the criteria.
@@ -47,4 +54,4 @@ threshold, and produce a routing decision.
 ```
 
 ## Brownfield mode
-When `mode = brownfield`, follow `agentic-sdlc:brownfield-mode`: run the full existing suite and compare to `state.test_baseline` — only NEW failures block; pre-existing failures are reported, not fixed.
+When `mode = brownfield`, follow `agentic-sdlc:brownfield-mode`: `full_suite` is always `true` — run the full existing suite and compare to `state.test_baseline` — only NEW failures block; pre-existing failures are reported, not fixed.

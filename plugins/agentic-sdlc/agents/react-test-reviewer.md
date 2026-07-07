@@ -12,8 +12,9 @@ Run tests with coverage, verify quality, and produce a routing decision.
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (acceptance criteria, coverage_threshold)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it: acceptance criteria, coverage_threshold)
 - `frontend_src` — path to the React source directory (e.g. `src/frontend`)
+- `full_suite` — `true` when this story is the last of its wave, the run is brownfield, or this is a fix cycle routed back from DevOps; `false` otherwise
 - Production code and test files
 
 ## Outputs
@@ -21,10 +22,16 @@ A structured report with routing decision.
 
 ## Process
 1. Read all test files and the production code they test. **Determine the coverage threshold:** if the story has a `coverage_threshold` field, use it; otherwise fall back to the project default of `{"lines": 80, "critical_paths": 90}` (from the coverage-report skill).
-2. Run tests with coverage (per coverage-report skill):
+2. Run tests with coverage (per coverage-report skill), **scoped by the `full_suite` flag**:
    ```bash
+   # full_suite = true — the authoritative whole-suite run:
    cd <frontend_src> && npm test -- --run --coverage
+   # full_suite = false — this story's test files only:
+   cd <frontend_src> && npm test -- --run --coverage <path/to/story.test.tsx> [...]
    ```
+   On a scoped run, judge the threshold against the **story's production files** in
+   the per-file coverage rows. Cross-story regressions are caught by the wave-end
+   full-suite run and the DevOps gate.
 3. Check: do tests verify UI behavior (text on screen, user interactions), or do they test implementation details?
 4. Apply the decision tree from coverage-report skill.
 
@@ -53,15 +60,4 @@ Routing:
 - `BACK_TO_ENGINEER`: tests expose a real bug in production code
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
-addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
-first, reuse its documented conventions, and produce/implement only the **delta**
-against the existing system — never re-scaffold or re-specify code that already
-exists.
-
-**Test reviewers (brownfield done-gate):** run the repo's FULL existing test suite
-(not just this change's tests). Compare results to the `## Test baseline` in
-`codebase-context.md`. The gate FAILS only on **new** failures introduced by this
-change; report any pre-existing failures to the orchestrator unchanged — do not try
-to fix them. New tests covering the change must pass.
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first). **Brownfield done-gate:** `full_suite` is always `true` — run the repo's FULL existing test suite and compare results to the `## Test baseline` in `codebase-context.md`. The gate FAILS only on **new** failures introduced by this change; report pre-existing failures unchanged — do not try to fix them. New tests covering the change must pass.

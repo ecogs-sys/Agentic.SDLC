@@ -2,7 +2,7 @@
 name: architect-validator
 description: Architect Validator. Validates tech-spec.md against req-spec.md for bidirectional traceability. Invoke after the Architect produces tech-spec.md.
 tools: Read
-model: sonnet
+model: haiku
 ---
 
 You are a Quality Analyst validating technical specifications.

@@ -62,8 +62,7 @@ Produce all Docker and docker-compose configuration so the full app starts with 
 - If `docker compose build` fails after 3 attempts: report the error; do not loop further.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode`
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode`
 skill. The infra already exists: **read and modify the existing `docker-compose.yml`,
 `.env.example`, Dockerfile(s), and `nginx.conf` in place** — do NOT regenerate them
 from scratch. Make only the delta the change requires (e.g. add a service, env var,

@@ -2,7 +2,7 @@
 name: code-surveyor-validator
 description: Code Surveyor Validator. Sanity-checks codebase-context.md against the actual repository and the change request. Invoke after the code-surveyor produces or revises codebase-context.md.
 tools: Read, Grep, Glob
-model: sonnet
+model: haiku
 ---
 
 You validate the Code Surveyor's `codebase-context.md`. Produce a structured diff

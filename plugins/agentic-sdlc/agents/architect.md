@@ -55,13 +55,14 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 - If two REQs conflict technically: implement both defensively and flag the conflict in a TECH note.
 - Never halt — always produce a complete tech-spec.md.
 
+## Revision mode
+When revision notes are present, change only what the notes require — do not
+rewrite unaffected TECHs or renumber IDs, and do NOT redo Process step 1's
+codebase discovery (reuse the existing `## Existing system` section). Still
+confirm every REQ-ID remains covered before finishing.
+
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
-addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
-first, reuse its documented conventions, and produce/implement only the **delta**
-against the existing system — never re-scaffold or re-specify code that already
-exists.
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; design the delta only; never re-specify existing code).
 
 ## Spec-freeze guardrail
 After Tech Lead approval, `req-spec.md` and `tech-spec.md` are frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit either file.

@@ -2,7 +2,7 @@
 name: tech-lead-validator
 description: Tech Lead Validator. Validates the runs/<run-id>/stories/ directory (index.md + STORY-XXX.md files) against tech-spec.md for coverage, structure, and execution-plan correctness. Invoke after the Tech Lead produces the stories directory.
 tools: Read
-model: sonnet
+model: haiku
 ---
 
 You are a Quality Analyst validating story decomposition.

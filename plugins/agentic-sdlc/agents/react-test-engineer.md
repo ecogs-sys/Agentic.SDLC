@@ -12,7 +12,7 @@ Write tests co-located with components in `<frontend_src>/src/` that cover the s
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (acceptance criteria, coverage_threshold)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it: acceptance criteria, coverage_threshold)
 - `frontend_src` — path to the React source directory (e.g. `src/frontend`)
 - Production code in `<frontend_src>/src/`
 
@@ -63,6 +63,11 @@ describe('TodoList', () => {
 - Every acceptance criterion has ≥1 RTL test.
 - All API calls mocked.
 - No production code modified.
+
+## Revision mode
+When revision notes (test-reviewer feedback) are present, fix only the listed
+issues. Read only the test files/production files named in the notes — do not
+re-read everything.
 
 ## Failure modes
 - If production bug found: write the failing test, report "PRODUCTION BUG: <description>", stop. Do not fix production code.

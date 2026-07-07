@@ -12,7 +12,7 @@ Write tests in `<backend_test>/<AppName>.Tests/` that cover every acceptance cri
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (acceptance criteria, coverage_threshold)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it: acceptance criteria, coverage_threshold)
 - `backend_src` — path to the .NET source directory (e.g. `src/backend`)
 - `backend_test` — path to the .NET test directory (e.g. `tests/backend`)
 - Production code files in `<backend_src>/<AppName>.Api/`
@@ -86,6 +86,11 @@ public class TodoControllerTests
 - Every acceptance criterion has ≥1 test.
 - Tests follow Arrange/Act/Assert.
 - No production code modified.
+
+## Revision mode
+When revision notes (test-reviewer feedback) are present, fix only the listed
+issues. Read only the test files/production files named in the notes — do not
+re-read everything.
 
 ## Failure modes
 - If a production bug is discovered while writing tests: write the failing test, report "PRODUCTION BUG: <description>", and stop. Do not fix production code.

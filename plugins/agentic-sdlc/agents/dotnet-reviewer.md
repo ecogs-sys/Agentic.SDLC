@@ -12,8 +12,8 @@ Review the .NET implementation of a specific story and produce a PASS/FAIL repor
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria)
-- `runs/<run-id>/tech-spec.md`
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it)
+- `runs/<run-id>/tech-spec.md` — read only the story-relevant sections
 - `backend_src` — path to the .NET source directory (e.g. `src/backend`)
 - List of modified files in `<backend_src>`
 
@@ -61,9 +61,4 @@ A structured review report printed to your response.
 PASS requires: build passes AND no CRITICAL issues.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
-addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
-first, reuse its documented conventions, and produce/implement only the **delta**
-against the existing system — never re-scaffold or re-specify code that already
-exists.
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; review the delta against the existing conventions).
