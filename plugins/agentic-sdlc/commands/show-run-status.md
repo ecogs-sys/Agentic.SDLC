@@ -33,6 +33,12 @@ Read state.json and display a clear status summary.
 4. For each artifact (req-spec.md, tech-spec.md, stories/index.md) **under the
    active phase dir**, check existence and read its `Version:` line. If the file
    exists but has no `Version:` line, report version as `?`.
+4b. Read the run's recent activity — the last 10 lines of the active run dir's
+   `progress.log`:
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" tail-log <run-dir> 10
+   ```
+   (Older runs may have no progress.log — show "(no activity log)".)
 5. Check existence of the archetype's code paths (by `app_type`, default `web`):
    - **web:** `<backend_src>/` (src_paths.backend), `<backend_test>/` (src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (src_paths.frontend), and `docker-compose.yml` at workspace root.
    - **electron:** the monorepo root `<electron_root>/` (src_paths.electron), `<electron_root>/apps/desktop/`, and `<electron_root>/electron-builder.yml`.
@@ -90,6 +96,10 @@ Read state.json and display a clear status summary.
   ─────────────────────────────────────────
   Packager                 [<stages.packaging.status>] iter: <n>
 
+  RECENT ACTIVITY  (last 10 events from progress.log)
+  ─────────────────────────────────────────
+  <one line per event, oldest first; or "(no activity log)">
+
   ARTIFACTS
   ─────────────────────────────────────────
   runs/<program-id>/<phase-folder>/raw-input.md    exists | missing
@@ -146,6 +156,10 @@ progressing on its own — surface it, don't bury it in the ladder.
   DEVELOPMENT  (if state.stories non-empty)
   ─────────────────────────────────────────
   <STORY-XXX [track] [status] per story>
+
+  RECENT ACTIVITY  (last 10 events from progress.log)
+  ─────────────────────────────────────────
+  <one line per event, oldest first; or "(no activity log)">
 
   ARTIFACTS
   ─────────────────────────────────────────
