@@ -1,5 +1,5 @@
 ---
-description: Start a new Agentic SDLC program. Collects the user's requirement, creates the program directory and branch, drives the Phase Planner → Validator loop and phase-plan gate, then creates the Phase 1 run and drives the BA → BA Validator loop and first user review gate.
+description: Start a new Agentic SDLC program. Collects the user's requirement, creates the program directory and branch, drives the Phase Planner → Validator loop and phase-plan gate, then creates the Phase 1 run and hands off to advance-stage for the BA loop and first user review gate.
 ---
 
 # /agentic-sdlc:start-run
@@ -9,8 +9,14 @@ You are the Agentic SDLC orchestrator.
 ## Your job
 Start a new program: collect the requirement, initialize the program, create the
 git branch, split the requirement into phases (Phase Planner + Validator loop +
-phase-plan gate), then create the Phase 1 run and drive the BA + validation loop
-up to the requirement-spec review gate.
+phase-plan gate), then create the Phase 1 run and hand off to
+`agentic-sdlc:advance-stage` (which drives the BA loop and everything after).
+
+## Helper script
+State updates, commits, and progress logging go through the helper:
+```bash
+SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
+```
 
 ## Composite run IDs
 Each phase is a normal run whose `run_id` is the composite `<program-id>/phase-0N`.
@@ -18,11 +24,10 @@ This makes every `runs/<run-id>/…` path resolve to `runs/<program-id>/phase-0N
 so the BA, Architect, Tech Lead, and development agents need no changes.
 
 ## User-review gate convention
-At **every** user-review gate (phase plan, requirement spec, triage, and any gate
-reached from here), before asking the user to approve: (1) tell them the exact
-artifact path under review — e.g. "Reviewing **`runs/<program-id>/phase-plan.md`**";
-(2) show the file's full contents; (3) then ask for approval. Never ask for approval
-without naming the path and showing the file.
+Follow the gate convention in the `agentic-sdlc:validation-loop` skill: at every
+gate, (1) name the exact artifact path under review; (2) show the file's full
+contents on first review — or the diff + validator notes on a re-review after
+revisions; (3) then ask for approval.
 
 ## Process
 
@@ -104,7 +109,7 @@ Inspect the detected source paths for real, existing application code:
   > continue, or type `greenfield` to force a from-scratch build instead."
   - `greenfield` → fall through to the existing greenfield flow.
   - otherwise → go to **Step B1 (Brownfield flow)** below and do NOT run the
-    greenfield Steps 4–10.
+    greenfield Steps 4–9.
 
 ### Step 3c — Choose the application archetype (greenfield only)
 Greenfield runs build one of two archetypes. Ask:
@@ -139,7 +144,7 @@ Check if `.gitignore` exists at the workspace root.
 - If missing: create it.
 - If exists: append any missing entries.
 
-**Note on `runs/`:** the workspace `.gitignore` does NOT exclude `runs/`. SDLC artifacts (req-spec, tech-spec, stories, state.json) are committed to the run branch as the audit trail. The marketplace repo's own `.gitignore` excludes `runs/` because that's a separate concern (don't pollute the marketplace with users' run artifacts). This is intentional, not an oversight.
+**Note on `runs/`:** the workspace `.gitignore` does NOT exclude `runs/`. SDLC artifacts (req-spec, tech-spec, stories, state.json, progress.log) are committed to the run branch as the audit trail. The marketplace repo's own `.gitignore` excludes `runs/` because that's a separate concern (don't pollute the marketplace with users' run artifacts). This is intentional, not an oversight.
 
 Ensure these entries are present:
 ```gitignore
@@ -156,8 +161,9 @@ dist/
 # Test coverage
 **/coverage*/
 
-# Logs
+# Logs (run progress logs are NOT excluded — they live under runs/)
 *.log
+!runs/**/progress.log
 
 # Environment — never commit secrets
 .env
@@ -194,61 +200,49 @@ Write `runs/<program-id>/program.json`:
 
 **Commit — program initialized:**
 ```bash
-git add .gitignore runs/<program-id>/original-input.md runs/<program-id>/program.json
-git commit -m "chore(<program-id>): initialize program"
+SDLC commit-step "chore(<program-id>): initialize program" .gitignore runs/<program-id>/original-input.md runs/<program-id>/program.json
 ```
 
 ### Step 7 — Phase Planner loop (max 5 iterations)
 
-Before the first iteration, set `program.json` `phase_plan.status = "in_progress"` (it was
-seeded `"pending"` in Step 6) so the planning stage reports as running, and fold that write
-into the first draft commit in step (b). Leave it `in_progress` for the whole loop.
+This is the `agentic-sdlc:validation-loop` protocol applied at the **program**
+level: state lives in `program.json` (`phase_plan.status` is a lifecycle field:
+pending → in_progress → frozen → escalated — do NOT store the validator's
+pass/fail in it; iterations live in `phase_plan.iterations`).
+
+Before the first iteration set `phase_plan.status = "in_progress"`
+(`SDLC set-field runs/<program-id>/program.json phase_plan.status in_progress` —
+ships with the first draft commit) and leave it `in_progress` for the whole loop.
 
 **On each iteration:**
 
-a. Invoke the `phase-planner` agent. Pass: program-id, path to
+a. Banner `▶ [phase-plan] phase-planner (iter <i>/5)`; invoke the `phase-planner`
+   agent (description: `"phase plan iter <i>"`). Pass: program-id, the path to
    `runs/<program-id>/original-input.md`, revision notes (empty on first iteration).
 
-b. **Commit — Phase Planner draft/revision:**
+b. **Commit — draft/revision:**
    ```bash
-   git add runs/<program-id>/phase-plan.md runs/<program-id>/program.json
-   # First iteration:
-   git commit -m "docs(<program-id>): phase plan draft"
-   # Subsequent iterations:
-   git commit -m "docs(<program-id>): phase plan revision (iter <n>)"
+   SDLC commit-step "docs(<program-id>): phase plan draft" runs/<program-id>/phase-plan.md runs/<program-id>/program.json
+   # revisions: "docs(<program-id>): phase plan revision (iter <n>)"
    ```
 
 c. Invoke `phase-planner-validator`. Pass: program-id, paths to original-input.md
-   and phase-plan.md.
+   and phase-plan.md. Print the `✔`/`✖` banner with its status.
 
-d. Keep `program.json` `phase_plan.status = "in_progress"` while the loop runs. Do
-   NOT store the validator's pass/fail in `phase_plan.status` (that field tracks plan
-   lifecycle: pending → in_progress → frozen → escalated).
-
-e. **Commit — Phase Planner validation outcome:**
-   ```bash
-   git add runs/<program-id>/program.json
-   # On pass:
-   git commit -m "docs(<program-id>): phase plan passed validation"
-   # On fail:
-   git commit -m "docs(<program-id>): phase plan failed validation (iter <n>)"
-   ```
-
-f. If `"status": "fail"`:
-   - Increment `program.json` `phase_plan.iterations`.
-   - If `phase_plan.iterations` < 5: re-invoke `phase-planner` with the validator's
+d. Route (validation outcomes get no standalone commit — the state ships with the
+   next commit):
+   - **fail, iterations < 5:** `SDLC set-field runs/<program-id>/program.json
+     phase_plan.iterations <n+1>`, re-invoke `phase-planner` with the validator's
      report as revision notes. Repeat from (a).
-   - If `phase_plan.iterations` = 5: set `program.json` `phase_plan.status =
-     "escalated"` and say to the user:
-     > "The Phase Planner failed validation 5 times. Here is the report. Provide
-     > guidance and I will try again, or use /agentic-sdlc:cancel-run to cancel."
-     Wait for guidance. If guidance is provided, re-invoke `phase-planner` with it
+   - **fail, iterations = 5:** set `phase_plan.status = "escalated"`, commit
+     (`"docs(<program-id>): phase plan escalated"`), emit the escalation block
+     (validation-loop skill), and wait. On guidance, re-invoke `phase-planner`
      (the counter does not reset). If the user cancels, stop.
-
-g. If `"status": "pass"`: proceed to Step 8.
+   - **pass:** proceed to Step 8.
 
 ### Step 8 — User review gate: phase plan
-State the path **`runs/<program-id>/phase-plan.md`** to the user, then read and display it in full.
+Apply the gate convention on **`runs/<program-id>/phase-plan.md`** (full contents
+on first review; diff + validator notes on a re-review).
 
 Say:
 > "The Phase Planner proposes **<N> phase(s)** (Version <n>). Reply **'approve'**
@@ -277,11 +271,10 @@ Wait for response:
   4. Write `runs/<program-id>/phase-01/state.json` (see schema below).
   5. **Commit — phase plan frozen, Phase 1 created:**
      ```bash
-     git add runs/<program-id>/program.json runs/<program-id>/phase-01/
-     git commit -m "docs(<program-id>): phase plan frozen — Phase 1 started"
+     SDLC commit-step "docs(<program-id>): phase plan frozen — Phase 1 started" runs/<program-id>/program.json runs/<program-id>/phase-01/
      ```
-  6. Proceed to Step 9 (BA loop).
-- **Any other response**: treat as revision notes. Increment `program.json`
+  6. Proceed to Step 9 (hand off).
+- **Any other response**: treat as revision notes. Increment
   `phase_plan.iterations`, then re-invoke `phase-planner` with those notes. Repeat
   from Step 7. (User revision counts toward the 5-iteration limit.)
 
@@ -316,65 +309,11 @@ Wait for response:
 }
 ```
 
-### Step 9 — BA loop (max 5 iterations)
-
-The Phase-1 schema already seeds `stages.ba.status = "in_progress"`. When you invoke the
-validator in step (c), set `stages.ba_validation.status = "in_progress"` first (fold into the
-validation-outcome commit) so the validation stage reports as running rather than jumping
-from `pending` to `complete`.
-
-**On each iteration:**
-
-a. Invoke the `ba` agent. Pass: run-id, path to raw-input.md, revision notes (empty on first iteration).
-
-b. **Commit — BA draft/revision:**
-   ```bash
-   git add runs/<run-id>/req-spec.md runs/<run-id>/state.json
-   # First iteration:
-   git commit -m "docs(<run-id>): BA req-spec draft"
-   # Subsequent iterations:
-   git commit -m "docs(<run-id>): BA req-spec revision (iter <n>)"
-   ```
-
-c. Invoke `ba-validator`. Pass: run-id, paths to raw-input.md and req-spec.md.
-
-d. Update `stages.ba_validation` in state.json with the validation outcome.
-
-e. **Commit — BA validation outcome:**
-   ```bash
-   git add runs/<run-id>/state.json
-   # On pass:
-   git commit -m "docs(<run-id>): BA req-spec passed validation"
-   # On fail:
-   git commit -m "docs(<run-id>): BA req-spec failed validation (iter <n>)"
-   ```
-
-f. If `"status": "fail"`:
-   - Increment `stages.ba.iterations` in state.json.
-   - If iterations < 5: re-invoke `ba` agent with the validator's diff as revision notes. Repeat from (a).
-   - If iterations = 5: update `stages.ba.status = "escalated"`. Say to user:
-     > "The BA agent failed validation 5 times. Here is the diff report. Provide guidance and I will try again, or use /agentic-sdlc:cancel-run to cancel."
-     Wait for guidance. If guidance provided, re-invoke BA. If user cancels, stop.
-
-g. If `"status": "pass"`:
-   - Update state.json: `stages.ba.status = "complete"`, `stages.ba_validation.status = "complete"`.
-
-### Step 10 — User review gate
-State the path **`runs/<run-id>/req-spec.md`** to the user, then read and display it in full.
-
-Say:
-> "The Business Analyst has produced the following requirement spec (Version <n>). Please review it and reply **'approve'** to continue, or describe what needs to change."
-
-Wait for response:
-- **"approve"** (case-insensitive):
-  - Update state.json: `stages.user_review_req.status = "complete"`, `current_stage = "architect"`.
-  - **Commit — req-spec approved:**
-    ```bash
-    git add runs/<run-id>/state.json
-    git commit -m "docs(<run-id>): requirement spec approved"
-    ```
-  - Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its instructions. Do NOT tell the user to run any command — continue the pipeline without pausing.
-- **Any other response**: treat as revision notes. Re-invoke `ba` agent with those notes. Repeat BA loop from Step 9. (User revision counts toward the 5-iteration limit.)
+### Step 9 — Hand off to advance-stage
+Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
+instructions — it discovers the Phase 1 run (`current_stage = "ba"`) and drives
+the BA → BA Validator loop, the requirement-spec gate, and everything after. Do
+NOT tell the user to run any command — continue the pipeline without pausing.
 
 ## Spec freeze
 Do not set `spec_frozen` here. That happens after Tech Lead approval in /advance-stage.
@@ -431,24 +370,20 @@ program/phase model.
   ```
 - **Commit:**
   ```bash
-  git add .gitignore runs/<run-id>/raw-input.md runs/<run-id>/state.json
-  git commit -m "chore(<run-id>): initialize brownfield change run"
+  SDLC commit-step --run runs/<run-id> "chore(<run-id>): initialize brownfield change run" .gitignore runs/<run-id>/raw-input.md
   ```
 
 ### Step B3 — Surveyor shallow recon (triage) + validator loop (max 5)
-On each iteration:
-a. Invoke `code-surveyor`. Pass: run-id, the request, src paths, depth = `shallow`,
-   plus validator notes on later iterations.
-b. **Commit:** `git add runs/<run-id>/codebase-context.md runs/<run-id>/state.json`
-   then `git commit -m "docs(<run-id>): codebase survey (recon)"`.
-c. Invoke `code-surveyor-validator`. Pass: run-id, request, codebase-context.md.
-   Update `stages.survey_validation`. Commit the state change.
-d. On `fail` + iterations < 5: increment `stages.survey.iterations`, re-invoke with
-   the report. On `fail` + iterations = 5: set `stages.survey.status = "escalated"`,
-   escalate to the user, wait for guidance. On `pass`: set `stages.survey.status =
-   "complete"`, also copy `infra_change_required` and the baseline into state
-   (`test_baseline.captured = true`, `preexisting_failures` from the survey), commit,
-   continue to B4.
+This is the `agentic-sdlc:validation-loop` protocol with CREATOR = `code-surveyor`
+(depth = `shallow`), VALIDATOR = `code-surveyor-validator`, ARTIFACT =
+`runs/<run-id>/codebase-context.md`, STAGE/VALIDATION_STAGE = `survey` /
+`survey_validation`, MSG = `codebase survey (recon)`. Pass the surveyor: run-id,
+the request, src paths, depth, plus validator notes on later iterations.
+
+On **pass**: `SDLC set-stage runs/<run-id> survey complete`, copy
+`infra_change_required` and the baseline into state (`test_baseline.captured =
+true`, `preexisting_failures` from the survey) via `SDLC set-field`, commit,
+continue to B4.
 
 ### Step B4 — Triage gate
 State the path **`runs/<run-id>/codebase-context.md`** to the user, then display its
@@ -515,14 +450,13 @@ Tier-specific finalization at the gate:
 
 - **Commit:**
   ```bash
-  git add runs/<run-id>/state.json runs/<run-id>/codebase-context.md runs/<run-id>/stories/
-  git commit -m "docs(<run-id>): tier <tier> confirmed — pipeline set"
+  SDLC commit-step --run runs/<run-id> "docs(<run-id>): tier <tier> confirmed — pipeline set" runs/<run-id>/codebase-context.md runs/<run-id>/stories/
   ```
 
 ### Step B5 — Hand off to advance-stage
 Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
-instructions (it will detect the brownfield run and drive the pipeline). Do NOT ask
-the user to run a command — continue without pausing.
+instructions (it will detect the brownfield run and load the brownfield-driver
+skill). Do NOT ask the user to run a command — continue without pausing.
 
 ---
 
@@ -592,10 +526,8 @@ survey already ran; `current_stage = "ba"`. (Carrying `app_type` here — and vi
 `/agentic-sdlc:next-phase` for later phases — keeps an electron brownfield program on
 the `electron` track and the packaging done-gate.)
 
-### Step BP4 — BA loop + hand off
-Run the greenfield **Step 9 (BA loop)** and **Step 10 (req-spec gate)** exactly as
-written (the BA reads `codebase-context.md` and writes a normal `req-spec.md` in
-brownfield mode). On approval, hand off to `agentic-sdlc:advance-stage`, which finds
-the program via the normal program scan and drives each phase's brownfield-aware
-greenfield sequence. Subsequent phases are started with `/agentic-sdlc:next-phase`
-after each phase's PR merges.
+### Step BP4 — Hand off
+Invoke the `agentic-sdlc:advance-stage` skill — it finds the program via the normal
+program scan and drives each phase's brownfield-aware greenfield sequence (the BA
+reads `codebase-context.md` and writes a normal `req-spec.md`). Subsequent phases
+are started with `/agentic-sdlc:next-phase` after each phase's PR merges.
