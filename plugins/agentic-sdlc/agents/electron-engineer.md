@@ -13,8 +13,8 @@ Implement exactly what the assigned story asks for inside `<electron_root>`. Not
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria, implements list, **process area**: main | preload | renderer | package)
-- `runs/<run-id>/tech-spec.md` — for architecture, IPC contracts, and stack detail
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it; it is self-contained: description, acceptance criteria, implements list, **process area**: main | preload | renderer | package)
+- `runs/<run-id>/tech-spec.md` — read **only** the sections named in the story's Implements list (architecture, IPC contracts, stack detail); do not read the whole spec
 - `electron_root` — path to the monorepo root (e.g. `.` or `apps/awakon`)
 - Current state of `<electron_root>`
 
@@ -22,18 +22,12 @@ Implement exactly what the assigned story asks for inside `<electron_root>`. Not
 - Modified/created files under `<electron_root>`
 
 ## Process
-1. Read the story and tech-spec.md. Read the `agentic-sdlc:electron-conventions` skill and follow it for all structural, security, and placement decisions.
+1. Read the story file and the story-relevant tech-spec sections. Read the `agentic-sdlc:electron-conventions` skill and follow it for all structural, security, and placement decisions.
 2. Detect the environment:
 
    **Existing `<electron_root>` (has `package.json`/`pnpm-workspace.yaml`):** reuse the existing layout, package names, tsconfig, and CSS approach per the electron-conventions "Detection" section. Do not re-scaffold.
 
-   **Empty `<electron_root>` (fresh project):** scaffold the monorepo skeleton once:
-   - `pnpm-workspace.yaml` with `packages: ["apps/*", "packages/*"]`
-   - root `package.json` (`"type": "module"`, `"private": true`, scripts: `dev`, `build`, `test`, `lint`) with devDeps: `electron`, `electron-vite`, `vite`, `typescript`, `vitest`, `@vitest/coverage-v8`, `jsdom`, `eslint`, `prettier`.
-   - `apps/desktop/src/{main,preload,renderer}` and `packages/contracts` (with `zod`).
-   - `electron.vite.config.ts` with `main`, `preload`, `renderer` targets.
-   - a root `vitest.config.ts` (or per-package) enabling `coverage: { provider: 'v8' }`, with `jsdom` for renderer tests and `node` elsewhere.
-   Install with `pnpm install`.
+   **Empty `<electron_root>` (fresh project):** invoke the **`agentic-sdlc:scaffold-electron`** skill and follow it to create the monorepo skeleton once.
 3. Implement only the story's acceptance criteria, placing each part in its process area per electron-conventions:
    - Node/OS/node-pty → `apps/desktop/src/main`
    - contextBridge surface → `apps/desktop/src/preload`
@@ -54,6 +48,11 @@ Implement exactly what the assigned story asks for inside `<electron_root>`. Not
 - Process boundaries respected: node-pty only in main; no Node built-ins in renderer; IPC payloads zod-validated.
 - No test files created or modified.
 - Only `<electron_root>` files modified.
+
+## Revision mode
+When revision notes (reviewer issues or failing-test info) are present, fix only
+the listed issues. Read only the files/sections named in the notes plus what you
+directly touch — do not re-survey the codebase or re-read the full spec.
 
 ## Failure modes
 - If a dependency story's IPC channel isn't defined yet: define the zod contract in `packages/contracts` yourself (it is shared), and leave `// TODO: remove stub when STORY-XXX lands` on any placeholder return.

@@ -12,8 +12,8 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria, implements list)
-- `runs/<run-id>/tech-spec.md` — for API contracts and data models
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it; it is self-contained: description, acceptance criteria, implements list)
+- `runs/<run-id>/tech-spec.md` — read **only** the sections named in the story's Implements list (plus the Stack section when relevant); do not read the whole spec
 - `backend_src` — path to the .NET source directory (e.g. `src/backend`)
 - `backend_test` — path to the .NET test directory (e.g. `tests/backend`). Test code lives here, **never under `<backend_src>`**.
 - Current state of `<backend_src>` — may be empty (first story) or partially built
@@ -22,52 +22,17 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 - Modified/created files in `<backend_src>`
 
 ## Process
-1. Read the story and tech-spec.md. Understand exactly what to build.
-2. Check what already exists in `<backend_src>`. If empty, scaffold a new **Clean Architecture** solution (four source projects under `<backend_src>` + one test project under `<backend_test>`). **The test project goes in `<backend_test>`, never under `<backend_src>`** (the `.sln` stays in `<backend_src>` and references it by relative path). Use `.sln` (the default classic format) consistently — do NOT mix `.sln` and `.slnx`. The reference wiring below enforces the inward dependency rule (Domain ← Application ← Infrastructure ← Api):
-   ```bash
-   dotnet new sln -n AppName -o <backend_src>
-
-   # Source projects (inner → outer) — all under <backend_src>
-   dotnet new classlib -n AppName.Domain        -o <backend_src>/AppName.Domain
-   dotnet new classlib -n AppName.Application    -o <backend_src>/AppName.Application
-   dotnet new classlib -n AppName.Infrastructure -o <backend_src>/AppName.Infrastructure
-   dotnet new webapi   -n AppName.Api --use-minimal-apis false -o <backend_src>/AppName.Api
-
-   # Test project — under <backend_test> (NOT under <backend_src>)
-   dotnet new xunit    -n AppName.Tests          -o <backend_test>/AppName.Tests
-
-   # Add all projects to the solution (the .sln lives in <backend_src>;
-   # dotnet records relative paths, so the test project resolves to ../../<backend_test>/...)
-   dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Domain/AppName.Domain.csproj
-   dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Application/AppName.Application.csproj
-   dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
-   dotnet sln <backend_src>/AppName.sln add <backend_src>/AppName.Api/AppName.Api.csproj
-   dotnet sln <backend_src>/AppName.sln add <backend_test>/AppName.Tests/AppName.Tests.csproj
-
-   # Dependency rule: references point only inward
-   dotnet add <backend_src>/AppName.Application/AppName.Application.csproj       reference <backend_src>/AppName.Domain/AppName.Domain.csproj
-   dotnet add <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj reference <backend_src>/AppName.Application/AppName.Application.csproj
-   dotnet add <backend_src>/AppName.Api/AppName.Api.csproj                       reference <backend_src>/AppName.Application/AppName.Application.csproj
-   dotnet add <backend_src>/AppName.Api/AppName.Api.csproj                       reference <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
-
-   # Tests reference the layers under test (cross-tree project references are fine)
-   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Api/AppName.Api.csproj
-   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Application/AppName.Application.csproj
-   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj reference <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj
-   dotnet add <backend_test>/AppName.Tests/AppName.Tests.csproj package Moq
-
-   # EF Core lives only in Infrastructure
-   dotnet add <backend_src>/AppName.Infrastructure/AppName.Infrastructure.csproj package Microsoft.EntityFrameworkCore
-   ```
-   Replace `AppName` with a name derived from the project in tech-spec (e.g., `TodoApp`). Do NOT add a reference from Domain or Application to Infrastructure or Api — that breaks the dependency rule.
-3. Follow the dotnet-conventions skill for all style decisions, including **Clean Architecture layer placement**: entities → Domain; interfaces + DTOs + service logic → Application; `DbContext` + repository implementations → Infrastructure; controllers + DI registration → Api. Put each part of the story's code in the layer the tech-spec's `Layer` field specifies. **On the first story (when you scaffold the solution), also add the mandatory `/health` endpoint** in `Program.cs` (Api layer — see dotnet-conventions skill, "Required: /health endpoint"). This is required by the DevOps smoke test and is not part of any user story.
+1. Read the story file and the story-relevant tech-spec sections. Understand exactly what to build.
+2. Check what already exists in `<backend_src>`. **If it is empty (no `.sln`/`.csproj`), invoke the `agentic-sdlc:scaffold-dotnet` skill and follow it** to create the Clean Architecture solution (including the mandatory `/health` endpoint). Otherwise skip scaffolding entirely.
+3. Follow the dotnet-conventions skill for all style decisions, including **Clean Architecture layer placement**: entities → Domain; interfaces + DTOs + service logic → Application; `DbContext` + repository implementations → Infrastructure; controllers + DI registration → Api. Put each part of the story's code in the layer the tech-spec's `Layer` field specifies.
 4. Implement only the story's acceptance criteria. Do not implement other stories' scope.
-5. Run `dotnet build`:
-   ```bash
-   dotnet build <backend_src>
-   ```
-   Fix all errors before finishing.
+5. Run `dotnet build <backend_src>`. Fix all errors before finishing.
 6. Do not write test files — that is the Test Engineer's responsibility.
+
+## Revision mode
+When revision notes (reviewer issues or failing-test info) are present, fix only
+the listed issues. Read only the files/sections named in the notes plus what you
+directly touch — do not re-survey the codebase or re-read the full spec.
 
 ## Definition of done
 - `dotnet build <backend_src>` exits with code 0, "Build succeeded."
@@ -78,19 +43,10 @@ Implement exactly what the assigned story asks for in `<backend_src>`. Nothing m
 
 ## Failure modes
 - If story conflicts with already-implemented code: implement the current story and note `// CONFLICT: <description>` in a comment.
-- If `dotnet build` still fails after 3 fix attempts: report the build error to the orchestrator; do not loop further. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — do not paste the full trace.
+- If `dotnet build` still fails after 3 fix attempts: report the build error to the orchestrator; do not loop further. Excerpt only the first ~5 distinct errors (see the dotnet-conventions skill, "Build execution discipline") — do not paste the full trace.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
-addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
-first, reuse its documented conventions, and produce/implement only the **delta**
-against the existing system — never re-scaffold or re-specify code that already
-exists.
-
-**Engineers:** in brownfield mode the source tree already exists — never scaffold a
-new solution/project. Edit existing files in place, follow the existing layer/folder
-placement, and only add new files where the change genuinely needs them.
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; work the delta only). The source tree already exists — never scaffold; edit existing files in place, following the existing layer/folder placement.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.
+You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or any file under `runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.

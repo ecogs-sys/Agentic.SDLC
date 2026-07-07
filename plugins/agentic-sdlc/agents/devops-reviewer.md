@@ -87,8 +87,7 @@ Routing decisions:
 - `HUMAN_REVIEW_REQUIRED`: API contract mismatch with no clear correct side — do not auto-route
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode`
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode`
 skill. Read ports/topology from `runs/<run-id>/codebase-context.md` (and
 `change-spec.md`/`tech-spec.md` if present) rather than assuming a `tech-spec.md`
 exists. The app already existed, so a regression in a previously-passing area is a

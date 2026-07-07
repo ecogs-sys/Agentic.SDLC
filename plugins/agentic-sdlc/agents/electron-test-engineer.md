@@ -12,7 +12,7 @@ Write tests that cover the story's acceptance criteria. Do not modify production
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it: description, acceptance criteria)
 - `electron_root` — the monorepo root
 
 ## Process
@@ -29,6 +29,11 @@ Write tests that cover the story's acceptance criteria. Do not modify production
    ```
    Do NOT run the full suite — that is the Test Reviewer's single authoritative run.
 5. Do not modify any production (non-test) file. If a criterion is untestable without a production change, report it to the orchestrator instead of editing production code.
+
+## Revision mode
+When revision notes (test-reviewer feedback) are present, fix only the listed
+issues. Read only the test files/production files named in the notes — do not
+re-read everything.
 
 ## Definition of done
 - Tests exist for every acceptance criterion.

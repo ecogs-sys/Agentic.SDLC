@@ -1,6 +1,6 @@
 ---
 name: dotnet-conventions
-description: Project-specific .NET coding conventions. Used by .NET Engineer, Reviewer, Test Engineer, and Test Reviewer.
+description: Project-specific .NET coding conventions (architecture, naming, DI, robustness). Used by the .NET Engineer and Reviewer. Test structure and test-execution rules live in the dotnet-testing skill.
 ---
 
 # .NET Conventions
@@ -56,7 +56,6 @@ referencing Application, or an Application class importing EF Core — is a hard
 - Controllers: `<Resource>Controller.cs`
 - Services: `I<Name>Service.cs` (interface) + `<Name>Service.cs` (impl)
 - DTOs: `<Name>Request.cs`, `<Name>Response.cs`
-- Test methods: `<MethodUnderTest>_<Scenario>_<ExpectedBehavior>`
 
 ## Async patterns
 - All controller actions and service methods touching I/O are `async Task<T>`.
@@ -78,58 +77,11 @@ referencing Application, or an Application class importing EF Core — is a hard
 - `DbContext` registered as scoped in `Program.cs` (the composition root).
 - Always use async EF methods: `ToListAsync()`, `FirstOrDefaultAsync()`, `SaveChangesAsync()`.
 
-## xUnit test structure
-```csharp
-public class FooServiceTests
-{
-    private readonly Mock<IRepository> _mockRepo;
-    private readonly FooService _sut;
-
-    public FooServiceTests()
-    {
-        _mockRepo = new Mock<IRepository>();
-        _sut = new FooService(_mockRepo.Object);
-    }
-
-    [Fact]
-    public async Task GetById_WithValidId_ReturnsEntity()
-    {
-        // Arrange
-        _mockRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Entity { Id = 1 });
-        // Act
-        var result = await _sut.GetByIdAsync(1);
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(1, result.Id);
-    }
-}
-```
-
-## Mocking
-- Use **Moq** for all mocking.
-- Mock only at service boundaries; test real logic.
-- For repository tests: use SQLite in-memory database instead of mocking EF Core.
-
-## Test scope: behavior only — never the build, SDK, or project structure
-
-Tests exercise the **application's runtime behavior** through its own types. They must NEVER:
-
-- **Invoke the `dotnet` CLI or spawn any external process** — no `dotnet build` / `restore` /
-  `sln list` / `run`, no `Process.Start`. Spawning `dotnet` from inside a `dotnet test` run is
-  slow and deadlocks on the NuGet package-folder lock or a network restore; it has produced
-  multi-minute hangs for zero behavioral coverage. If you find yourself shelling out to a tool,
-  the test is wrong.
-- **Assert on project structure, layering, or "it compiles"** — e.g. "the solution has four
-  projects", "Domain references nothing", "the build succeeds". Clean Architecture layering is
-  enforced by the **architect-validator**; "it compiles" is proven by the build step. These are
-  not runtime behavior and get **zero** tests at this layer. A structural acceptance criterion
-  ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture itself and
-  validated upstream — do not write a test for it.
-- **Depend on an ambient database, network service, or Docker.** Repository tests use SQLite
-  in-memory; integration tests use `WebApplicationFactory` with the data layer pointed at SQLite
-  in-memory (or EF in-memory) — never `(localdb)`, a `Server=localhost` SQL Server, or
-  Testcontainers requiring a Docker daemon. CI/Ubuntu agents have none of these, so such tests
-  hang on connect-retry.
+## Testing
+Test structure, mocking, test scope, and test-execution rules live in the
+**`agentic-sdlc:dotnet-testing`** skill (used by the test engineer and test
+reviewer). One rule engineers must know: tests never live under `<backend_src>`,
+and production code never asserts on project structure or spawns the `dotnet` CLI.
 
 ## Robustness essentials (mandatory)
 
@@ -169,48 +121,22 @@ dotnet build          # Expected: Build succeeded.
 dotnet test           # Expected: All tests pass.
 ```
 
-## Build & test execution discipline (CI/Ubuntu)
+## Build execution discipline (CI/Ubuntu)
 
-These rules keep agent runs fast and context lean — a full solution build-and-test cycle is
-slow on Linux/CI, and full stack traces waste the agent's context budget.
+These rules keep agent runs fast and context lean — a full solution build is slow on
+Linux/CI, and full stack traces waste the agent's context budget. (Test-run
+discipline — focused runs, hang timeouts, `--no-build` — lives in the
+`agentic-sdlc:dotnet-testing` skill.)
 
-- **Truncate error output.** When `dotnet build` / `dotnet test` emits more than ~30 lines of
-  errors, do NOT read or echo the whole trace. Read only the first ~5 distinct errors and fix
+- **Engineers and reviewers build only** (`dotnet build <backend_src>`) — they do not
+  run the test suite. At most one build/test process in flight against the tree.
+- **Truncate error output.** When `dotnet build` emits more than ~30 lines of errors,
+  do NOT read or echo the whole trace. Read only the first ~5 distinct errors and fix
   those — repeated errors usually share one root cause. Scope output at the source:
   ```bash
   dotnet build <backend_src> 2>&1 | head -n 30
   ```
-- **Target the specific project while iterating.** Build/test the project you changed, not the
-  whole solution:
-  ```bash
-  dotnet test <backend_test>/<AppName>.Tests/<AppName>.Tests.csproj --filter "FullyQualifiedName~<ClassUnderTest>"
-  ```
-  The single authoritative full-solution run with coverage belongs to the Test Reviewer's gate,
-  not to iteration.
-- **At most one `dotnet test` in flight against a given project/DB.** Never launch a run while
-  another is still active — concurrent runs share the same build output, test database, and ports,
-  producing SQL deadlocks, `database is locked`, port-in-use, and net *slowdown* (more processes
-  fighting the same cores and disk), never a speedup. Run the suite once per change and let it
-  finish before starting another.
-- **Reuse binaries only when safe (`--no-build` / `--no-restore`).** After a successful build in
-  the same invocation with nothing changed since, you may re-run tests with `dotnet test
-  --no-build` to save time. Force a clean build (drop the flags) whenever a `.csproj`, project
-  reference, or package changed — and ALWAYS for the Test Reviewer's authoritative coverage run.
-  Never report a pass off stale binaries.
-- **Cap the inner fix loop at 3.** Within a single agent invocation, stop after 3 consecutive
-  failed fix attempts on the same persistent build/test error. Report the (truncated) logs to the
-  orchestrator instead of attempting a fourth — the orchestrator's outer loop handles escalation.
-- **Bound every test run so a hang fails fast.** A test that blocks (e.g. in fixture setup, or a
-  test that shells out — which it must not; see "Test scope" above) will otherwise stall the run
-  indefinitely. Always pass `--blame-hang-timeout` so the run self-terminates and names the
-  offending test instead of hanging forever:
-  ```bash
-  dotnet test <project> --blame-hang-timeout 120s
-  ```
-  A run that exceeds the timeout is a **failure to diagnose** (which test stalled, and why) — not
-  a slow run to wait out. "It's just slow, I'll wait" is the wrong reflex; find the blocking test.
-- **Never pipe a test run you need to observe through `tail`.** `tail` buffers all of stdin and
-  flushes only at EOF, so a still-running — or hung — `dotnet test ... | tail` shows *nothing*:
-  you lose both live progress and the hang report. `head`/`tail` truncation is for *error output
-  after a finished build* (above), not for a live or authoritative test run. To see which test is
-  executing, use `--logger "console;verbosity=detailed"` — it prints each test as it starts.
+- **Cap the inner fix loop at 3.** Within a single agent invocation, stop after 3
+  consecutive failed fix attempts on the same persistent build error. Report the
+  (truncated) logs to the orchestrator instead of attempting a fourth — the
+  orchestrator's outer loop handles escalation.

@@ -262,6 +262,7 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 │       ├── phase-plan.md               ← Phase Planner output (frozen)
 │       └── phase-01/                   ← a full run, scoped to Phase 1
 │           ├── state.json              ← per-phase state machine
+│           ├── progress.log            ← append-only activity feed (tail -f it during long stages)
 │           ├── raw-input.md            ← this phase's scope
 │           ├── req-spec.md             ← BA output
 │           ├── tech-spec.md            ← Architect output
@@ -340,9 +341,27 @@ via `/agentic-sdlc:next-phase`.
 
 | Command | Purpose |
 |---|---|
-| `/agentic-sdlc:show-run-status` | Show current stage and artifact status |
+| `/agentic-sdlc:show-run-status` | Show current stage, artifact status, and recent activity |
 | `/agentic-sdlc:cancel-run` | Cancel and clean up the current run |
 | `/agentic-sdlc:next-phase` | Start the next phase once the current one is merged |
+
+## Watching progress
+
+- The orchestrator prints a one-line banner before/after every agent it runs
+  (`▶ [development 4/7] STORY-003 (3/6, wave 2) — dotnet-engineer (iter 2/5)`), a
+  short summary when each stage begins, and an explicit ⛔ escalation block whenever
+  a loop hits its 5-iteration cap.
+- Every state change and commit is appended to `runs/<run-id>/progress.log` — you
+  can `tail -f` it from another terminal during long stages, and
+  `/agentic-sdlc:show-run-status` shows the last 10 events.
+- **Optional statusline:** always-visible run state in the Claude Code statusline
+  (zero token cost). Add to your workspace `.claude/settings.json`:
+  ```json
+  { "statusLine": { "type": "command",
+      "command": "node <path-to-plugin>/scripts/statusline-sdlc.mjs" } }
+  ```
+  It renders e.g. `SDLC ▸ program-…/phase-01 ▸ development ▸ STORY-003 ▸ last: reviewer PASS`
+  and prints nothing when no run is active.
 
 ## Troubleshooting
 

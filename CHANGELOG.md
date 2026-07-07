@@ -2,6 +2,55 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.11.0] - 2026-07-07
+
+Token-usage optimization + progress-visibility release (see
+`docs/REVIEW-2026-07-07-token-optimization.md` for the full findings). No quality
+gate was weakened: all 5-iteration caps, validator loops, spec-freeze rules, test
+serialization, and the brownfield baseline comparison are unchanged.
+
+### Added
+- **`scripts/sdlc.mjs` helper.** All state.json transitions, iteration counters,
+  and commits now go through one deterministic script (`set-stage`, `set-field`,
+  `bump-iter`, `story-status`, `story-iter`, `commit-step`, `log`, `tail-log`)
+  instead of hand-written prose steps. Every call appends to a per-run
+  **`progress.log`** — an append-only activity feed you can `tail -f`.
+- **Per-stage orchestrator skills.** `advance-stage` is now a ~6KB dispatcher that
+  loads only the current stage's handler on demand: `stage-ba`, `stage-architect`,
+  `stage-tech-lead`, `stage-development`, `stage-devops`, `stage-packaging`, and
+  `brownfield-driver`, plus a shared `validation-loop` protocol that replaces the
+  five duplicated creator→validator loops.
+- **Scaffold skills** (`scaffold-dotnet`, `scaffold-react`, `scaffold-electron`):
+  one-time project scaffolding moved out of the engineer agent prompts — loaded
+  only on the first story of a greenfield run.
+- **Testing skills** (`dotnet-testing`, `react-testing`): test structure, mocking,
+  test scope, and test-execution discipline split out of the conventions skills so
+  each role loads only its half.
+- **Progress visibility:** one-line ▶/✔/✖ banners around every agent invocation,
+  stage-entry summaries with pipeline position, informative subagent descriptions,
+  a standard ⛔ escalation block at every 5-cap, a "Recent activity" section in
+  `/show-run-status` (from `progress.log`), and an optional zero-token statusline
+  (`scripts/statusline-sdlc.mjs`).
+
+### Changed
+- **Subagents receive paths, not pasted contents.** Engineers/reviewers/test roles
+  read the story file themselves and only the tech-spec sections named in the
+  story's `Implements` list. Creators/engineers gained a "revision mode" rule:
+  fix only the flagged issues instead of re-reading everything.
+- **Test runs are scoped per story.** Test reviewers take a `full_suite` flag —
+  the whole suite runs on the last story of each wave, on every brownfield story
+  (baseline comparison unchanged), on DevOps/Packaging fix cycles, and at the
+  end-of-run gate; other stories run only their own tests with coverage.
+- **Validators run on Haiku.** The five Read-only traceability validators
+  (ba/architect/tech-lead/phase-planner/code-surveyor) switch from Sonnet to Haiku.
+- **Fewer commits.** Validator/reviewer outcomes no longer get standalone
+  state-only commits — the state update ships with the next commit.
+- **Review gates show diffs on re-review.** Full artifact contents on first
+  review; validator notes + `git diff` after revisions (full file on request).
+- **`/start-run` slimmed:** its duplicated BA loop is gone — it hands off to
+  `advance-stage` after the phase-plan gate. The repeated 8-line brownfield block
+  in every agent is now a one-liner pointing at the `brownfield-mode` skill.
+
 ## [0.10.0] - 2026-07-04
 
 ### Added

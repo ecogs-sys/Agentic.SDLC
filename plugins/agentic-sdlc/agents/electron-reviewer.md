@@ -13,7 +13,7 @@ security compliance, and story-acceptance-criteria coverage. Produce a PASS/FAIL
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria)
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it)
 - List of modified files
 - `electron_root` — the monorepo root
 

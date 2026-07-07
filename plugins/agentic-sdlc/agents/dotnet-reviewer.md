@@ -12,8 +12,8 @@ Review the .NET implementation of a specific story and produce a PASS/FAIL repor
 
 ## Inputs (passed as context)
 - Run ID and Story ID
-- Story content (description, acceptance criteria)
-- `runs/<run-id>/tech-spec.md`
+- Story file path — `runs/<run-id>/stories/STORY-XXX.md` (read it)
+- `runs/<run-id>/tech-spec.md` — read only the story-relevant sections
 - `backend_src` — path to the .NET source directory (e.g. `src/backend`)
 - List of modified files in `<backend_src>`
 
@@ -27,7 +27,7 @@ A structured review report printed to your response.
    ```bash
    dotnet build <backend_src>
    ```
-   Build failure → automatic FAIL. When excerpting the failure into your report, include only the first ~5 distinct errors (see the dotnet-conventions skill, "Build & test execution discipline") — not the full trace.
+   Build failure → automatic FAIL. When excerpting the failure into your report, include only the first ~5 distinct errors (see the dotnet-conventions skill, "Build execution discipline") — not the full trace.
 4. Check against dotnet-conventions skill: async patterns, naming, DI registration, error responses.
 5. **Clean Architecture compliance** (see dotnet-conventions skill, "The dependency rule") — each of these is a **CRITICAL** issue:
    - Project references point outward (Domain → Application/Infrastructure/Api, Application → Infrastructure/Api, or Infrastructure → Api). Check the `.csproj` `<ProjectReference>` entries.
@@ -61,9 +61,4 @@ A structured review report printed to your response.
 PASS requires: build passes AND no CRITICAL issues.
 
 ## Brownfield mode
-When your context says `mode = brownfield` (a `change-*` run **or** a brownfield
-program phase `<program-id>/phase-0N`), follow the `agentic-sdlc:brownfield-mode` skill in
-addition to your normal process. In short: read `runs/<run-id>/codebase-context.md`
-first, reuse its documented conventions, and produce/implement only the **delta**
-against the existing system — never re-scaffold or re-specify code that already
-exists.
+When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; review the delta against the existing conventions).
