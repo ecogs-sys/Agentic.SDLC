@@ -35,6 +35,10 @@ a. **Progress banner**, then invoke `CREATOR`:
    Pass: run-id, the `INPUTS` **paths** (agents read them; do not paste file contents),
    and revision notes (user notes on a user-triggered rerun; the validator's diff on
    later iterations). Set the Agent tool `description` to `"<STAGE> <CREATOR> iter <i>"`.
+   On re-invocations, state **revision mode** explicitly and pass only the validator's
+   diff JSON (or the user's notes) — the creator follows its **Revision mode** section
+   (Grep the flagged ID headings, Read only those blocks plus the cited source
+   sections, fix with Edit; it does not re-read the inputs or rewrite the artifact).
 
 b. **Commit the draft/revision** (includes any prior not-yet-committed state changes,
    e.g. a previous FAIL outcome — validation outcomes never get standalone commits):
@@ -45,6 +49,19 @@ b. **Commit the draft/revision** (includes any prior not-yet-committed state cha
 
 c. `SDLC set-stage <run-dir> <VALIDATION_STAGE> in_progress` (first time), banner
    `▶ … <VALIDATOR>`, then invoke `VALIDATOR` with the source + derived artifact paths.
+   **First validation of the loop (and the first retry after an escalation): full
+   validation.** On iterations 2+, invoke the validator in **delta mode** instead:
+   pass the previous diff report plus the output of
+   `git diff <validated_commit> -- <ARTIFACT>` (validators cannot run git — paste the
+   diff text), where the SHA comes from `stages.<VALIDATION_STAGE>.validated_commit`.
+   The validator follows the validate-traceability skill's **Delta re-validation**
+   section. If the SHA is missing or the diff is empty, fall back to full validation.
+   After every validator invocation, record what it saw:
+   ```bash
+   SDLC set-field <run-dir>/state.json stages.<VALIDATION_STAGE>.validated_commit "$(git rev-parse --short HEAD)"
+   ```
+   (this state change ships with the next commit — validation outcomes never get
+   standalone commits).
    Record its outcome in `stages.<VALIDATION_STAGE>` (via `SDLC set-field` as needed).
 
 d. Route on the validator's `status`:
@@ -80,4 +97,6 @@ d. Route on the validator's `status`:
 3. Ask for approval, stating what happens next. On **approve**, fold the gate status
    updates into one `SDLC commit-step` (this also carries the pending validation-pass
    state from (d)). Any other reply = revision notes → re-run the loop (user
-   revisions count toward the 5-iteration cap).
+   revisions count toward the 5-iteration cap). The re-run uses revision mode for
+   the creator and delta mode for the validator, scoped to the git diff since
+   `validated_commit` (no prior flagged IDs — the touched blocks are the scope).

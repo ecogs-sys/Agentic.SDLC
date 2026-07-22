@@ -2,6 +2,38 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.12.0] - 2026-07-23
+
+Delta-scoped revision and re-validation release. Loop re-iterations no longer
+re-read full artifacts: revision and re-validation invocations are scoped to the
+flagged blocks plus the git diff since the last validated commit (~70–80% fewer
+tokens per re-iteration). No quality gate was weakened: first-pass full
+validation, build/test execution, 5-iteration caps, spec freeze, and human gates
+(full artifact on first review, diff after) are unchanged.
+
+### Changed
+- **Creators revise as a delta.** BA / Architect / Tech Lead / Phase Planner
+  gained a delta "Revision mode": Grep the flagged ID headings, Read only those
+  blocks plus the cited source sections, fix with surgical Edits (never rewrite
+  with Write), scoped self-check. Full re-read only when notes demand a global
+  or structural change. All four gained the `Grep` tool.
+- **Validators re-validate the delta.** Full validation on iteration 1; on
+  iterations 2+ the orchestrator passes the previous diff report plus
+  `git diff <validated_commit> -- <artifact>` and the validator checks only the
+  flagged blocks and the diff (a new **Delta re-validation** section in
+  `validate-traceability`; drift outside flagged blocks — deletions,
+  renumbering, new IDs — is still caught from the diff). Fallback to full
+  validation whenever the SHA or diff is missing/unmappable. All four planning
+  validators gained `Grep` (still no Bash — the orchestrator computes diffs).
+- **Dev-stage reviewers re-review the delta.** The six code/test reviewers
+  gained a "Re-review mode": verify prior findings and review only the diff
+  hunks since the last review. Builds and the `full_suite` test-execution rules
+  are unchanged — the delta applies to file reading only.
+- **Validated-commit tracking.** The validation loop records
+  `stages.<v>.validated_commit`, and stage-development records per-story
+  `last_review_commit` / `last_test_review_commit`, via the existing
+  `sdlc.mjs set-field` (no script changes).
+
 ## [0.11.0] - 2026-07-07
 
 Token-usage optimization + progress-visibility release (see

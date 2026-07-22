@@ -59,5 +59,12 @@ Routing:
 - `BACK_TO_TEST_ENGINEER`: tests wrong, coverage not met, or testing implementation details
 - `BACK_TO_ENGINEER`: tests expose a real bug in production code
 
+## Re-review mode
+When your context includes your previous findings and a diff since the last review:
+verify each prior finding is resolved, and review only the diff hunks (Read
+surrounding context where needed). Still run the test command per `full_suite` —
+execution gates never shrink. Do not re-read unchanged files or the full story.
+New issues may fail the re-review only if they appear in the diff.
+
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first). **Brownfield done-gate:** `full_suite` is always `true` — run the repo's FULL existing test suite and compare results to the `## Test baseline` in `codebase-context.md`. The gate FAILS only on **new** failures introduced by this change; report pre-existing failures unchanged — do not try to fix them. New tests covering the change must pass.

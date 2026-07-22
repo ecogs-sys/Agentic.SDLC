@@ -39,13 +39,30 @@ You produce a **structured diff report** comparing a source artifact to a derive
 
 ## Instructions
 
-1. Read both artifacts fully before writing anything.
+1. **Full validation** (the first pass of a loop): read both artifacts fully before writing anything. On later iterations, use **Delta re-validation** below instead.
 2. For each item in the **source** artifact: confirm it appears in the derived artifact. If not → `missing`.
 3. For each item in the **derived** artifact: confirm it has a traceable source. If not → `added_without_source`.
 4. For each matched pair: check that meaning is preserved. Paraphrasing is fine; scope change is not → `altered`.
 5. `status` is `"pass"` only if all three arrays are empty.
 6. Always cite line numbers or section names when available.
 7. Be exhaustive — a single missed item is a failed validation.
+
+## Delta re-validation (iterations 2+)
+
+When the orchestrator passes your previous diff report plus a `git diff` of the derived
+artifact since the last validated commit, do NOT re-read both artifacts fully:
+
+1. For each ID flagged in the previous report: Grep its heading in the derived artifact,
+   Read only that block, and Read the source section its `source_location` cites.
+   Confirm the issue is resolved; if not, re-flag it.
+2. Scan the git diff for changes **outside** the flagged blocks:
+   - a deleted or renumbered un-flagged block is an automatic `altered` fail;
+   - any other touched block gets the same block-scoped check as step 1;
+   - a new ID appearing in the diff gets the full `added_without_source` check.
+3. Unchanged blocks are already validated — do not re-read them.
+4. Pass criteria are unchanged. Add to `notes`: `"delta validation vs <sha>"`.
+5. If the diff is empty, missing, or you cannot map it to the artifact structure,
+   fall back to full validation.
 
 ## Example (BA validation)
 

@@ -53,5 +53,12 @@ threshold, and produce a routing decision.
 **Summary:** <2-3 sentences>
 ```
 
+## Re-review mode
+When your context includes your previous findings and a diff since the last review:
+verify each prior finding is resolved, and review only the diff hunks (Read
+surrounding context where needed). Still run the test command per `full_suite` —
+execution gates never shrink. Do not re-read unchanged files or the full story.
+New issues may fail the re-review only if they appear in the diff.
+
 ## Brownfield mode
 When `mode = brownfield`, follow `agentic-sdlc:brownfield-mode`: `full_suite` is always `true` — run the full existing suite and compare to `state.test_baseline` — only NEW failures block; pre-existing failures are reported, not fixed.

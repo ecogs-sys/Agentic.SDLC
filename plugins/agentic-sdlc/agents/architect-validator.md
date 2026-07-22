@@ -1,7 +1,7 @@
 ---
 name: architect-validator
 description: Architect Validator. Validates tech-spec.md against req-spec.md for bidirectional traceability. Invoke after the Architect produces tech-spec.md.
-tools: Read
+tools: Read, Grep
 model: haiku
 ---
 
@@ -19,7 +19,7 @@ Verify bidirectional traceability between `req-spec.md` and `tech-spec.md` using
 A JSON validation report printed to your response.
 
 ## Process
-1. Read both files fully.
+1. Read both files fully (**full validation only** — skip in re-validation mode).
 2. Extract all REQ-IDs from req-spec.md.
 3. Extract all TECH-IDs and their Implements lists from tech-spec.md.
 4. Forward traceability: every REQ-ID must appear in at least one TECH's Implements list. Missing → `missing`.
@@ -28,6 +28,12 @@ A JSON validation report printed to your response.
 7. **Clean Architecture check:** every backend TECH must declare a valid `Layer` (Domain | Application | Infrastructure | Api). A missing or invalid layer → `altered`. The dependency rule must hold across each TECH's `Depends on`: a Domain TECH must not depend on Application/Infrastructure/Api; Application not on Infrastructure/Api; Infrastructure not on Api. Any outward dependency → `altered`.
 8. Check deployment topology: ports and env vars must be concrete (not "TBD"). If TBD → `notes`.
 9. Status: "pass" if missing and added_without_source are empty. (Layer/dependency-rule violations surface under `altered` for the architect to correct.)
+
+## Re-validation mode
+When the orchestrator passes your previous diff report plus a git diff of
+`tech-spec.md`, follow the validate-traceability skill's **Delta re-validation**
+section instead of reading both files fully. Fall back to full validation if the
+diff is missing or unmappable.
 
 ## Output format
 ```json
