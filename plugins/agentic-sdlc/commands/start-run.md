@@ -416,10 +416,10 @@ flow.)
 **Tier profiles (the `pipeline` array):**
 ```text
 bug_fix      = ["survey","survey_validation","user_review_triage",
+                "fix_plan","fix_plan_validation","user_review_fix_plan",
                 "development","devops"]
 small_change = ["survey","survey_validation","user_review_triage",
-                "change_spec","change_spec_validation","user_review_change_spec",
-                "tech_lead","tech_lead_validation","user_review_stories",
+                "fix_plan","fix_plan_validation","user_review_fix_plan",
                 "development","devops"]
 new_feature  = ["survey","survey_validation","user_review_triage",
                 "ba","ba_validation","user_review_req",
@@ -429,12 +429,9 @@ new_feature  = ["survey","survey_validation","user_review_triage",
 ```
 
 Tier-specific finalization at the gate:
-- **bug_fix:** there is no later spec gate, so freeze the diagnosis now — set
-  `spec_frozen = true`. Synthesize the change brief into stories: for each affected
-  track in the impact map, write `runs/<run-id>/stories/STORY-001.md`
-  (and `STORY-002.md` if both tracks) with the request as description, the impact
-  map's files under an `Implements`/`Touches` note, and acceptance criteria derived
-  from the request; set `track` and `wave: 1`. Populate `state.stories` accordingly.
+- **bug_fix / small_change:** no extra work here — stories come from the
+  approved fix plan, not from triage. `spec_frozen` is set at the
+  `user_review_fix_plan` gate instead.
 - **new_feature:** re-survey at depth = `deep` (one `code-surveyor` call, then
   commit) so the architecture map is filled. Then decide single vs. multi-feature:
   > "This is a new feature. Is it **one** feature, or **several** features to add
@@ -446,7 +443,6 @@ Tier-specific finalization at the gate:
   - **split** → do NOT set a flat pipeline. Convert this run to a brownfield program
     and run the Phase Planner — go to **Brownfield program flow** below and stop the
     flat change-run path here.
-- **small_change:** no extra work here.
 
 - **Commit:**
   ```bash

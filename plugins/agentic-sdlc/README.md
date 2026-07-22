@@ -161,14 +161,18 @@ right-sized pipeline:
 
 | Tier | Stages | Gates |
 |---|---|---|
-| **bug-fix** | survey(shallow) → development (TDD; a failing test reproduces the bug first) → devops? | 1 (triage) |
-| **small-change** | survey(med) → change-spec (BA-lite) → stories → development → devops? | 3 (triage, change-spec, stories) |
+| **bug-fix** | survey(shallow) → fix-plan (evidence-cited investigation) → development (TDD; a failing test reproduces the bug first) → devops? | 2 (triage, fix plan) |
+| **small-change** | survey(shallow) → fix-plan (evidence-cited investigation + stories) → development → devops? | 2 (triage, fix plan) |
 | **new-feature** | survey(deep) → BA → Architect → stories → development → devops? | 4 (triage, req, tech, stories) |
 
 DevOps runs only when the change needs infra changes (new service, env var, port,
 dependency). The brownfield done-gate keeps the repo's **full existing test suite**
 green — no new failures versus the surveyor's baseline — plus new tests covering the
 change. Pre-existing failures are surfaced, never hidden.
+
+The Fix Planner traces the actual code path for the reported scenario and writes
+`fix-plan.md` — root cause / insertion points with file:line evidence, proposed
+changes, test plan, and story stubs — validated and user-approved before development.
 
 A **new-feature** that spans several features can be **split** at the triage gate
 into a brownfield *program*: it runs the Phase Planner loop and ships one PR per
@@ -181,11 +185,14 @@ flowchart TD
     SV --> SVV["🔍 Surveyor Validator"]
     SVV -- "loop" --> SV
     SVV --> TG{{"👤 Triage gate<br/>confirm tier"}}
-    TG -- "bug_fix" --> D1["Development<br/>(synthesized story)"]
-    TG -- "small_change" --> D2["Change-spec → Stories → Development"]
+    TG -- "bug_fix" --> FP["🤖 Fix Planner<br/>writes fix-plan.md"]
+    TG -- "small_change" --> FP
+    FP --> FPV["🔍 Fix-Plan Validator"]
+    FPV -- "loop" --> FP
+    FPV --> FPG{{"👤 Fix-plan gate"}}
+    FPG --> D1["Development"]
     TG -- "new_feature" --> D3["Deep survey → BA → Architect → Stories → Development"]
     D1 --> IC{"infra change?"}
-    D2 --> IC
     D3 --> IC
     IC -- "yes" --> DO["DevOps<br/>(update existing infra)"]
     IC -- "no" --> PR(["🎉 Open PR → parent branch"])
@@ -229,8 +236,8 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 
 # Brownfield (existing code detected at /start-run):
 /start-run  → Code Surveyor (shallow) → [triage gate · confirm tier]
-            → bug_fix      → development → [devops if infra change] → PR
-            → small_change → change-spec → stories → development → [devops?] → PR
+            → bug_fix      → fix-plan → [fix-plan gate] → development → [devops if infra change] → PR
+            → small_change → fix-plan → [fix-plan gate] → development → [devops?] → PR
             → new_feature  → Surveyor (deep) → BA → Architect → stories
                            → development → [devops?] → PR
 ```
@@ -300,18 +307,18 @@ source tree; infra files change only when the Architect's `Infra change` line is
 │       ├── state.json                   ← mode:brownfield · tier · pipeline · test_baseline · infra_change_required
 │       ├── raw-input.md                 ← your change request, verbatim
 │       ├── codebase-context.md          ← Code Surveyor (stack, conventions, impact map, baseline)
-│       ├── change-spec.md               ← small-change tier only (BA-lite)
+│       ├── fix-plan.md                  ← bug-fix + small-change tiers (evidence-cited plan)
 │       ├── req-spec.md  tech-spec.md    ← new-feature tier only
-│       └── stories/                     ← index.md + STORY-N.md (bug-fix: one synthesized story)
+│       └── stories/                     ← index.md + STORY-N.md (bug-fix/small-change: from the approved fix plan)
 │
 └── (your existing src tree — edited in place)
 ```
 
 Which artifacts appear depends on tier:
 
-| Tier | codebase-context.md | change-spec.md | req-spec / tech-spec | stories/ |
+| Tier | codebase-context.md | fix-plan.md | req-spec / tech-spec | stories/ |
 |---|---|---|---|---|
-| bug-fix | shallow | — | — | synthesized |
+| bug-fix | shallow | ✅ | — | ✅ |
 | small-change | shallow | ✅ | — | ✅ |
 | new-feature (single) | deep | — | ✅ | ✅ |
 

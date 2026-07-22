@@ -165,7 +165,7 @@ progressing on its own — surface it, don't bury it in the ladder.
   ─────────────────────────────────────────
   runs/<run-id>/raw-input.md           exists | missing
   runs/<run-id>/codebase-context.md    exists (v<n>) | missing
-  runs/<run-id>/change-spec.md         exists (v<n>) | n/a (tier)
+  runs/<run-id>/fix-plan.md            exists (v<n>) | n/a (tier)
   runs/<run-id>/req-spec.md            exists (v<n>) | n/a (tier)
   runs/<run-id>/tech-spec.md           exists (v<n>) | n/a (tier)
   runs/<run-id>/stories/index.md       exists (v<n>) | n/a (tier)

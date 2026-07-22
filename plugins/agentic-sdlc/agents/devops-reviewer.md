@@ -89,7 +89,7 @@ Routing decisions:
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode`
 skill. Read ports/topology from `runs/<run-id>/codebase-context.md` (and
-`change-spec.md`/`tech-spec.md` if present) rather than assuming a `tech-spec.md`
+`fix-plan.md`/`tech-spec.md` if present) rather than assuming a `tech-spec.md`
 exists. The app already existed, so a regression in a previously-passing area is a
 real failure — route it `BACK_TO_*_ENGINEER`. Compare test results to the surveyor's
 `## Test baseline`: only **new** failures block; pre-existing baseline failures are

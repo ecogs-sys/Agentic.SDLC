@@ -29,8 +29,9 @@ process.
 ## Traceability is scoped to the change
 - Trace your work to the change request and the impacted code identified in the
   impact map — not to whole-system coverage.
-- Validators in brownfield compare: request → change-spec/stories → (existing + new
-  code). Untouched existing behavior is out of scope for traceability.
+- Validators in brownfield compare: request → fix-plan/tech-spec/stories →
+  (existing + new code). Untouched existing behavior is out of scope for
+  traceability.
 
 ## Do not break existing behavior
 - The done-gate requires the repo's **full existing test suite** to stay green:

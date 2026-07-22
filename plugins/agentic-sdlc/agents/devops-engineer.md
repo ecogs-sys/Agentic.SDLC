@@ -68,7 +68,7 @@ skill. The infra already exists: **read and modify the existing `docker-compose.
 from scratch. Make only the delta the change requires (e.g. add a service, env var,
 port, or dependency), preserving existing services, networks, volumes, and settings.
 There may be no `tech-spec.md`; use `runs/<run-id>/codebase-context.md` (and
-`change-spec.md` if present) for topology. You are invoked only when the change
+`fix-plan.md` if present) for topology. You are invoked only when the change
 actually needs an infra change.
 
 ## Spec-freeze guardrail

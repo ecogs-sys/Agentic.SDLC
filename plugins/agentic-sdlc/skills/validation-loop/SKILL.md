@@ -1,6 +1,6 @@
 ---
 name: validation-loop
-description: The generic creator → validator loop protocol (max 5 iterations) used by every planning stage (Phase Planner, BA, Architect, Tech Lead, change-spec). Stage skills invoke this protocol with their own parameters.
+description: The generic creator → validator loop protocol (max 5 iterations) used by every planning stage (Phase Planner, BA, Architect, Tech Lead, Fix Planner). Stage skills invoke this protocol with their own parameters.
 ---
 
 # Validation Loop Protocol
