@@ -2,6 +2,32 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.13.0] - 2026-07-23
+
+fix_plan stage replaces change_spec + tech_lead for bug_fix/small_change
+tiers; new fix-planner (sonnet) + fix-plan-validator (haiku) agents;
+evidence-cited fix plans, no assumption story synthesis.
+
+### Changed
+- **`bug_fix` and `small_change` share a new Fix Plan stage.** Both tiers now
+  run `survey → fix_plan → user_review_fix_plan → development → devops?` — two
+  gates (triage, fix plan) instead of `bug_fix`'s blind story synthesis at
+  triage or `small_change`'s change-spec + tech-lead + two extra gates.
+- **New `fix-planner` agent (sonnet).** Traces the actual code path for the
+  reported scenario, establishes root cause (bug_fix) / insertion points
+  (small_change) with `file:line` evidence, reproduces the scenario where
+  feasible, and writes `fix-plan.md` including 1–3 story stubs — no separate
+  Tech Lead stage needed for these tiers. Follows the new `write-fix-plan`
+  skill.
+- **New `fix-plan-validator` agent (haiku).** Mechanically verifies every
+  citation is real, the request is covered, no speculative language leaks
+  outside `## Open questions`, and stories are well-formed.
+
+### Removed
+- **`write-change-spec` skill and the `change_spec` stage.** Superseded by
+  `fix_plan` for both `bug_fix` and `small_change`. All references to
+  `change_spec` / `change-spec.md` removed from commands, skills, and docs.
+
 ## [0.12.0] - 2026-07-23
 
 Delta-scoped revision and re-validation release. Loop re-iterations no longer

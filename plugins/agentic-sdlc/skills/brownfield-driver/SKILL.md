@@ -27,29 +27,33 @@ agents. See the dispatcher.)
 
 | pipeline stage | handler |
 |---|---|
-| `change_spec` / `change_spec_validation` / `user_review_change_spec` | Change-spec handler (below) |
+| `fix_plan` / `fix_plan_validation` / `user_review_fix_plan` | Fix-plan handler (below) |
 | `ba` / `ba_validation` / `user_review_req` | `agentic-sdlc:stage-ba` skill |
 | `architect` / `architect_validation` / `user_review_tech` | `agentic-sdlc:stage-architect` skill |
 | `tech_lead` / `tech_lead_validation` / `user_review_stories` | `agentic-sdlc:stage-tech-lead` skill |
 | `development` | `agentic-sdlc:stage-development` skill |
 | `devops` (web) / `packaging` (electron) | `agentic-sdlc:stage-devops` / `stage-packaging` skill, gated by `infra_change_required` |
 
-## Change-spec handler (small_change tier)
+## Fix-plan handler (bug_fix + small_change tiers)
 
 The `agentic-sdlc:validation-loop` protocol with:
 
 | Parameter | Value |
 |---|---|
-| CREATOR / VALIDATOR | `ba` (following the **write-change-spec** skill) / `ba-validator` |
-| ARTIFACT | `runs/<run-id>/change-spec.md` |
+| CREATOR / VALIDATOR | `fix-planner` (following the **write-fix-plan** skill) / `fix-plan-validator` |
+| ARTIFACT | `runs/<run-id>/fix-plan.md` |
 | INPUTS | `runs/<run-id>/raw-input.md`, `runs/<run-id>/codebase-context.md`, `mode = brownfield` |
-| STAGE / VALIDATION_STAGE | `change_spec` / `change_spec_validation` |
-| MSG | `change-spec` |
+| STAGE / VALIDATION_STAGE | `fix_plan` / `fix_plan_validation` |
+| MSG | `fix-plan` |
 
-The validator compares request+impact-map → change-spec per the
-validate-traceability schema. **user_review_change_spec gate:** apply the gate
-convention on **`runs/<run-id>/change-spec.md`**; "approve" → mark complete,
-advance the pipeline; other → revision notes, re-run the loop.
+The validator compares request+impact-map → fix-plan per the
+validate-traceability schema (evidence citations, no assumptions, story
+coverage — see the fix-plan-validator agent). **user_review_fix_plan gate:**
+apply the gate convention on **`runs/<run-id>/fix-plan.md`**. On "approve":
+set `spec_frozen = true`; write `runs/<run-id>/stories/STORY-00N.md` files
+plus `index.md` from the plan's `## Stories` section (write-stories format);
+populate `state.stories`; commit; advance the pipeline. Any other reply =
+revision notes, re-run the loop.
 
 ## Notes for reused stage skills
 
@@ -62,18 +66,21 @@ advance the pipeline; other → revision notes, re-run the loop.
 - **Spec-input substitution.** Wherever a reused handler expects
   `runs/<run-id>/tech-spec.md`, substitute the spec the tier actually has:
   - **new_feature** → `tech-spec.md` exists (Architect ran) — use it.
-  - **small_change** → `change-spec.md` + `codebase-context.md` (no tech-spec.md).
-  - **bug_fix** → the synthesized story + `codebase-context.md` (no req/tech/change spec).
+  - **bug_fix / small_change** → `fix-plan.md` + `codebase-context.md` (no
+    tech-spec.md).
 - **ba / architect / tech_lead:** pass `codebase-context.md` and `mode =
   brownfield`. The BA writes a normal `req-spec.md` (new_feature tier only). After
   the **architect** stage (new_feature tier), the tech-spec's `**Infra change:**`
   line sets `state.infra_change_required` — it overrides the surveyor's assessment.
-- **tech_lead stories gate (small_change + new_feature):** on approve, set
+- **tech_lead stories gate (new_feature only):** on approve, set
   `spec_frozen = true` and populate `state.stories` exactly as greenfield.
-- **development:** stories may already exist (bug_fix synthesized them at triage);
-  engineers edit in place (no scaffold); the test reviewer always runs the FULL
-  existing suite (`full_suite = true`) and compares to `test_baseline` — only NEW
-  failures fail the gate; pre-existing failures are reported, not fixed.
+  (bug_fix/small_change never reach `tech_lead` — their stories come from the
+  fix-plan gate instead.)
+- **development:** stories always exist by development time (fix-plan gate for
+  bug_fix/small_change, tech_lead gate for new_feature); engineers edit in
+  place (no scaffold); the test reviewer always runs the FULL existing suite
+  (`full_suite = true`) and compares to `test_baseline` — only NEW failures
+  fail the gate; pre-existing failures are reported, not fixed.
 - **devops / packaging (conditional):** at the final pipeline entry, if
   `infra_change_required == false`, `SDLC set-stage <run-dir> <devops|packaging>
   skipped` and go to **Completion**. If `true`, run the stage skill's loop but
