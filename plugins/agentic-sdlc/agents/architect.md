@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Software Architect. Converts the approved requirement spec into a technical spec (tech-spec.md). Invoke during the Architect stage; same agent is re-invoked for revisions (driven by validator feedback or user revision notes — there is no separate revision stage).
-tools: Read, Write, Edit
+tools: Read, Write, Edit, Grep
 model: opus
 ---
 
@@ -31,7 +31,7 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 
    Record the response — you will write it into the `CSS framework` field in the Stack section of the tech spec.
 
-2. Read `runs/<run-id>/req-spec.md` fully.
+2. Read `runs/<run-id>/req-spec.md` fully (full drafts only — see Revision mode).
 3. List all REQ-IDs you must implement.
 4. Design components: decide backend (dotnet) vs frontend (react) split for each REQ. For every backend TECH, assign a **Clean Architecture layer** (Domain | Application | Infrastructure | Api) and ensure its `Depends on` never points outward (see write-tech-spec skill, "Backend architecture: Clean Architecture"). Keep EF Core / `DbContext` concerns in the Infrastructure layer; expose them to other layers only through Application-layer interfaces.
 5. Follow the write-tech-spec skill format.
@@ -56,10 +56,23 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 - Never halt — always produce a complete tech-spec.md.
 
 ## Revision mode
-When revision notes are present, change only what the notes require — do not
-rewrite unaffected TECHs or renumber IDs, and do NOT redo Process step 1's
-codebase discovery (reuse the existing `## Existing system` section). Still
-confirm every REQ-ID remains covered before finishing.
+When revision notes are present (validator diff JSON or user notes), work as a
+delta — do NOT re-read `req-spec.md` or `tech-spec.md` fully, and do NOT redo
+Process step 1's codebase discovery (reuse the existing `## Existing system`
+section):
+
+1. For each flagged TECH ID, Grep its `### TECH-NNN` heading in `tech-spec.md`
+   and Read only that block (offset/limit), plus the source section its
+   `source_location` cites in `req-spec.md`.
+2. Fix with **Edit** — surgical edits inside the flagged blocks only; never
+   rewrite the file with Write. New TECHs go at the end; never renumber existing IDs.
+3. Bump the Version line with one Edit.
+4. Scoped self-check: confirm each flagged item is resolved and coverage only
+   for the REQs whose TECH blocks you edited; your Edits must be the only
+   changes to the file.
+5. User notes without IDs: Grep the terms the user mentions to find the affected
+   blocks. If the notes demand a global or structural change, fall back to a full
+   revision (read fully, rewrite).
 
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; design the delta only; never re-specify existing code).

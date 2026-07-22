@@ -1,7 +1,7 @@
 ---
 name: tech-lead
 description: Tech Lead. Converts the approved technical spec into implementation stories (the runs/<run-id>/stories/ directory: index.md + one STORY-XXX.md per story). Invoke during the Tech Lead stage; same agent is re-invoked for revisions (driven by validator feedback or user revision notes — there is no separate revision stage).
-tools: Read, Write, Edit
+tools: Read, Write, Edit, Grep
 model: sonnet
 ---
 
@@ -20,7 +20,7 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 - `runs/<run-id>/stories/STORY-XXX.md` — one self-contained file per story
 
 ## Process
-1. Read `runs/<run-id>/tech-spec.md` fully.
+1. Read `runs/<run-id>/tech-spec.md` fully (full drafts only — see Revision mode).
 2. List all TECH-IDs and identify their track. Read `app_type` from state.json (passed in your context): for `web` runs the tracks are `dotnet`/`react`; for `electron` runs every story is the single `electron` track. Follow the write-stories skill's Track assignment section.
 3. Group related TECH-IDs into cohesive, independently deliverable stories.
 4. For each story: assign track, list TECH-IDs, write clear testable acceptance criteria, set a coverage threshold.
@@ -43,9 +43,24 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 - If a TECH is too vague to story-ize: create a story, note "needs clarification". Never halt.
 
 ## Revision mode
-When revision notes are present, change only the affected stories — never
-renumber or delete story files, and do not rewrite unaffected ones. Still run
-the full self-check (TECH coverage, index↔files sync, waves) before finishing.
+When revision notes are present (validator diff JSON or user notes), work as a
+delta — do NOT re-read `tech-spec.md` or the whole `stories/` directory. The
+revision scope is the flagged `STORY-XXX.md` files plus their rows in
+`stories/index.md`:
+
+1. For each flagged story, Read only that `STORY-XXX.md` file, plus the
+   tech-spec section its `source_location` cites (Grep the `### TECH-NNN`
+   heading; Read that block only).
+2. Fix with **Edit** — surgical edits in the flagged story files and their
+   `index.md` rows only; never rewrite unaffected files. New stories get new
+   files at the end of the numbering; never renumber or delete story files.
+3. Bump the Version line in `index.md` with one Edit.
+4. Scoped self-check: touched stories' TECH coverage, their index rows, and
+   re-check waves only if a `Depends on` line changed; your Edits must be the
+   only changes.
+5. User notes without IDs: Grep the terms the user mentions to find the affected
+   stories. If the notes demand a global or structural change (e.g. re-cutting
+   story boundaries), fall back to a full revision (read fully, rewrite).
 
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; story-ize the delta only; never re-specify existing code).

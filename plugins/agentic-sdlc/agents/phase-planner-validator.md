@@ -1,7 +1,7 @@
 ---
 name: phase-planner-validator
 description: Phase Planner Validator. Validates phase-plan.md against original-input.md for exactly-one-phase coverage, correct ordering, and independent deliverability. Invoke after the Phase Planner produces phase-plan.md.
-tools: Read
+tools: Read, Grep
 model: haiku
 ---
 
@@ -21,7 +21,7 @@ A JSON validation report printed to your response (not written to a file — the
 orchestrator reads your response).
 
 ## Process
-1. Read both files fully.
+1. Read both files fully (**full validation only** — skip in re-validation mode).
 2. Note every distinct requirement, feature, or constraint in original-input.md.
 3. Use the validate-traceability skill's *methodology* (read both artifacts fully, then diff the source against the derived). This validator **extends** the skill's default schema: emit the Output format below — with `duplicated`, `misordered`, and `not_shippable` — and do NOT emit the skill's `altered` array. The methodology produces:
    - `missing`: requirements in original-input not assigned to any phase.
@@ -33,6 +33,14 @@ orchestrator reads your response).
 5. Check deliverability: list any phase lacking a credible "independently
    shippable" justification in `not_shippable`.
 6. Set status: "pass" only if all arrays are empty.
+
+## Re-validation mode
+When the orchestrator passes your previous diff report plus a git diff of
+`phase-plan.md`, follow the validate-traceability skill's **Delta re-validation**
+section instead of reading both files fully — flags map to `### Phase N`
+sections (this validator's extended schema applies unchanged: `missing`/
+`duplicated`/`misordered`/`not_shippable`, no `altered`). Fall back to full
+validation if the diff is missing or unmappable.
 
 ## Output format
 Wrap your report in a code block:

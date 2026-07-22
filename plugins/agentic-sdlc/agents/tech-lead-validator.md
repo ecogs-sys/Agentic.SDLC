@@ -1,7 +1,7 @@
 ---
 name: tech-lead-validator
 description: Tech Lead Validator. Validates the runs/<run-id>/stories/ directory (index.md + STORY-XXX.md files) against tech-spec.md for coverage, structure, and execution-plan correctness. Invoke after the Tech Lead produces the stories directory.
-tools: Read
+tools: Read, Grep
 model: haiku
 ---
 
@@ -20,7 +20,7 @@ Verify that the `runs/<run-id>/stories/` directory correctly implements all of `
 A JSON validation report printed to your response.
 
 ## Process
-1. Read `tech-spec.md`, `runs/<run-id>/stories/index.md`, and every `STORY-XXX.md` file listed in the index's `File` column.
+1. Read `tech-spec.md`, `runs/<run-id>/stories/index.md`, and every `STORY-XXX.md` file listed in the index's `File` column (**full validation only** — skip in re-validation mode).
 2. Extract all TECH-IDs from tech-spec.md.
 3. Extract all stories and their Implements lists.
 4. Coverage: every TECH-ID must appear in at least one story's Implements list. Uncovered → `missing`.
@@ -35,6 +35,15 @@ A JSON validation report printed to your response.
 13. **Wave correctness:** for each story, recompute its wave from `Depends on` (wave 1 = empty deps; wave N = all deps in earlier waves). The recomputed wave must equal both the `**Wave:**` field in the story file and the `Wave` column in the index. Mismatch → `altered` with a note naming the story and the expected wave.
 14. **Diagram consistency:** the Mermaid edges in `## Execution plan` must equal the union of all `Depends on` entries (one `dependency --> story` edge per dependency). Missing or extra edges → `altered` with a note.
 15. Status: "pass" if `missing` and `added_without_source` are empty.
+
+## Re-validation mode
+When the orchestrator passes your previous diff report plus a git diff of the
+`stories/` directory, follow the validate-traceability skill's **Delta
+re-validation** section instead of reading everything fully: re-read only the
+flagged story files + `index.md`. Re-run the DAG/wave/Mermaid checks (steps
+9–14) only if the diff touches a `Depends on`, `Wave`, index-table, or Mermaid
+line — otherwise those results stand from iteration 1. Fall back to full
+validation if the diff is missing or unmappable.
 
 ## Output format
 ```json

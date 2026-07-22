@@ -61,5 +61,12 @@ Routing decisions:
 - `PASS`: build green, all security/boundary checks pass, acceptance criteria met.
 - `FAIL`: any security violation, build failure, or unmet acceptance criterion.
 
+## Re-review mode
+When your context includes your previous findings and a diff since the last review:
+verify each prior finding is resolved, and review only the diff hunks (Read
+surrounding context where needed). Still run the build and the security greps —
+execution gates never shrink. Do not re-read unchanged files or the full story.
+New issues may fail the re-review only if they appear in the diff.
+
 ## Brownfield mode
 When `mode = brownfield`, follow `agentic-sdlc:brownfield-mode`: read `codebase-context.md`, and treat a regression in previously-working behavior as a real FAIL. Reuse the existing conventions rather than imposing fresh scaffolding.

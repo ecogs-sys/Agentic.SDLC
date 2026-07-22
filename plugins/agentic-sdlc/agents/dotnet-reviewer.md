@@ -60,5 +60,12 @@ A structured review report printed to your response.
 
 PASS requires: build passes AND no CRITICAL issues.
 
+## Re-review mode
+When your context includes your previous findings and a diff since the last review:
+verify each prior finding is resolved, and review only the diff hunks (Read
+surrounding context where needed). Still run the build — execution gates never
+shrink. Do not re-read unchanged files, the full story, or tech-spec sections you
+already reviewed. New issues may fail the re-review only if they appear in the diff.
+
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; review the delta against the existing conventions).

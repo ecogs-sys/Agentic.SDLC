@@ -60,6 +60,13 @@ b. **Commit — engineer draft/revision** (include `<test_path>` — the dotnet 
 c. Invoke the track's reviewer (`dotnet-reviewer` / `react-reviewer` /
    `electron-reviewer`). Pass: run-id, story ID, story file path, modified-files
    list, src_path (electron: `electron_root`). Description: `"STORY-XXX review iter <i>"`.
+   **Re-review (iterations 2+):** also pass your previous review's issue list and
+   `git diff <last_review_commit> -- <src_path>` (names + hunks); the reviewer
+   follows its **Re-review mode** — verify each prior finding and review only the
+   diff. The build still runs. After every review:
+   ```bash
+   SDLC set-field <run-dir>/state.json stories.STORY-XXX.last_review_commit "$(git rev-parse --short HEAD)"
+   ```
    Print `✔`/`✖` banner with the verdict:
    `✖ [development] STORY-XXX — reviewer: FAIL (iter <i>/5) — <n> CRITICAL`.
 
@@ -94,6 +101,15 @@ c. Invoke the track's test reviewer. Pass: run-id, story ID, story file path,
    - `full_suite = false` otherwise — the reviewer runs only this story's test
      scope with coverage. Cross-story regressions are still caught by the wave-end
      full-suite runs and the end-of-run devops/packaging verification.
+
+   **Re-review (iterations 2+):** also pass your previous test review's issue
+   list and `git diff <last_test_review_commit> -- <test_path>` (names + hunks);
+   the test reviewer follows its **Re-review mode**. The scoped/full-suite
+   **test execution rules are unchanged** (`full_suite` flag as written) — the
+   delta applies to file reading only. After every test review:
+   ```bash
+   SDLC set-field <run-dir>/state.json stories.STORY-XXX.last_test_review_commit "$(git rev-parse --short HEAD)"
+   ```
 
 d. Route on the reviewer's decision (no standalone outcome commit):
    - **DONE:** `SDLC story-status <run-dir> STORY-XXX complete`, then
