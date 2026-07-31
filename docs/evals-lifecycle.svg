@@ -1,0 +1,64 @@
+<svg width="100%" viewBox="0 0 880 566" role="img" xmlns="http://www.w3.org/2000/svg" font-family="'Anthropic Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+<title>How evals are generated and consumed in the Agentic SDLC</title>
+<desc>A five-step lifecycle read top to bottom. Step 1: at spec freeze the Tech Lead generates an eval manifest with one eval per acceptance criterion. Step 2: the Test Engineer tags each test with its criterion id. Step 3: the eval gate consumes the manifest and the tagged tests to check that every criterion of a story has a passing tagged test, routing back to the Test Engineer if one is missing. Step 4: a passing story is promoted, minting permanent EVAL ids into a growing corpus. Step 5: every later run and brownfield change replays the corpus as a regression gate, failing if a previously shipped criterion has lost its test. Green steps generate or grow evals; blue steps consume them.</desc>
+<defs>
+<marker id="ev-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<text x="40" y="32" font-size="18" font-weight="600" fill="#3d3d3a">How evals are generated &amp; consumed</text>
+
+<!-- legend -->
+<circle cx="566" cy="27" r="6" fill="#e9f6f0" stroke="#0f6e56" stroke-width="1.5"/>
+<text x="578" y="31" font-size="12" fill="#5a5955">generated / grown</text>
+<circle cx="702" cy="27" r="6" fill="#e6f1fb" stroke="#185fa5" stroke-width="1.5"/>
+<text x="714" y="31" font-size="12" fill="#5a5955">consumed by agents</text>
+
+<!-- ===== Step 1 — GENERATE (green) ===== -->
+<rect x="36" y="60" width="118" height="30" rx="15" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.75"/>
+<text x="95" y="79" text-anchor="middle" font-size="12" font-weight="500" fill="#44443f">Tech Lead</text>
+<rect x="170" y="60" width="520" height="64" rx="10" fill="#e9f6f0" stroke="#0f6e56" stroke-width="1"/>
+<text x="186" y="79" font-size="10" font-weight="600" fill="#0f6e56" letter-spacing="0.5">① GENERATED — AT SPEC FREEZE</text>
+<text x="186" y="98" font-size="14" font-weight="600" fill="#085041">Tech Lead authors the eval manifest</text>
+<text x="186" y="115" font-size="11" fill="#3d6f60">one eval per acceptance criterion — e.g. STORY-1 / AC-1</text>
+<line x1="430" y1="124" x2="430" y2="148" marker-end="url(#ev-arrow)" stroke="#73726c" stroke-width="1.5"/>
+
+<!-- ===== Step 2 — TAG (neutral) ===== -->
+<rect x="36" y="163" width="118" height="30" rx="15" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.75"/>
+<text x="95" y="182" text-anchor="middle" font-size="12" font-weight="500" fill="#44443f">Test Engineer</text>
+<rect x="170" y="148" width="520" height="64" rx="10" fill="#f4f3ef" stroke="#7a7974" stroke-width="1"/>
+<text x="186" y="167" font-size="10" font-weight="600" fill="#7a7974" letter-spacing="0.5">② TAG THE TESTS</text>
+<text x="186" y="186" font-size="14" font-weight="600" fill="#44443f">Test Engineer tags each test with its criterion id</text>
+<text x="186" y="203" font-size="11" fill="#5a5955">xUnit [Trait(criterion, STORY-1/AC-1)]  ·  Vitest it([STORY-1/AC-1] …)</text>
+<line x1="430" y1="212" x2="430" y2="236" marker-end="url(#ev-arrow)" stroke="#73726c" stroke-width="1.5"/>
+
+<!-- ===== Step 3 — CONSUME · story gate (blue) ===== -->
+<rect x="36" y="259" width="118" height="30" rx="15" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.75"/>
+<text x="95" y="278" text-anchor="middle" font-size="12" font-weight="500" fill="#44443f">Eval gate</text>
+<rect x="170" y="236" width="520" height="72" rx="10" fill="#e6f1fb" stroke="#185fa5" stroke-width="1"/>
+<text x="186" y="255" font-size="10" font-weight="600" fill="#185fa5" letter-spacing="0.5">③ CONSUMED — PER-STORY GATE</text>
+<text x="186" y="274" font-size="14" font-weight="600" fill="#0c447c">Eval gate checks the story  (evals.mjs)</text>
+<text x="186" y="292" font-size="11" fill="#2f5f95">reads the manifest + tagged tests: every criterion needs a passing test</text>
+<!-- feedback branch: missing test → back to Test Engineer -->
+<path d="M 690 272 L 738 272 L 738 180 L 692 180" fill="none" stroke="#a32d2d" stroke-width="1.25" stroke-dasharray="5 3" marker-end="url(#ev-arrow)"/>
+<text transform="translate(752 232) rotate(-90)" text-anchor="middle" font-size="10" fill="#a32d2d">missing test → back to engineer</text>
+<line x1="430" y1="308" x2="430" y2="332" marker-end="url(#ev-arrow)" stroke="#73726c" stroke-width="1.5"/>
+
+<!-- ===== Step 4 — GENERATE / GROW (green) ===== -->
+<rect x="36" y="347" width="118" height="30" rx="15" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.75"/>
+<text x="95" y="366" text-anchor="middle" font-size="12" font-weight="500" fill="#44443f">Promote</text>
+<rect x="170" y="332" width="520" height="64" rx="10" fill="#e9f6f0" stroke="#0f6e56" stroke-width="1"/>
+<text x="186" y="351" font-size="10" font-weight="600" fill="#0f6e56" letter-spacing="0.5">④ PROMOTE — GROWS THE PERMANENT CORPUS</text>
+<text x="186" y="370" font-size="14" font-weight="600" fill="#085041">A passing story is promoted into evals/</text>
+<text x="186" y="387" font-size="11" fill="#3d6f60">mints EVAL-0001, EVAL-0002 … kept forever, one per shipped criterion</text>
+<line x1="430" y1="396" x2="430" y2="420" marker-end="url(#ev-arrow)" stroke="#73726c" stroke-width="1.5"/>
+
+<!-- ===== Step 5 — CONSUME · regression gate (blue) ===== -->
+<rect x="36" y="443" width="118" height="30" rx="15" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.75"/>
+<text x="95" y="462" text-anchor="middle" font-size="12" font-weight="500" fill="#44443f">Every run</text>
+<rect x="170" y="420" width="520" height="72" rx="10" fill="#e6f1fb" stroke="#185fa5" stroke-width="1"/>
+<text x="186" y="439" font-size="10" font-weight="600" fill="#185fa5" letter-spacing="0.5">⑤ CONSUMED — REGRESSION GATE (FOREVER)</text>
+<text x="186" y="458" font-size="14" font-weight="600" fill="#0c447c">Every later run &amp; brownfield change replays the corpus</text>
+<text x="186" y="476" font-size="11" fill="#2f5f95">a previously shipped criterion that lost its test fails the run</text>
+
+<text x="40" y="524" font-size="11" fill="#5a5955">Generated at steps ① and ④ (green) · consumed by agents/gates at steps ③ and ⑤ (blue). The corpus only grows.</text>
+</svg>

@@ -21,6 +21,15 @@ Test project layout mirrors the layers:
 ## Naming
 - Test methods: `<MethodUnderTest>_<Scenario>_<ExpectedBehavior>`
 
+## Criterion tagging (required)
+Every behavioral test carries the id of the acceptance criterion it proves, via
+`[Trait("criterion", "STORY-XXX/AC-n")]` above the `[Fact]`/`[Theory]`. The eval
+layer derives its criterion→test bindings from these traits (`agentic-sdlc:write-evals`
+skill), and the story's eval gate fails if any behavioral criterion has no tagged
+test. One criterion may have several tagged tests; tag each test with the single
+criterion it primarily proves. Purely structural criteria (see "Test scope" below)
+get no test and no tag.
+
 ## xUnit test structure
 ```csharp
 public class FooServiceTests
@@ -34,6 +43,7 @@ public class FooServiceTests
         _sut = new FooService(_mockRepo.Object);
     }
 
+    [Trait("criterion", "STORY-001/AC-1")]
     [Fact]
     public async Task GetById_WithValidId_ReturnsEntity()
     {

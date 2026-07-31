@@ -60,8 +60,12 @@ Version: <n>
 - track: dotnet | react | electron
 - wave: 1
 - description: <what to implement>
-- acceptance criteria: <derived from the request + test plan>
-(1–3 stories max; two tracks → separate stories)
+- acceptance criteria:
+  - AC-1: <derived from the request + test plan>
+  - AC-2: <…>
+(1–3 stories max; two tracks → separate stories. Each criterion carries a
+write-once `AC-n` id — the STORY-XXX.md files written at the gate use
+write-stories format and the eval layer keys on `STORY-XXX/AC-n`.)
 ```
 
 ## Quality checklist (self-check before finishing)

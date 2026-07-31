@@ -38,3 +38,25 @@ process.
   no *new* failures versus the baseline in `codebase-context.md`. Pre-existing
   failures are surfaced to the user, never hidden or "fixed" opportunistically.
 - Add tests that cover the change itself.
+- The **eval corpus** (`evals/` at the workspace root) is replayed as a
+  criteria-keyed regression gate on top of the raw suite (see the
+  `agentic-sdlc:write-evals` skill). Every previously-shipped acceptance criterion
+  must still be proven by a present test.
+
+## Intentional behavior change → retire / supersede an eval
+- When your change **deliberately** alters or removes a previously-shipped behavior,
+  the eval that asserts the old behavior WILL fail replay — that is correct, not a
+  bug to work around. Retiring/updating it is part of the change and is reviewed like
+  code:
+  - `EVALS retire <EVAL-ID> "<why the old behavior no longer applies>"` — the
+    criterion is gone.
+  - `EVALS supersede <EVAL-ID> "<what replaced it>"` — the behavior changed; the new
+    behavior gets a fresh criterion (and a new eval on the next promote).
+- Never silence a replay failure by deleting corpus files or editing them by hand.
+  Use `retire`/`supersede` so provenance and the reason survive. If you are unsure
+  whether a failure is a regression or an intended change, escalate to the user — do
+  not retire on a guess.
+- Identify the affected `EVAL-ID`s from the impact map (the corpus records each
+  eval's `criterion` and `source.story`); call these out in the artifact you produce
+  (BA req-spec / architect tech-spec / fix-plan) so the retirement is a planned,
+  visible line item.

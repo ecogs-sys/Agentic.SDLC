@@ -42,11 +42,19 @@ re-review. Offer to show any individual `STORY-XXX.md` (name its path) on reques
      SDLC set-field <run-dir>/state.json spec_frozen true
      SDLC set-field <run-dir>/state.json stories.STORY-001 '{"track":"dotnet","wave":1,"status":"pending","reviewer_iterations":0,"test_reviewer_iterations":0,"fix_iterations":0}'
      # …one set-field per story…
-     SDLC commit-step --run <run-dir> "docs(<run-id>): stories approved — spec frozen"
      ```
-  2. Immediately invoke the `agentic-sdlc:stage-development` skill.
+  2. **Author the run's eval manifest** from the now-frozen acceptance criteria —
+     one stub per `STORY-XXX/AC-n` (see the `agentic-sdlc:write-evals` skill). This
+     is the authoring point: criteria are immutable from here on.
+     ```bash
+     EVALS author <run-dir>                 # reads <run-dir>/stories/, writes <run-dir>/evals/manifest.json
+     SDLC set-field <run-dir>/state.json stages.evals '{"status":"in_progress"}'
+     SDLC commit-step --run <run-dir> "docs(<run-id>): stories approved — spec frozen" <run-dir>/evals
+     ```
+  3. Immediately invoke the `agentic-sdlc:stage-development` skill.
      (Brownfield driver: return to the driver instead — it advances the pipeline.
-     Brownfield also freezes here: set `spec_frozen = true` exactly as above.)
+     Brownfield also freezes here: set `spec_frozen = true` and author the eval
+     manifest exactly as above.)
 - **other:** treat as revision notes for the tech-lead; re-run the loop.
 
 ## Story-state schema

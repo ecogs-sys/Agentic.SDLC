@@ -38,7 +38,7 @@ A structured report with routing decision.
    the per-file coverage rows (whole-solution line coverage is meaningless when only
    part of the suite ran). Cross-story regressions are caught by the wave-end
    full-suite run and the DevOps gate.
-3. Check: do tests verify story acceptance criteria, or are they trivially passing (e.g., `Assert.True(true)`)?
+3. Check: do tests verify story acceptance criteria, or are they trivially passing (e.g., `Assert.True(true)`)? Also confirm **every acceptance criterion (`AC-n`) has ≥1 test tagged `[Trait("criterion", "STORY-XXX/AC-n")]`** — an untagged or unmatched criterion fails the downstream eval gate, so route it back now (see the `agentic-sdlc:write-evals` skill).
 4. Apply the decision tree from coverage-report skill.
 5. When tests fail, list the failing test names and only the first ~5 distinct errors in your report — not full stack traces (see the dotnet-testing skill, "Test-execution discipline").
 
@@ -62,8 +62,8 @@ A structured report with routing decision.
 ```
 
 Routing:
-- `DONE`: all tests pass AND coverage ≥ threshold AND no trivially-passing tests
-- `BACK_TO_TEST_ENGINEER`: tests fail due to wrong tests, coverage not met, or trivial tests
+- `DONE`: all tests pass AND coverage ≥ threshold AND no trivially-passing tests AND every `AC-n` has a criterion-tagged test
+- `BACK_TO_TEST_ENGINEER`: tests fail due to wrong tests, coverage not met, trivial tests, or a criterion with no tagged test
 - `BACK_TO_ENGINEER`: tests fail due to a bug in production code (state which test and why it's a production bug, not a test bug)
 
 ## Re-review mode

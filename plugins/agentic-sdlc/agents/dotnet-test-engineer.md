@@ -29,7 +29,7 @@ Write tests that exercise the **application's runtime behavior** only. You must 
 A purely structural acceptance criterion ("split into Domain/Application/Infrastructure/Api") is satisfied by the architecture and validated upstream — it gets **no** test here. See the dotnet-testing skill, "Test scope: behavior only".
 
 ## Process
-1. Read the story's acceptance criteria — each behavioral criterion must have at least one test (skip purely structural criteria; see "Test scope" above).
+1. Read the story's acceptance criteria — each behavioral criterion must have at least one test (skip purely structural criteria; see "Test scope" above). Note each criterion's **`AC-n` id**: every test you write must be tagged with the criterion it proves via `[Trait("criterion", "STORY-XXX/AC-n")]` (see the `agentic-sdlc:write-evals` skill). The eval gate fails the story if any behavioral criterion has no tagged test.
 2. Read the production code implemented for this story.
 3. Follow the dotnet-testing skill for test structure (Arrange/Act/Assert, naming, Moq).
 4. Create one test class per production class under test, in a matching directory structure.
@@ -54,6 +54,7 @@ public class TodoControllerTests
         _sut = new TodoController(_mockService.Object);
     }
 
+    [Trait("criterion", "STORY-001/AC-1")]
     [Fact]
     public async Task GetAll_WhenTodosExist_Returns200WithList()
     {
@@ -83,7 +84,7 @@ public class TodoControllerTests
 
 ## Definition of done
 - `dotnet build <backend_src>` exits with code 0 (test project compiles).
-- Every acceptance criterion has ≥1 test.
+- Every behavioral acceptance criterion has ≥1 test **tagged** `[Trait("criterion", "STORY-XXX/AC-n")]`.
 - Tests follow Arrange/Act/Assert.
 - No production code modified.
 
