@@ -13,11 +13,13 @@ stage handlers you are not about to run.
 All state.json updates, iteration counters, commits, and progress logging go
 through the helper (never hand-edit state.json or hand-write the git sequences):
 ```bash
-SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
+SDLC()  { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
+EVALS() { node "${CLAUDE_PLUGIN_ROOT}/scripts/evals.mjs" "$@"; }
 ```
-Below and in every stage skill, `SDLC <cmd> …` means that invocation and
-`<run-dir>` means `runs/<run-id>` resolved to a real path. Every helper call also
-appends to `<run-dir>/progress.log` — the run's live activity feed.
+Below and in every stage skill, `SDLC <cmd> …` / `EVALS <cmd> …` mean those
+invocations and `<run-dir>` means `runs/<run-id>` resolved to a real path. `EVALS`
+drives the eval layer (see the `agentic-sdlc:write-evals` skill). Every helper call
+also appends to `<run-dir>/progress.log` — the run's live activity feed.
 
 ## Finding the active run
 

@@ -51,9 +51,12 @@ validate-traceability schema (evidence citations, no assumptions, story
 coverage — see the fix-plan-validator agent). **user_review_fix_plan gate:**
 apply the gate convention on **`runs/<run-id>/fix-plan.md`**. On "approve":
 set `spec_frozen = true`; write `runs/<run-id>/stories/STORY-00N.md` files
-plus `index.md` from the plan's `## Stories` section (write-stories format);
-populate `state.stories`; commit; advance the pipeline. Any other reply =
-revision notes, re-run the loop.
+plus `index.md` from the plan's `## Stories` section (write-stories format —
+each acceptance criterion carries a write-once `AC-n` id); populate
+`state.stories`; then **author the eval manifest** exactly as the tech-lead gate
+does (`EVALS author <run-dir>`; `SDLC set-field <run-dir>/state.json stages.evals
+'{"status":"in_progress"}'`); commit (staging `<run-dir>/evals`); advance the
+pipeline. Any other reply = revision notes, re-run the loop.
 
 ## Notes for reused stage skills
 
@@ -80,7 +83,13 @@ revision notes, re-run the loop.
   bug_fix/small_change, tech_lead gate for new_feature); engineers edit in
   place (no scaffold); the test reviewer always runs the FULL existing suite
   (`full_suite = true`) and compares to `test_baseline` — only NEW failures
-  fail the gate; pre-existing failures are reported, not fixed.
+  fail the gate; pre-existing failures are reported, not fixed. The
+  stage-development completion block's `EVALS promote` + `EVALS replay` **DO apply
+  to brownfield** (this is not a greenfield-only tail): promotion adds the change's
+  new criteria to `evals/`, and replay is the criteria-keyed regression gate over
+  the corpus. A replay failure is a regression unless the change intentionally
+  altered that behavior — then `EVALS retire`/`supersede` per the
+  `agentic-sdlc:brownfield-mode` skill.
 - **devops / packaging (conditional):** at the final pipeline entry, if
   `infra_change_required == false`, `SDLC set-stage <run-dir> <devops|packaging>
   skipped` and go to **Completion**. If `true`, run the stage skill's loop but

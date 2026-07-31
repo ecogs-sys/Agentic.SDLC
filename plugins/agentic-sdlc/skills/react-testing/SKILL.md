@@ -19,7 +19,7 @@ import { TodoList } from './TodoList';
 vi.mock('../../api/todos');
 
 describe('TodoList', () => {
-  it('renders todo items when loaded', async () => {
+  it('[STORY-003/AC-1] renders todo items when loaded', async () => {
     (todosApi.fetchTodos as Mock).mockResolvedValue([{ id: 1, title: 'Test todo' }]);
     render(<TodoList />);
     await waitFor(() => {
@@ -35,6 +35,11 @@ describe('TodoList', () => {
   the network.
 - Cover each acceptance criterion with ≥1 happy-path test AND ≥1 negative/edge test
   (error state, empty state).
+- **Criterion tagging (required):** begin every test's title with the criterion
+  token `[STORY-XXX/AC-n]` (e.g. `it("[STORY-003/AC-1] renders todo items", …)`).
+  The eval layer derives its criterion→test bindings from these tokens
+  (`agentic-sdlc:write-evals`), and the story's eval gate fails if any criterion has
+  no tagged test.
 
 ## Test-execution discipline
 

@@ -32,7 +32,7 @@ A structured report with routing decision.
    On a scoped run, judge the threshold against the **story's production files** in
    the per-file coverage rows. Cross-story regressions are caught by the wave-end
    full-suite run and the DevOps gate.
-3. Check: do tests verify UI behavior (text on screen, user interactions), or do they test implementation details?
+3. Check: do tests verify UI behavior (text on screen, user interactions), or do they test implementation details? Also confirm **every acceptance criterion (`AC-n`) has ≥1 test whose title begins with `[STORY-XXX/AC-n]`** — an untagged or unmatched criterion fails the downstream eval gate, so route it back now (see the `agentic-sdlc:write-evals` skill).
 4. Apply the decision tree from coverage-report skill.
 
 ## Output format
@@ -55,8 +55,8 @@ A structured report with routing decision.
 ```
 
 Routing:
-- `DONE`: all tests pass AND coverage ≥ threshold
-- `BACK_TO_TEST_ENGINEER`: tests wrong, coverage not met, or testing implementation details
+- `DONE`: all tests pass AND coverage ≥ threshold AND every `AC-n` has a criterion-tagged test
+- `BACK_TO_TEST_ENGINEER`: tests wrong, coverage not met, testing implementation details, or a criterion with no tagged test
 - `BACK_TO_ENGINEER`: tests expose a real bug in production code
 
 ## Re-review mode

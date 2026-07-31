@@ -20,7 +20,7 @@ Write tests co-located with components in `<frontend_src>/src/` that cover the s
 - New/modified `.test.tsx` files co-located with the components they test
 
 ## Process
-1. Read the story's acceptance criteria — each must have ≥1 test.
+1. Read the story's acceptance criteria — each must have ≥1 test. Note each criterion's **`AC-n` id**: every test's title must begin with the criterion token `[STORY-XXX/AC-n]` (see the `agentic-sdlc:write-evals` skill), e.g. `it("[STORY-003/AC-1] renders items", …)`. The eval gate fails the story if any criterion has no tagged test.
 2. Read the production components.
 3. Follow the react-testing skill for test structure and mocking patterns.
 4. Create `<Component>.test.tsx` next to each `<Component>.tsx` under test.
@@ -44,13 +44,13 @@ import { TodoList } from './TodoList'
 vi.mock('../../api/todos')
 
 describe('TodoList', () => {
-  it('renders items returned from API', async () => {
+  it('[STORY-003/AC-1] renders items returned from API', async () => {
     (todosApi.fetchTodos as Mock).mockResolvedValue([{ id: 1, title: 'Write tests' }])
     render(<TodoList />)
     await waitFor(() => expect(screen.getByText('Write tests')).toBeInTheDocument())
   })
 
-  it('shows empty state when API returns no items', async () => {
+  it('[STORY-003/AC-1] shows empty state when API returns no items', async () => {
     (todosApi.fetchTodos as Mock).mockResolvedValue([])
     render(<TodoList />)
     await waitFor(() => expect(screen.getByText(/no items/i)).toBeInTheDocument())
@@ -60,7 +60,7 @@ describe('TodoList', () => {
 
 ## Definition of done
 - `npx tsc --noEmit` exits with code 0 (test files type-check).
-- Every acceptance criterion has ≥1 RTL test.
+- Every acceptance criterion has ≥1 RTL test whose title begins with `[STORY-XXX/AC-n]`.
 - All API calls mocked.
 - No production code modified.
 

@@ -29,10 +29,10 @@ threshold, and produce a routing decision.
    On a scoped run, judge the threshold against the **story's production files** in
    the per-file coverage rows. Cross-story regressions are caught by the wave-end
    full-suite run and the Packaging gate.
-3. Compare coverage to the story's `Coverage threshold`. Judge whether tests actually exercise the acceptance criteria (not just line coverage).
+3. Compare coverage to the story's `Coverage threshold`. Judge whether tests actually exercise the acceptance criteria (not just line coverage). Also confirm **every acceptance criterion (`AC-n`) has ≥1 test whose title begins with `[STORY-XXX/AC-n]`** — an untagged or unmatched criterion fails the downstream eval gate, so route it back now (see the `agentic-sdlc:write-evals` skill).
 4. Decide routing:
-   - `DONE`: all tests pass AND coverage meets the threshold AND tests meaningfully cover the criteria.
-   - `BACK_TO_TEST_ENGINEER`: tests fail for a test-quality reason, or coverage/behavioral gaps remain — the production code is fine.
+   - `DONE`: all tests pass AND coverage meets the threshold AND tests meaningfully cover the criteria AND every `AC-n` has a criterion-tagged test.
+   - `BACK_TO_TEST_ENGINEER`: tests fail for a test-quality reason, coverage/behavioral gaps remain, or a criterion has no tagged test — the production code is fine.
    - `BACK_TO_ENGINEER`: a test reveals a genuine production bug (the code, not the test, is wrong).
 
 ## Output format

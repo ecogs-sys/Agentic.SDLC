@@ -112,9 +112,23 @@ c. Invoke the track's test reviewer. Pass: run-id, story ID, story file path,
    ```
 
 d. Route on the reviewer's decision (no standalone outcome commit):
-   - **DONE:** `SDLC story-status <run-dir> STORY-XXX complete`, then
-     `SDLC commit-step --run <run-dir> "feat(STORY-XXX): story complete"`.
-     Print `✔ [development] STORY-XXX complete (<i>/<S>)`. Next story.
+   - **DONE:** the story's tests are green. Before closing it, run the **eval gate**
+     — a deterministic backstop that every one of the story's acceptance criteria
+     resolves to a passing tagged test (see the `agentic-sdlc:write-evals` skill):
+     ```bash
+     EVALS scan <run-dir> <test_path>              # derive bindings from the tagged tests
+     EVALS run  <run-dir> --filter STORY-XXX --suite-green
+     ```
+     - **Gate PASS** (every `STORY-XXX/AC-n` is bound): `SDLC story-status <run-dir>
+       STORY-XXX complete`, then `SDLC commit-step --run <run-dir>
+       "feat(STORY-XXX): story complete" <run-dir>/evals`. Print
+       `✔ [development] STORY-XXX complete (<i>/<S>)`. Next story.
+     - **Gate FAIL** (a criterion has no tagged test — the reviewer's coverage
+       judgment missed a criterion, or a test isn't tagged): treat exactly like
+       **BACK_TO_TEST_ENGINEER** — `SDLC story-iter <run-dir> STORY-XXX
+       test_reviewer_iterations bump`; if < 5 re-invoke the test engineer naming the
+       unbound criterion id(s) and the tag convention; if = 5 escalate (story
+       `escalated`, commit, escalation block).
    - **BACK_TO_TEST_ENGINEER:** `SDLC story-iter <run-dir> STORY-XXX
      test_reviewer_iterations bump`. If < 5: re-invoke the test engineer with the
      issues; repeat from (a). If = 5: escalate (story `escalated`, commit,
@@ -139,6 +153,23 @@ SDLC set-field <run-dir>/state.json current_stage packaging
 SDLC set-stage <run-dir> devops skipped
 SDLC commit-step --run <run-dir> "docs(<run-id>): all stories complete"
 ```
+
+**Promote + replay the eval corpus** (see the `agentic-sdlc:write-evals` skill).
+Promotion mints this run's bound criteria into the permanent `evals/` corpus at the
+workspace root (so it ships in the PR); replay is the criteria-keyed regression
+gate — meaningful once the corpus spans more than this run (later phases,
+brownfield). `<test-paths>` = `<backend_test> <frontend_src>` (web) or
+`<electron_root>` (electron).
+```bash
+EVALS promote <run-dir>                       # → evals/registry.json + evals/EVAL-*.json
+EVALS replay --corpus evals <test-paths>      # non-zero = a prior criterion lost its test
+SDLC set-field <run-dir>/state.json stages.evals '{"status":"complete"}'
+SDLC commit-step --run <run-dir> "chore(<run-id>): promote evals to corpus" evals
+```
+If **replay fails**, a prior-corpus criterion lost its proving test. Either this run
+broke it (fix the code/test and re-run) or the change *intentionally* altered that
+behavior — in which case `EVALS retire <EVAL-ID> "<reason>"` (or `supersede`) as a
+reviewed part of the change (see `agentic-sdlc:brownfield-mode`), then re-run replay.
 Immediately invoke the final stage's skill by `app_type`:
 `agentic-sdlc:stage-devops` (web) or `agentic-sdlc:stage-packaging` (electron).
 (Brownfield driver: return to the driver instead — it owns the transition and the

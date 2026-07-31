@@ -22,7 +22,7 @@ Write tests that cover the story's acceptance criteria. Do not modify production
    - **main / package (Node) code** → tests run in the `node` environment.
    - **IPC contracts** → assert zod schemas accept valid payloads and reject invalid ones.
    - **node-pty / OS calls** → mock the module (`vi.mock('node-pty', ...)`); never spawn a real shell in a unit test.
-3. Cover each acceptance criterion with at least one assertion. Test behavior, not implementation details.
+3. Cover each acceptance criterion with at least one assertion. Test behavior, not implementation details. Tag every test with its criterion by beginning the test title with the token `[STORY-XXX/AC-n]` (see the `agentic-sdlc:write-evals` skill), e.g. `it("[STORY-004/AC-2] rejects invalid IPC payload", …)`. The eval gate fails the story if any criterion has no tagged test.
 4. Run focused tests to confirm they pass:
    ```bash
    cd <electron_root> && pnpm test -- --run <path-to-new-test>
@@ -36,7 +36,7 @@ issues. Read only the test files/production files named in the notes — do not
 re-read everything.
 
 ## Definition of done
-- Tests exist for every acceptance criterion.
+- Tests exist for every acceptance criterion, each title beginning with `[STORY-XXX/AC-n]`.
 - Focused `pnpm test -- --run <path>` for the new tests passes.
 - Only `*.test.ts`/`*.test.tsx` files created or modified.
 - Real shells / real windows are mocked, not spawned.

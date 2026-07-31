@@ -131,3 +131,10 @@ committed), delete it.
 
 ## Note
 Cancellation is clean when code was committed to the phase branch — switching branches restores the original workspace state. If code was generated but not yet committed (mid-story), `git checkout -- .` discards those changes before the branch switch.
+
+**Eval artifacts need no special handling.** The run-specific manifest
+(`runs/<run-id>/evals/manifest.json`) lives in the deleted run directory. Any
+permanent-corpus evals this run promoted (`evals/EVAL-*.json`, `evals/registry.json`)
+were committed only on the cancelled branch, so the branch switch/discard removes
+them along with the code they proved — correct, since that code is gone too. A
+previously **merged** run's corpus lives on `master` and is untouched.

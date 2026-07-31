@@ -65,9 +65,20 @@ Run ID: <run-id>
 <what to build — concrete, actionable, enough for an engineer to work without asking questions>
 
 ## Acceptance criteria
-- <specific, testable criterion (e.g., "GET /api/todos returns 200 with JSON array")>
-- <second criterion>
+- **AC-1:** <specific, testable criterion (e.g., "GET /api/todos returns 200 with JSON array")>
+- **AC-2:** <second criterion>
 ```
+
+## Acceptance-criterion IDs
+- Every acceptance criterion is prefixed with a **stable, write-once id** — `AC-1`,
+  `AC-2`, … in listed order within its story. The story-scoped key is
+  `STORY-XXX/AC-n` (e.g. `STORY-003/AC-1`).
+- IDs are **write-once**: when revising a story, only append new `AC-n`; never
+  renumber or reuse an id, and never delete a criterion's id (retire it in prose if
+  the criterion no longer applies). Downstream evals key on these ids, so a renumber
+  silently breaks the criterion→test binding.
+- These ids are what the test engineer tags each test with and what the eval layer
+  keys on — see the `agentic-sdlc:write-evals` skill.
 
 ## Index format (`index.md`)
 
@@ -114,6 +125,7 @@ The `Complexity` column copies each story's `**Estimated complexity:**` value (S
 - [ ] Every TECH-ID from tech-spec.md appears in at least one story's Implements list
 - [ ] Each story belongs to exactly one track (dotnet or react for web runs; electron for electron runs)
 - [ ] Acceptance criteria are specific enough to write a failing test for
+- [ ] Every acceptance criterion carries a write-once `AC-n` id (unique within its story, never renumbered)
 - [ ] `index.md` exists with the `## Execution plan` diagram and `## Story index` table
 - [ ] Every story in the index table has a matching `STORY-XXX.md` file, and vice-versa
 - [ ] Each story's `**Wave:**` field matches its `Wave` column in the index

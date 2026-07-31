@@ -92,6 +92,11 @@ webPreferences: {
 - **Tests:** Vitest (`^2.x`) + `@vitest/coverage-v8`. Renderer/DOM tests use the
   `jsdom` environment; main/package tests use the `node` environment. Co-locate tests
   as `*.test.ts`/`*.test.tsx` next to the code they cover.
+- **Criterion tagging (required):** begin every test's title with its acceptance-
+  criterion token `[STORY-XXX/AC-n]` (e.g. `it("[STORY-004/AC-2] rejects invalid IPC
+  payload", …)`). The eval layer derives its criterion→test bindings from these
+  tokens (`agentic-sdlc:write-evals`), and the story's eval gate fails if any
+  criterion has no tagged test.
 
 ## Build & test execution discipline
 

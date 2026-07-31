@@ -4,7 +4,26 @@ A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a mu
 
 ## Pipeline overview
 
-![Agentic SDLC pipeline with phase planning and DevOps phase](docs/agentic-sdlc-pipeline.svg)
+![Agentic SDLC pipeline with phase planning, an accumulating eval layer, and DevOps phase](docs/agentic-sdlc-pipeline.svg)
+
+## The eval layer — where evals come from and who uses them
+
+An **eval** is a machine-checkable link between one acceptance criterion and the test
+that proves it. The pipeline builds evals as it works and keeps them **forever**, so
+the suite of guarantees grows with every feature and catches regressions on every
+later run. If you read one picture, read this one:
+
+![How evals are generated and consumed: authored at spec freeze, tests tagged by criterion, gated per story, promoted into a permanent corpus, and replayed as a regression gate](docs/evals-lifecycle.svg)
+
+- **Generated** (green) at two points: the **Tech Lead** writes one eval per
+  acceptance criterion at spec freeze, and each passing story is **promoted** into a
+  permanent `evals/` corpus (`EVAL-0001`, `EVAL-0002`, …).
+- **Consumed** (blue) by two gates: the per-story **eval gate** blocks a story until
+  every criterion has a passing tagged test, and **every later run** replays the
+  whole corpus so a previously shipped criterion that lost its test fails the run.
+- **Zero duplication:** evals don't re-implement tests — the **Test Engineer** tags
+  each test with its criterion id (xUnit `[Trait]` / Vitest title token) and the
+  corpus is *derived* from those tags. See the `write-evals` skill for details.
 
 ## Install
 

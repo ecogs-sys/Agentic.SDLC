@@ -2,6 +2,49 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.14.0] - 2026-07-31
+
+Accumulating **eval layer** — acceptance criteria become a machine-checkable,
+replayable regression asset the SDLC grows on every run. Two lifecycle stages of one
+artifact: a **run-specific** manifest that gates the current run, promoted into a
+**permanent** `evals/` corpus that is replayed forever. Deterministic (~0 LLM
+tokens) and criteria-keyed, so it catches cross-feature regressions no single
+reviewer sees. No quality gate was weakened: the existing creator→validator loops,
+reviewers, iteration caps, spec freeze, and human gates are unchanged — the eval gate
+is additive.
+
+### Added
+- **`scripts/evals.mjs`** — deterministic eval helper (Node built-ins only), sibling
+  to `sdlc.mjs`. Commands: `author` (stub one eval per `STORY-XXX/AC-n` from the
+  frozen stories at spec freeze), `scan` (DERIVE criterion→test bindings from
+  in-test tags — never hand-authored), `run` (run-specific completeness gate),
+  `promote` (mint write-once `EVAL-NNNN` into the permanent `evals/` corpus),
+  `replay` (criteria-keyed regression gate), `retire` / `supersede` (the only
+  sanctioned way to change corpus expectations on an intentional behavior change).
+  `EVALS` alias added to `advance-stage`.
+- **`scripts/evals.test.mjs`** — Node `--test` suite for the helper (author/scan/run/
+  promote/replay/retire), establishing the script-test pattern the repo lacked.
+- **`write-evals` skill** — manifest schema, the per-language criterion-tag
+  convention (xUnit `[Trait("criterion", …)]`, Vitest `[STORY-XXX/AC-n]` title
+  token), `EVAL-NNNN` registry/provenance rules, and deterministic-by-default /
+  judge-only-for-residue policy.
+
+### Changed
+- **Criterion ids.** Each acceptance criterion now carries a write-once `AC-n` id
+  (`write-stories`, `write-fix-plan`) — the key the whole layer binds to.
+- **Zero-duplication binding.** Test engineers tag each test with its criterion id;
+  `evals.mjs scan` derives the binding, so tests stay the single source of truth and
+  the mapping can't drift on a rename. The three testing skills document the tag as a
+  required rule; the three test reviewers verify no criterion is left untagged.
+- **Authoring at spec freeze.** `stage-tech-lead` and the brownfield fix-plan gate
+  author the run manifest when criteria freeze.
+- **Gate + promote in development.** `stage-development`'s test-reviewer `DONE` route
+  scans + runs the run gate (a criterion with no passing tagged test routes back);
+  completion promotes to the corpus and replays it.
+- **Brownfield replay + retire.** `brownfield-mode` / `brownfield-driver` replay the
+  corpus as a criteria-keyed regression gate atop the `test_baseline` comparison, and
+  document `retire`/`supersede` for deliberate behavior changes.
+
 ## [0.13.0] - 2026-07-23
 
 fix_plan stage replaces change_spec + tech_lead for bug_fix/small_change
