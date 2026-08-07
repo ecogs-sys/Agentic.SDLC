@@ -495,10 +495,10 @@ machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried
    }
    ```
 6. Delete the migrated `runs/<change-run-id>/` directory (the flat run is superseded).
-7. **Commit:**
+7. **Commit** (this migration renames a directory and moves files, so stage
+   everything with `--all`):
    ```bash
-   git add -A
-   git commit -m "chore(<program-id>): convert brownfield change to program"
+   SDLC commit-step --all "chore(<program-id>): convert brownfield change to program"
    ```
 
 ### Step BP2 — Phase Planner loop, then phase-plan gate

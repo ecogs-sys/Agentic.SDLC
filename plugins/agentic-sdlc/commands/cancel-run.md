@@ -77,32 +77,19 @@ planning-stage path, or `agentic-sdlc/<program-id>/<phase-folder>` for the phase
 path.
 
 ### Step 3 — Clean up git branch and generated code
-If the workspace is a git repository:
+If the workspace is a git repository, run the helper — it discards uncommitted
+changes, switches to `<parent_branch>` (falling back to `main`, then `master`),
+then deletes the phase branch:
 
 ```bash
-# Discard any uncommitted changes in the working tree
-git checkout -- .
-git clean -fd
-
-# Switch back to the parent branch.
-# Fall back to main, then master. Do NOT use `git checkout -` — that may land
-# us back on the phase branch, after which `git branch -D` cannot delete it.
-if git rev-parse --verify <parent_branch> >/dev/null 2>&1; then
-  git checkout <parent_branch>
-elif git rev-parse --verify main >/dev/null 2>&1; then
-  git checkout main
-elif git rev-parse --verify master >/dev/null 2>&1; then
-  git checkout master
-else
-  echo "ERROR: no parent_branch in program.json and neither main nor master exists."
-  echo "Manually checkout your default branch and re-run /agentic-sdlc:cancel-run, or"
-  echo "delete branch <cancel-branch> yourself with: git branch -D <cancel-branch>"
-  exit 1
-fi
-
-# Delete the phase branch (we are guaranteed to be on a different branch now)
-git branch -D <cancel-branch>
+SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
+SDLC cleanup-branch <cancel-branch> <parent_branch>
 ```
+
+The helper never uses `git checkout -` (which could land back on the phase branch
+and block its deletion). If no `<parent_branch>` is known and neither `main` nor
+`master` exists, it exits non-zero with instructions to checkout the default
+branch manually and delete `<cancel-branch>` yourself with `git branch -D`.
 
 If git is not available or the branch doesn't exist, skip git steps and continue.
 
