@@ -2,6 +2,46 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.15.0] - 2026-08-04
+
+Collapse hand-written git sequences in the orchestrator commands into single
+`sdlc.mjs` calls. Deterministic git (branch cleanup, add/commit) now runs as code,
+not model-emitted prose — fewer tool round-trips, no chance of the model formatting
+a multi-line git sequence wrong, and ~0 reasoning tokens spent on git plumbing.
+Behavior is unchanged; only the invocation collapses.
+
+### Added
+- **`sdlc.mjs cleanup-branch <cancel-branch> [parent-branch] [fallback-branch...]`**
+  — discards uncommitted changes, switches to the parent branch (falling back to
+  `main`, then `master`, or to a caller-supplied fallback list), then deletes the
+  cancel branch. Replaces the ~10-line branch-cleanup sequence in `cancel-run`
+  (also reused by the brownfield-change cancel path). Never uses `git checkout -`.
+  The discard step (`checkout -- .` / `clean -fd`) is status-checked and dies
+  loudly on failure, same as every other git call in the function — a locked file
+  no longer produces a silent false-success. The fallback-branch existence check
+  is one batched `git branch --list` call instead of one `rev-parse` per candidate.
+- **`sdlc.mjs commit-step --all`** — stages every change (`git add -A`) instead of
+  explicit paths, for migrations that rename/move files. Rejects being combined
+  with explicit paths (fails fast instead of silently ignoring them).
+- **`scripts/sdlc.test.mjs`** — Node `--test` suite for `sdlc.mjs` (mirrors the
+  `evals.test.mjs` pattern), covering every subcommand including the
+  `cleanup-branch` fallback chain (default and custom), `commit-step --all`, and
+  their new failure/validation paths.
+
+### Changed (internal)
+- `commit-step`'s staged/log dirty-check collapses from two `git` spawns into one
+  `git status --porcelain` call.
+- `commit-step`'s `--run`/`--all` flag parsing simplified from a loop to two
+  straight-line checks (no real caller combines or reorders them).
+
+### Changed
+- **`cancel-run`** Step 3 now calls `SDLC cleanup-branch` instead of an inline
+  `checkout`/`clean`/branch-fallback/`branch -D` block.
+- **`next-phase`** — the phase-plan replan commit and the "Phase N started" commit
+  now go through `SDLC commit-step` (helper defined once at the top of the command).
+- **`start-run`** — the brownfield-to-program conversion commit now uses
+  `SDLC commit-step --all`.
+
 ## [0.14.0] - 2026-07-31
 
 Accumulating **eval layer** — acceptance criteria become a machine-checkable,

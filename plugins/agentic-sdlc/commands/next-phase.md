@@ -13,6 +13,11 @@ drive it up to the requirement-spec review gate.
 
 ## Process
 
+All commits go through the helper (never hand-write git add/commit sequences):
+```bash
+SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
+```
+
 ### Step 1 — Find the active program and current phase
 If the active run is a brownfield change run (`runs/change-*/state.json` with
 `current_stage != "complete"`), say:
@@ -78,8 +83,7 @@ Say:
      start of the replan; on the user's approval it returns to `"frozen"`.
   2. Commit the revision (lands on the phase branch created in Step 4):
      ```bash
-     git add runs/<program-id>/phase-plan.md runs/<program-id>/program.json
-     git commit -m "docs(<program-id>): phase plan replan (after phase <current_phase>)"
+     SDLC commit-step "docs(<program-id>): phase plan replan (after phase <current_phase>)" runs/<program-id>/phase-plan.md runs/<program-id>/program.json
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
      start-run Step 7. On pass, state the path **`runs/<program-id>/phase-plan.md`**
@@ -124,8 +128,7 @@ Say:
    `status = "in_progress"`.
 5. **Commit — Phase N started:**
    ```bash
-   git add runs/<program-id>/program.json runs/<program-id>/phase-0N/
-   git commit -m "docs(<program-id>): Phase N started"
+   SDLC commit-step "docs(<program-id>): Phase N started" runs/<program-id>/program.json runs/<program-id>/phase-0N/
    ```
 
 ### Step 7 — Drive the BA loop

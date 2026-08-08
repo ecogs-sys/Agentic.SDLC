@@ -12,16 +12,23 @@
  *   node sdlc.mjs bump-iter    <run-dir> <stage>
  *   node sdlc.mjs story-status <run-dir> <story-id> <status>
  *   node sdlc.mjs story-iter   <run-dir> <story-id> <counter> [bump|reset]
- *   node sdlc.mjs commit-step  [--run <run-dir>] "<message>" [paths...]
+ *   node sdlc.mjs commit-step  [--run <run-dir>] [--all] "<message>" [paths...]
  *   node sdlc.mjs log          <run-dir> <event text...>
  *   node sdlc.mjs tail-log     <run-dir> [n]
+ *   node sdlc.mjs cleanup-branch <cancel-branch> [parent-branch] [fallback-branch...]
  *
  * Every state-mutating command appends a timestamped line to <run-dir>/progress.log
  * (the run's live activity feed — `tail -f` it during long stages).
  *
  * commit-step: `--run <run-dir>` auto-stages <run-dir>/state.json and
- * <run-dir>/progress.log alongside any extra paths. If nothing is staged the
- * command prints "nothing to commit" and exits 0 (idempotent).
+ * <run-dir>/progress.log alongside any extra paths. `--all` stages every change
+ * (git add -A) instead of explicit paths — it cannot be combined with explicit
+ * paths (fails fast rather than silently ignoring them). If nothing is staged
+ * the command prints "nothing to commit" and exits 0 (idempotent).
+ *
+ * cleanup-branch: discards uncommitted changes, switches to parent-branch (else
+ * the fallback-branch args, defaulting to main, then master, if none given),
+ * then deletes cancel-branch. Used by cancel-run.
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
@@ -161,24 +168,36 @@ switch (cmd) {
 
   case 'commit-step': {
     let runDir = null;
+    let all = false;
     let rest = [...args];
     if (rest[0] === '--run') {
       runDir = rest[1];
       rest = rest.slice(2);
     }
+    if (rest[0] === '--all') {
+      all = true;
+      rest = rest.slice(1);
+    }
     const [message, ...paths] = rest;
-    if (!message) die('usage: commit-step [--run <run-dir>] "<message>" [paths...]');
+    if (!message) die('usage: commit-step [--run <run-dir>] [--all] "<message>" [paths...]');
+    if (all && paths.length > 0) die('commit-step: --all stages everything — cannot combine with explicit paths');
     const toAdd = [...paths];
     const progressLog = runDir ? join(runDir, 'progress.log') : null;
     if (runDir && existsSync(statePath(runDir))) toAdd.push(statePath(runDir));
-    if (toAdd.length > 0) {
+    if (all) {
+      const add = git(['add', '-A']);
+      if (add.status !== 0) die(`git add -A failed: ${add.stderr.trim()}`);
+    } else if (toAdd.length > 0) {
       const add = git(['add', '--', ...toAdd]);
       if (add.status !== 0) die(`git add failed: ${add.stderr.trim()}`);
     }
-    const stagedDirty = git(['diff', '--cached', '--quiet']).status !== 0;
+    // Single `git status --porcelain` answers both "is anything staged" and
+    // "is progressLog dirty" without a second git spawn.
+    const porcelain = git(['status', '--porcelain']).stdout;
+    const stagedDirty = porcelain.split('\n').some((l) => l[0] && l[0] !== ' ' && l[0] !== '?');
     const logDirty =
       progressLog && existsSync(progressLog) &&
-      git(['status', '--porcelain', '--', progressLog]).stdout.trim() !== '';
+      porcelain.split('\n').some((l) => l.slice(3) === progressLog.replace(/\\/g, '/'));
     if (!stagedDirty && !logDirty) {
       console.log('nothing to commit');
       break;
@@ -212,6 +231,39 @@ switch (cmd) {
     }
     const lines = readFileSync(file, 'utf8').trimEnd().split('\n');
     console.log(lines.slice(-Number(n)).join('\n'));
+    break;
+  }
+
+  case 'cleanup-branch': {
+    const [cancelBranch, parentBranch, ...fallbacks] = args;
+    if (!cancelBranch) die('usage: cleanup-branch <cancel-branch> [parent-branch] [fallback-branch...]');
+    // Discard any uncommitted changes so the branch switch is clean.
+    const discard = git(['checkout', '--', '.']);
+    if (discard.status !== 0) die(`git checkout -- . failed: ${discard.stderr.trim()}`);
+    const clean = git(['clean', '-fd']);
+    if (clean.status !== 0) die(`git clean -fd failed: ${clean.stderr.trim()}`);
+    // Switch to a safe branch. Try parent, then the fallback list (default
+    // main, master — override by passing your own fallback-branch args). Never
+    // use `git checkout -` — it may land us back on the cancel branch, after
+    // which `git branch -D` cannot delete it.
+    const candidates = [parentBranch, ...(fallbacks.length > 0 ? fallbacks : ['main', 'master'])].filter(Boolean);
+    // One batched `git branch --list` instead of one `rev-parse` per candidate.
+    const existing = new Set(
+      git(['branch', '--list', ...candidates]).stdout.split('\n').map((l) => l.replace(/^\*?\s+/, '').trim()).filter(Boolean)
+    );
+    const target = candidates.find((b) => existing.has(b));
+    if (!target) {
+      die(
+        `none of [${candidates.join(', ')}] exist — checkout your default branch ` +
+        `and delete the branch yourself: git branch -D ${cancelBranch}`
+      );
+    }
+    const co = git(['checkout', target]);
+    if (co.status !== 0) die(`git checkout ${target} failed: ${co.stderr.trim()}`);
+    // We are guaranteed to be on a different branch now.
+    const del = git(['branch', '-D', cancelBranch]);
+    if (del.status !== 0) die(`git branch -D ${cancelBranch} failed: ${del.stderr.trim()}`);
+    console.log(`switched to ${target}, deleted ${cancelBranch}`);
     break;
   }
 
