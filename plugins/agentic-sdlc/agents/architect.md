@@ -78,4 +78,4 @@ section):
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; design the delta only; never re-specify existing code).
 
 ## Spec-freeze guardrail
-After Tech Lead approval, `req-spec.md` and `tech-spec.md` are frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit either file.
+Once the eval review gate is approved, `req-spec.md` and `tech-spec.md` are frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit either file. (Before that gate — including a technical change routed back from the eval gate — `spec_frozen` is still `false` and you may revise normally.)

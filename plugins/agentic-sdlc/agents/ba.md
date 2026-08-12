@@ -59,4 +59,4 @@ delta — do NOT re-read `raw-input.md` or `req-spec.md` fully:
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; specify the delta only; never re-specify existing behavior).
 
 ## Spec-freeze guardrail
-After Tech Lead approval, `req-spec.md` is frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit `req-spec.md`.
+Once the eval review gate is approved, `req-spec.md` is frozen. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit `req-spec.md`. (Before that gate — including a requirements change routed back from the eval gate — `spec_frozen` is still `false` and you may revise normally.)

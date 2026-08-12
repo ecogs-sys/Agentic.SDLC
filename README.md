@@ -13,11 +13,13 @@ that proves it. The pipeline builds evals as it works and keeps them **forever**
 the suite of guarantees grows with every feature and catches regressions on every
 later run. If you read one picture, read this one:
 
-![How evals are generated and consumed: authored at spec freeze, tests tagged by criterion, gated per story, promoted into a permanent corpus, and replayed as a regression gate](docs/evals-lifecycle.svg)
+![How evals are generated, reviewed and consumed: authored after the stories are approved, reviewed and approved by you at a human spec-freeze gate, tests tagged by criterion, gated per story, promoted into a permanent corpus, and replayed as a regression gate](docs/evals-lifecycle.svg)
 
-- **Generated** (green) at two points: the **Tech Lead** writes one eval per
-  acceptance criterion at spec freeze, and each passing story is **promoted** into a
-  permanent `evals/` corpus (`EVAL-0001`, `EVAL-0002`, …).
+- **Generated** (green) at two points: after the stories are approved, one eval is
+  authored per acceptance criterion and **you review them at a human gate** (the
+  spec-freeze point — approve, reclassify how a criterion is checked, or route a
+  change back upstream); then each passing story is **promoted** into a permanent
+  `evals/` corpus (`EVAL-0001`, `EVAL-0002`, …).
 - **Consumed** (blue) by two gates: the per-story **eval gate** blocks a story until
   every criterion has a passing tagged test, and **every later run** replays the
   whole corpus so a previously shipped criterion that lost its test fails the run.

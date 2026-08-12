@@ -80,6 +80,7 @@ Read state.json and display a clear status summary.
   Tech Lead                [<status>] iter: <n>
   Tech Lead Validation     [<status>] iter: <n>
   User Review (Stories)    [<status>]
+  User Review (Evals)      [<status>]
 
   DEVELOPMENT PHASE            [<stages.development.status>]
   ─────────────────────────────────────────

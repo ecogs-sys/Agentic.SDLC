@@ -31,6 +31,7 @@ agents. See the dispatcher.)
 | `ba` / `ba_validation` / `user_review_req` | `agentic-sdlc:stage-ba` skill |
 | `architect` / `architect_validation` / `user_review_tech` | `agentic-sdlc:stage-architect` skill |
 | `tech_lead` / `tech_lead_validation` / `user_review_stories` | `agentic-sdlc:stage-tech-lead` skill |
+| `user_review_evals` | `agentic-sdlc:stage-evals` skill |
 | `development` | `agentic-sdlc:stage-development` skill |
 | `devops` (web) / `packaging` (electron) | `agentic-sdlc:stage-devops` / `stage-packaging` skill, gated by `infra_change_required` |
 
@@ -50,13 +51,14 @@ The validator compares request+impact-map → fix-plan per the
 validate-traceability schema (evidence citations, no assumptions, story
 coverage — see the fix-plan-validator agent). **user_review_fix_plan gate:**
 apply the gate convention on **`runs/<run-id>/fix-plan.md`**. On "approve":
-set `spec_frozen = true`; write `runs/<run-id>/stories/STORY-00N.md` files
-plus `index.md` from the plan's `## Stories` section (write-stories format —
-each acceptance criterion carries a write-once `AC-n` id); populate
-`state.stories`; then **author the eval manifest** exactly as the tech-lead gate
-does (`EVALS author <run-dir>`; `SDLC set-field <run-dir>/state.json stages.evals
-'{"status":"in_progress"}'`); commit (staging `<run-dir>/evals`); advance the
-pipeline. Any other reply = revision notes, re-run the loop.
+write `runs/<run-id>/stories/STORY-00N.md` files plus `index.md` from the plan's
+`## Stories` section (write-stories format — each acceptance criterion carries a
+write-once `AC-n` id); populate `state.stories`; then **author the eval manifest**
+exactly as the tech-lead gate does (`EVALS author <run-dir>`; `SDLC set-field
+<run-dir>/state.json stages.evals '{"status":"in_progress"}'`); commit (staging
+`<run-dir>/evals`); advance the pipeline. Do **not** set `spec_frozen` here — the
+`user_review_evals` gate is the spec-freeze point. Any other reply = revision notes,
+re-run the loop.
 
 ## Notes for reused stage skills
 
@@ -75,10 +77,15 @@ pipeline. Any other reply = revision notes, re-run the loop.
   brownfield`. The BA writes a normal `req-spec.md` (new_feature tier only). After
   the **architect** stage (new_feature tier), the tech-spec's `**Infra change:**`
   line sets `state.infra_change_required` — it overrides the surveyor's assessment.
-- **tech_lead stories gate (new_feature only):** on approve, set
-  `spec_frozen = true` and populate `state.stories` exactly as greenfield.
-  (bug_fix/small_change never reach `tech_lead` — their stories come from the
-  fix-plan gate instead.)
+- **tech_lead stories gate (new_feature only):** on approve, populate
+  `state.stories` and author the eval manifest exactly as greenfield — but do NOT set
+  `spec_frozen` (the `user_review_evals` gate freezes the spec). (bug_fix/small_change
+  never reach `tech_lead` — their stories come from the fix-plan gate instead.)
+- **user_review_evals gate:** run `agentic-sdlc:stage-evals` — the human review of the
+  authored manifest and the spec-freeze point. On approve it sets `spec_frozen = true`
+  and returns here. A substantial change routes to the acceptance-criteria source: the
+  **fix-plan** for bug_fix/small_change, or the **tech-lead** (and up to architect/BA)
+  for new_feature — the driver re-enters that stage and comes back down to this gate.
 - **development:** stories always exist by development time (fix-plan gate for
   bug_fix/small_change, tech_lead gate for new_feature); engineers edit in
   place (no scaffold); the test reviewer always runs the FULL existing suite

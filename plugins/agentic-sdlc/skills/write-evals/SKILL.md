@@ -7,8 +7,9 @@ description: The eval layer — how acceptance criteria become a machine-checkab
 
 An **eval** binds one frozen acceptance criterion (`STORY-XXX/AC-n`) to a
 machine-checkable verification and records whether it holds. Evals are the pipeline's
-*memory of correctness*: authored when criteria freeze, replayed on every later run as
-a deterministic regression gate.
+*memory of correctness*: authored from the approved criteria, human-reviewed at the
+eval gate (where the spec freezes), then replayed on every later run as a deterministic
+regression gate.
 
 Two lifecycle stages of the **same** artifact:
 - **Run-specific** — `runs/<run-id>/evals/manifest.json`, gates *this* run, discarded
@@ -83,14 +84,34 @@ or `assert` check instead, not `test`.
 
 | Command | When | Effect |
 |---|---|---|
-| `author <run-dir> [stories-dir]` | at SPEC FREEZE | one stub per `STORY-XXX/AC-n` parsed from the frozen `stories/` (`check` unbound) |
+| `author <run-dir> [stories-dir]` | when stories/fix-plan are approved | one stub per `STORY-XXX/AC-n` parsed from the approved `stories/` (`check` unbound, `kind: test`) |
+| `set-kind <run-dir> <id> <kind>` | the eval review gate | reclassify one criterion's `check.kind` (`test`\|`assert`\|`judge`) — the ONLY sanctioned manifest edit; goes through the tool, never a hand-edit. Non-`test` marks `source: human` |
 | `scan <run-dir> <test-path…>` | after a story's tests pass review | derive `check.tests` by extracting criterion tags from the test files |
 | `run <run-dir> [--filter <id\|story,…>] [--suite-green]` | the story / end-of-run gate | verify every targeted criterion is bound (has a tagged test); exit non-zero on any unbound criterion. Pass `--suite-green` when the test-reviewer reported the suite green so covered evals stamp `pass` |
-| `report <run-dir>` | any time | human-readable coverage summary |
+| `report <run-dir>` | any time / the eval review gate | human-readable summary (id, `check.kind`, test count, criterion) |
 
 `run` is a **completeness gate**, not a second test runner: the test-reviewer's suite is
 the authoritative execution: `run` asserts each criterion resolves to a passing tagged
 test. `--filter` accepts criterion ids or a story id (all its criteria).
+
+## Human review gate (authoring time)
+
+Right after `author` (the stories / fix-plan gate) and before development, the
+orchestrator pauses at the **eval review gate** (`current_stage = user_review_evals`,
+handler `agentic-sdlc:stage-evals`). The human reviews the authored manifest — the
+run's definition of correctness, which becomes permanent corpus and is replayed forever
+— rendered by `report` (id, `check.kind`, criterion).
+
+- **This gate is the SPEC-FREEZE point.** `spec_frozen` is set here, not at the
+  stories/fix-plan gate, so a substantial change can still re-open upstream stages.
+- **Local edit — kind only:** the reviewer may reclassify a criterion's `check.kind`
+  via `set-kind`. That is the only in-place mutation; the manifest otherwise stays
+  DERIVED from the acceptance criteria.
+- **Substantial change routes to the source:** adding, removing, or rewording a
+  criterion is a change to the acceptance-criteria owner — the stories (Tech Lead),
+  the fix-plan, or further up (Architect / BA). The gate re-opens that stage; the
+  chain flows back down and re-`author`s the manifest. The manifest is never
+  hand-authored to diverge from the criteria.
 
 ## Permanent corpus (Phase B — forward reference)
 
@@ -108,5 +129,6 @@ test. `--filter` accepts criterion ids or a story id (all its criteria).
       `write-fix-plan` format)
 - [ ] Every `test`-kind criterion has ≥1 test tagged with its id (xUnit Trait or Vitest
       title token)
+- [ ] The eval review gate (`user_review_evals`) was approved — the spec froze there
 - [ ] `evals.mjs run` passes (no unbound criteria) before a story is marked complete
-- [ ] Manifest was produced by `evals.mjs`, never hand-edited
+- [ ] Manifest was produced by `evals.mjs` — only `set-kind` mutates it, never a hand-edit

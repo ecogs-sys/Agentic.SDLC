@@ -66,4 +66,4 @@ revision scope is the flagged `STORY-XXX.md` files plus their rows in
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; story-ize the delta only; never re-specify existing code).
 
 ## Spec-freeze guardrail
-After Tech Lead approval (your own user-review gate), all upstream artifacts are frozen — `req-spec.md`, `tech-spec.md`, and every file under `runs/<run-id>/stories/`. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit any artifact.
+Once the eval review gate is approved, all upstream artifacts are frozen — `req-spec.md`, `tech-spec.md`, and every file under `runs/<run-id>/stories/`. If you are invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen — do not edit any artifact. (Before that gate — e.g. a re-open routed back from the eval gate — `spec_frozen` is still `false` and you may revise normally.)

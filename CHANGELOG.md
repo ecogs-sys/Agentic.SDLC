@@ -2,6 +2,39 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.16.0] - 2026-08-08
+
+Add a **human review gate for the evals authored each run**. After the stories
+(greenfield / brownfield new_feature) or fix-plan (brownfield bug_fix / small_change)
+gate authors the eval manifest, the pipeline now pauses at a new `user_review_evals`
+gate before development. The human reviews the run's machine-checkable definition of
+correctness — the evals that get promoted into the permanent corpus and replayed
+forever — signs off, adjusts how a criterion is checked, or routes a substantial
+change back to the stage that owns the acceptance criterion.
+
+**The eval gate is now the single SPEC-FREEZE point.** `spec_frozen` moved off the
+stories / fix-plan gates and onto this gate, so a substantial change here can still
+re-open the upstream stages (which freeze would otherwise block).
+
+### Added
+- **`user_review_evals` stage + `stage-evals` handler skill** — the eval review gate.
+  Displays the authored manifest (`EVALS report`), then: **approve** (freezes the spec,
+  advances to development); **set a check kind** in place (`test`/`assert`/`judge`);
+  or **route a substantial change** (add/remove/reword a criterion) back to the
+  Tech Lead / fix-plan / Architect / BA, mirroring the tech-spec gate's routing. It
+  re-authors the manifest on the way back down and re-shows the gate.
+- **`evals.mjs set-kind <run-dir> <criterion-id> <kind>`** — the only sanctioned
+  manifest mutation (goes through the tool, never a hand-edit). Non-`test` kinds mark
+  `check.source = "human"`. `report` now shows each eval's `check.kind`.
+
+### Changed
+- `spec_frozen` is set at `user_review_evals`, not at the stories / fix-plan gates.
+- `stage-tech-lead` and the brownfield fix-plan gate now advance to `user_review_evals`
+  after authoring the manifest instead of jumping to development.
+- Brownfield tier pipelines (`bug_fix`, `small_change`, `new_feature`) include
+  `user_review_evals` before `development`; greenfield seeds the stage; the dispatcher
+  and brownfield driver route it; `show-run-status` renders it in the ladder.
+
 ## [0.15.0] - 2026-08-04
 
 Collapse hand-written git sequences in the orchestrator commands into single
