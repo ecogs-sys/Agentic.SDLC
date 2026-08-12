@@ -128,6 +128,31 @@ test('retire removes an eval from replay; superseded is also skipped', () => {
   assert.equal(recs.status, 'retired');
 });
 
+test('set-kind changes check.kind, marks non-test source human, and run treats it as bound', () => {
+  const { run } = scaffold({ tests: false });
+  evals('author', run);
+  // reclassify the never-tested criterion as a judge check
+  const sk = evals('set-kind', run, 'STORY-001/AC-2', 'judge');
+  assert.equal(sk.code, 0);
+  const m = readJson(join(run, 'evals', 'manifest.json'));
+  const ev = m.evals.find((e) => e.id === 'STORY-001/AC-2');
+  assert.equal(ev.check.kind, 'judge');
+  assert.equal(ev.check.source, 'human');
+  // a judge criterion is bound without a tagged test
+  const filtered = evals('run', run, '--filter', 'STORY-001/AC-2', '--suite-green');
+  assert.equal(filtered.code, 0);
+  // report surfaces the kind
+  const rep = evals('report', run);
+  assert.match(rep.out, /\[judge\].*STORY-001\/AC-2|STORY-001\/AC-2.*\[judge\]/);
+});
+
+test('set-kind rejects a bad kind and an unknown id', () => {
+  const { run } = scaffold({ tests: false });
+  evals('author', run);
+  assert.equal(evals('set-kind', run, 'STORY-001/AC-1', 'bogus').code, 1);
+  assert.equal(evals('set-kind', run, 'STORY-999/AC-9', 'judge').code, 1);
+});
+
 test('unknown command exits non-zero', () => {
   const r = evals('frobnicate');
   assert.equal(r.code, 1);

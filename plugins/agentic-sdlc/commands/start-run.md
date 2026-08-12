@@ -301,6 +301,7 @@ Wait for response:
     "tech_lead": { "status": "pending", "iterations": 0 },
     "tech_lead_validation": { "status": "pending", "iterations": 0 },
     "user_review_stories": { "status": "pending" },
+    "user_review_evals": { "status": "pending" },
     "development": { "status": "pending" },
     "devops": { "status": "pending", "iterations": 0 },
     "packaging": { "status": "pending", "iterations": 0 }
@@ -316,7 +317,9 @@ the BA → BA Validator loop, the requirement-spec gate, and everything after. D
 NOT tell the user to run any command — continue the pipeline without pausing.
 
 ## Spec freeze
-Do not set `spec_frozen` here. That happens after Tech Lead approval in /advance-stage.
+Do not set `spec_frozen` here. That happens at the eval review gate
+(`user_review_evals`) in /advance-stage, after the stories are approved and the evals
+are authored.
 
 ---
 
@@ -417,21 +420,21 @@ flow.)
 ```text
 bug_fix      = ["survey","survey_validation","user_review_triage",
                 "fix_plan","fix_plan_validation","user_review_fix_plan",
-                "development","devops"]
+                "user_review_evals","development","devops"]
 small_change = ["survey","survey_validation","user_review_triage",
                 "fix_plan","fix_plan_validation","user_review_fix_plan",
-                "development","devops"]
+                "user_review_evals","development","devops"]
 new_feature  = ["survey","survey_validation","user_review_triage",
                 "ba","ba_validation","user_review_req",
                 "architect","architect_validation","user_review_tech",
                 "tech_lead","tech_lead_validation","user_review_stories",
-                "development","devops"]
+                "user_review_evals","development","devops"]
 ```
 
 Tier-specific finalization at the gate:
 - **bug_fix / small_change:** no extra work here — stories come from the
   approved fix plan, not from triage. `spec_frozen` is set at the
-  `user_review_fix_plan` gate instead.
+  `user_review_evals` gate (the eval review, after the fix-plan gate authors the evals).
 - **new_feature:** re-survey at depth = `deep` (one `code-surveyor` call, then
   commit) so the architecture map is filled. Then decide single vs. multi-feature:
   > "This is a new feature. Is it **one** feature, or **several** features to add

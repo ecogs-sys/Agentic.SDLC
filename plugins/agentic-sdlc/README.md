@@ -70,7 +70,10 @@ flowchart TD
 
     TLV -- pass --> RG3{{"👤 User Review Gate<br/>stories/index.md"}}
     RG3 -- "request changes" --> TL
-    RG3 -- "approve · 🔒 SPEC FREEZE" --> ADV3(["▶ /advance-stage"])
+    RG3 -- "approve · author evals" --> RGE{{"👤 User Review Gate<br/>evals/manifest.json"}}
+    RGE -- "set-kind (local)" --> RGE
+    RGE -- "add / remove / reword" --> TL
+    RGE -- "approve · 🔒 SPEC FREEZE" --> ADV3(["▶ /advance-stage"])
 
     ADV3 --> NEXT
 
@@ -218,7 +221,7 @@ Paste your requirement when prompted. Then:
 /agentic-sdlc:advance-stage
 ```
 
-Repeat `/advance-stage` after each approval. You'll be asked to review and approve at four gates (phase plan, requirement spec, technical spec, stories).
+Repeat `/advance-stage` after each approval. You'll be asked to review and approve at five gates (phase plan, requirement spec, technical spec, stories, evals).
 
 ## Pipeline order
 
@@ -229,6 +232,7 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
                     → BA → BA Validator (loop) → [user review req spec]
 /advance-stage      → Architect → Architect Validator (loop) → [user review tech spec]
 /advance-stage      → Tech Lead → Tech Lead Validator (loop) → [user review stories]
+                    → author evals → [user review evals]
                     ══ SPEC FREEZE ══
 /advance-stage      → .NET stories (Engineer → Reviewer → Test Engineer → Test Reviewer → git commit)
                     → React stories (Engineer → Reviewer → Test Engineer → Test Reviewer → git commit)
@@ -236,15 +240,15 @@ Repeat `/advance-stage` after each approval. You'll be asked to review and appro
 
 # Brownfield (existing code detected at /start-run):
 /start-run  → Code Surveyor (shallow) → [triage gate · confirm tier]
-            → bug_fix      → fix-plan → [fix-plan gate] → development → [devops if infra change] → PR
-            → small_change → fix-plan → [fix-plan gate] → development → [devops?] → PR
-            → new_feature  → Surveyor (deep) → BA → Architect → stories
-                           → development → [devops?] → PR
+            → bug_fix      → fix-plan → [fix-plan gate] → author evals → [eval gate] → development → [devops if infra change] → PR
+            → small_change → fix-plan → [fix-plan gate] → author evals → [eval gate] → development → [devops?] → PR
+            → new_feature  → Surveyor (deep) → BA → Architect → stories → [stories gate]
+                           → author evals → [eval gate] → development → [devops?] → PR
 ```
 
 ## Spec freeze rule
 
-After you approve the stories, `req-spec.md`, `tech-spec.md`, and everything under `runs/<run-id>/stories/` are **frozen**. No agent can modify them. To make upstream changes: `/agentic-sdlc:cancel-run` and start a new run.
+After you approve the **evals** (the gate just after the stories gate authors the eval manifest), `req-spec.md`, `tech-spec.md`, and everything under `runs/<run-id>/stories/` are **frozen**. No agent can modify them. Until that point — including a substantial change routed back from the eval gate — the spec is not yet frozen. Once frozen, to make upstream changes: `/agentic-sdlc:cancel-run` and start a new run.
 
 ## Phases
 

@@ -74,6 +74,7 @@ Invoke exactly one handler skill for the run's `current_stage`:
 | `ba` | `agentic-sdlc:stage-ba` |
 | `architect` | `agentic-sdlc:stage-architect` |
 | `tech_lead` | `agentic-sdlc:stage-tech-lead` |
+| `user_review_evals` | `agentic-sdlc:stage-evals` |
 | `development` | `agentic-sdlc:stage-development` |
 | `devops` | `agentic-sdlc:stage-devops` |
 | `packaging` | `agentic-sdlc:stage-packaging` |

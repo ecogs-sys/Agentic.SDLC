@@ -1,6 +1,6 @@
 ---
 name: stage-tech-lead
-description: Orchestrator handler for the Tech Lead stage — runs the Tech Lead → Validator loop and the stories user gate with SPEC FREEZE, then seeds state.stories. Loaded by /advance-stage when current_stage = tech_lead.
+description: Orchestrator handler for the Tech Lead stage — runs the Tech Lead → Validator loop and the stories user gate, then seeds state.stories, authors the eval manifest, and hands off to the eval review gate (where the spec freezes). Loaded by /advance-stage when current_stage = tech_lead.
 ---
 
 # Stage: Tech Lead
@@ -19,17 +19,17 @@ Pass the run's `app_type` to the tech-lead (it drives track assignment).
 
 **Stage-entry summary** (print on entry):
 > **Stage <k>/<n> — Tech Lead.** Splitting the tech-spec into stories
-> (Tech Lead → validator loop, then your review gate — the spec freezes on
-> approval). This is the last gate before development.
+> (Tech Lead → validator loop, then your review gate). On approval the evals are
+> authored and you get one last gate — the eval review — where the spec freezes.
 
-## User review gate + SPEC FREEZE
+## User review gate — stories
 
 Name **`runs/<run-id>/stories/index.md`**, then display it (the execution-plan
 diagram and story table) — full on first review, diff + validator notes on
 re-review. Offer to show any individual `STORY-XXX.md` (name its path) on request.
 
 > "The Tech Lead has produced the stories (Version <n>). Reply **'approve'** to
-> freeze the spec and begin development, or describe what to change."
+> author the evals and move to the eval review gate, or describe what to change."
 
 - **approve:**
   1. Parse `runs/<run-id>/stories/index.md`: read the `## Story index` table
@@ -38,23 +38,22 @@ re-review. Offer to show any individual `STORY-XXX.md` (name its path) on reques
      below. Then:
      ```bash
      SDLC set-stage <run-dir> user_review_stories complete
-     SDLC set-field <run-dir>/state.json current_stage development
-     SDLC set-field <run-dir>/state.json spec_frozen true
+     SDLC set-field <run-dir>/state.json current_stage user_review_evals
      SDLC set-field <run-dir>/state.json stories.STORY-001 '{"track":"dotnet","wave":1,"status":"pending","reviewer_iterations":0,"test_reviewer_iterations":0,"fix_iterations":0}'
      # …one set-field per story…
      ```
-  2. **Author the run's eval manifest** from the now-frozen acceptance criteria —
-     one stub per `STORY-XXX/AC-n` (see the `agentic-sdlc:write-evals` skill). This
-     is the authoring point: criteria are immutable from here on.
+     Do **not** set `spec_frozen` here — the eval review gate is now the spec-freeze
+     point (a substantial change there re-opens these stages, which freeze would block).
+  2. **Author the run's eval manifest** from the acceptance criteria — one stub per
+     `STORY-XXX/AC-n` (see the `agentic-sdlc:write-evals` skill):
      ```bash
      EVALS author <run-dir>                 # reads <run-dir>/stories/, writes <run-dir>/evals/manifest.json
      SDLC set-field <run-dir>/state.json stages.evals '{"status":"in_progress"}'
-     SDLC commit-step --run <run-dir> "docs(<run-id>): stories approved — spec frozen" <run-dir>/evals
+     SDLC commit-step --run <run-dir> "docs(<run-id>): stories approved — evals authored" <run-dir>/evals
      ```
-  3. Immediately invoke the `agentic-sdlc:stage-development` skill.
-     (Brownfield driver: return to the driver instead — it advances the pipeline.
-     Brownfield also freezes here: set `spec_frozen = true` and author the eval
-     manifest exactly as above.)
+  3. Immediately invoke the `agentic-sdlc:stage-evals` skill (the eval review gate).
+     (Brownfield driver: return to the driver instead — it advances the pipeline to
+     `user_review_evals`. Author the eval manifest exactly as above.)
 - **other:** treat as revision notes for the tech-lead; re-run the loop.
 
 ## Story-state schema

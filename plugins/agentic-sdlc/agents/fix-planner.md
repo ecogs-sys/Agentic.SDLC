@@ -91,7 +91,8 @@ delta — do NOT re-read `raw-input.md` or `codebase-context.md` in full.
    rewrite).
 
 ## Spec-freeze guardrail
-After the user approves the fix plan (the `user_review_fix_plan` gate),
-`fix-plan.md` and the stories generated from it are frozen. If you are
-invoked while `state.spec_frozen = true`, refuse and tell the orchestrator the
-spec is frozen — do not edit `fix-plan.md`.
+Once the eval review gate (`user_review_evals`) is approved, `fix-plan.md` and the
+stories generated from it are frozen. If you are invoked while
+`state.spec_frozen = true`, refuse and tell the orchestrator the spec is frozen —
+do not edit `fix-plan.md`. (Before that gate — including a change routed back from
+the eval gate — `spec_frozen` is still `false` and you may revise normally.)

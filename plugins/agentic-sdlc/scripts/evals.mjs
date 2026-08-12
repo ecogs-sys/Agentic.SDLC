@@ -11,10 +11,11 @@
  * works on Windows (Git Bash / PowerShell) and Linux CI.
  *
  * Usage:
- *   node evals.mjs author <run-dir> [stories-dir]      # generate manifest stubs
- *   node evals.mjs scan   <run-dir> <test-path...>      # derive bindings from tags
- *   node evals.mjs run    <run-dir> [--filter <id,...>] [--suite-green]
- *   node evals.mjs report <run-dir>                     # human-readable summary
+ *   node evals.mjs author   <run-dir> [stories-dir]     # generate manifest stubs
+ *   node evals.mjs scan     <run-dir> <test-path...>    # derive bindings from tags
+ *   node evals.mjs run      <run-dir> [--filter <id,...>] [--suite-green]
+ *   node evals.mjs report   <run-dir>                   # human-readable summary
+ *   node evals.mjs set-kind <run-dir> <criterion-id> <test|assert|judge>   # human gate edit
  *   node evals.mjs promote   <run-dir> [corpus-dir]     # mint EVAL-NNNN into evals/
  *   node evals.mjs replay    [--corpus <dir>] <test-path...>   # regression gate
  *   node evals.mjs retire    <eval-id> <reason> [--corpus <dir>]
@@ -287,8 +288,26 @@ switch (cmd) {
     for (const ev of manifest.evals) {
       const n = ev.check.tests?.length ?? 0;
       const mark = ev.status?.result === 'pass' ? '✔' : ev.status?.result === 'unbound' ? '✖' : '·';
-      console.log(`  ${mark} ${ev.id} — ${n} test(s) — ${ev.criterion}`);
+      console.log(`  ${mark} ${ev.id} — [${ev.check.kind}] ${n} test(s) — ${ev.criterion}`);
     }
+    break;
+  }
+
+  case 'set-kind': {
+    const [runDir, id, kind] = args;
+    if (!runDir || !id || !kind) die('usage: set-kind <run-dir> <criterion-id> <test|assert|judge>');
+    if (!['test', 'assert', 'judge'].includes(kind)) die(`invalid kind "${kind}" — expected test | assert | judge`);
+    const manifest = loadManifest(runDir);
+    const ev = manifest.evals.find((e) => e.id === id);
+    if (!ev) die(`unknown criterion id ${id} — not in ${manifestPath(runDir)}`);
+    const prevKind = ev.check.kind;
+    ev.check.kind = kind;
+    // A non-test kind is a human decision that a tagged test won't prove this
+    // criterion; a test kind restores the DERIVED (scan) binding source.
+    ev.check.source = kind === 'test' ? 'annotation' : 'human';
+    writeJson(manifestPath(runDir), manifest);
+    logEvent(runDir, `evals set-kind — ${id} ${prevKind} → ${kind}`);
+    console.log(`${id}: check.kind ${prevKind} → ${kind}`);
     break;
   }
 
