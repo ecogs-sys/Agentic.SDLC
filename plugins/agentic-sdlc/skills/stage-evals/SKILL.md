@@ -41,6 +41,16 @@ Explain the three `check.kind` values so the reviewer can judge them:
 - **`assert`** — a runnable probe, for a criterion no test covers (don't double-cover).
 - **`judge`** — a persisted rubric, the fallback for irreducibly semantic criteria.
 
+## Surface dissent before asking
+
+This gate freezes the spec, so a rubber-stamp here is the most expensive kind. Before
+the gate prompt, state a short **Concerns / what I'd challenge** list: criteria whose
+`check.kind` looks too weak for what they assert (e.g. a semantic criterion left as
+`test`, or an `assert` probe that can't really prove the behavior), criteria that read
+as vague or untestable, and anything you'd expect to bite during development. If you
+genuinely have none, say "No concerns" **and give the one-line basis** — do not stay
+silent to move development along.
+
 ## Gate prompt
 
 > "The run has authored <N> evals from the frozen acceptance criteria (above). Reply

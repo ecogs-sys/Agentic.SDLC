@@ -31,7 +31,9 @@ orchestrator reads your response).
 4. Check ordering: each phase must depend only on earlier phases. List any phase
    that depends on a later phase in `misordered`.
 5. Check deliverability: list any phase lacking a credible "independently
-   shippable" justification in `not_shippable`.
+   shippable" justification in `not_shippable`. **Fail closed:** if you cannot
+   *positively* confirm a phase is independently shippable, list it — do not give
+   the benefit of the doubt.
 6. Set status: "pass" only if all arrays are empty.
 
 ## Re-validation mode
