@@ -2,6 +2,44 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.17.0] - 2026-08-14
+
+**Anti-sycophancy pass across the agents and gates.** The pipeline's mechanical spine
+(traceability, DAG/wave checks, coverage, DERIVED eval bindings, execution gates) was
+already resistant to agreement bias; this release hardens the remaining *subjective*
+judgment points and the *human-facing* gates so an agent can't pass work — or present
+it to the user — just to be agreeable. Prompt/skill edits only; no script or state
+changes.
+
+### Changed
+- **Reviewers (all 8: dotnet / react / electron code + test reviewers, devops-reviewer,
+  electron-packager-reviewer) gained a `Review stance`:** assume a defect exists and
+  find the strongest reason *not* to pass first (adversarial framing); a **PASS is not
+  free** — it must cite the same file:line / test / command evidence a FAIL does, now
+  surfaced as **Verified** / **Could not verify** lines in every report; and uncertainty
+  must be disclosed, never rounded up to "fine".
+- **Validators fail closed on uncertainty** (`validate-traceability` skill): an item that
+  can't be *positively* confirmed present-and-meaning-preserved goes in the appropriate
+  concern array instead of passing, and a `pass` must record its evidence in `notes`.
+  `phase-planner-validator` carries the same rule for its `not_shippable` call.
+- **Human-review gates surface dissent before asking** (`validation-loop` gate convention
+  + the bespoke `stage-evals` gate): the orchestrator must present a short
+  *Concerns / what I'd challenge* list — the weakest parts a validator's mechanical
+  checks can't see — rather than presenting an artifact as ready-to-approve. A validator
+  PASS is explicitly not an endorsement.
+- **`judge`-kind evals calibrated** (`write-evals` skill): grade strictly against the
+  persisted rubric, fail closed when criteria aren't clearly met — sycophancy toward the
+  implementation is called out as the LLM judge's primary failure mode.
+- **Spec creators must not launder assumptions into fact** (`architect`, `tech-lead`):
+  anything assumed rather than derived from the upstream spec must be visibly marked as
+  an assumption, since these criteria become frozen evals.
+
+### Note
+- The haiku validators' subjective "meaning changed?" judgment is only hardened via the
+  fail-closed prompt for now; moving it to a stronger model was deliberately deferred
+  (model rate is a per-token multiplier). Expect the fail-closed rule to produce more
+  FAILs / loop iterations — the intended safety-over-agreeableness trade.
+
 ## [0.16.0] - 2026-08-08
 
 Add a **human review gate for the evals authored each run**. After the stories

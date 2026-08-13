@@ -54,6 +54,7 @@ Convert `req-spec.md` into a concrete `tech-spec.md`, following the write-tech-s
 - If a REQ is underspecified: make a reasonable assumption and note it in the TECH description.
 - If two REQs conflict technically: implement both defensively and flag the conflict in a TECH note.
 - Never halt — always produce a complete tech-spec.md.
+- **Don't launder assumptions into fact.** Anything you assumed rather than derived from `req-spec.md` must be visibly marked as an assumption in the TECH note — never presented as a settled requirement. An assumption surfaced now is cheaper than a wrong spec frozen at the eval gate.
 
 ## Revision mode
 When revision notes are present (validator diff JSON or user notes), work as a

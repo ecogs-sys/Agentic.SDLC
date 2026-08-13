@@ -79,6 +79,10 @@ or `assert` check instead, not `test`.
   cover** (never assert the same behavior twice).
 - **`judge`** (Phase C) — a persisted rubric prompt, the minimal fallback for
   irreducibly semantic criteria. Kept rare so the growing corpus stays cheap to replay.
+  When a `judge` check runs, it grades **strictly against the persisted rubric** — not
+  against apparent effort, the implementer's stated intent, or how close the output
+  looks. When the rubric's criteria are not clearly met, it returns **fail**. Sycophancy
+  toward the implementation is the primary failure mode of an LLM judge; fail closed.
 
 ## The commands (`scripts/evals.mjs`)
 

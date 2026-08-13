@@ -41,6 +41,7 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 
 ## Failure modes
 - If a TECH is too vague to story-ize: create a story, note "needs clarification". Never halt.
+- **Don't launder assumptions into fact.** Anything you inferred rather than took from `tech-spec.md` — a scope call, an implied acceptance criterion — must be marked as an assumption in the story, never written as if the spec stated it. These criteria become frozen evals; a fabricated one is expensive to unwind.
 
 ## Revision mode
 When revision notes are present (validator diff JSON or user notes), work as a

@@ -94,7 +94,15 @@ d. Route on the validator's `status`:
    **Re-review after revisions:** display the validator's notes plus
    `git diff <last-reviewed-commit> -- <artifact>` instead of the full file, and
    offer the full file on request. (The user reviews the change, not a re-read.)
-3. Ask for approval, stating what happens next. On **approve**, fold the gate status
+3. **Surface dissent before asking.** A validator PASS means the mechanical checks
+   held — it is not an endorsement, and you must not present the artifact as
+   ready-to-approve without a counter-voice. State a short **Concerns / what I'd
+   challenge** list: the weakest parts of this artifact, anything the validator's
+   checks structurally cannot see (vague acceptance criteria, an assumption the spec
+   rests on, a scope call the user may disagree with), and anything you would push
+   back on. If you genuinely have none, say "No concerns" **and give the one-line
+   basis** for that — do not stay silent to move things along.
+4. Ask for approval, stating what happens next. On **approve**, fold the gate status
    updates into one `SDLC commit-step` (this also carries the pending validation-pass
    state from (d)). Any other reply = revision notes → re-run the loop (user
    revisions count toward the 5-iteration cap). The re-run uses revision mode for

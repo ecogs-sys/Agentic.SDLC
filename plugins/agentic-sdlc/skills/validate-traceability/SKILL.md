@@ -46,6 +46,8 @@ You produce a **structured diff report** comparing a source artifact to a derive
 5. `status` is `"pass"` only if all three arrays are empty.
 6. Always cite line numbers or section names when available.
 7. Be exhaustive — a single missed item is a failed validation.
+8. **Fail closed on uncertainty.** If you cannot *positively* confirm an item is present and meaning-preserved, record it in the appropriate concern array and do NOT pass — do not extend the derived artifact the benefit of the doubt. A possible meaning change goes in `altered`; an item you could not confirm is covered goes in `missing`. Validators using an extended schema without `altered` (e.g. the Phase Planner Validator) record the unconfirmed item in their nearest concern array (`not_shippable` / `misordered` / `missing`). "Looks fine" is not confirmation; an observation is.
+9. **A `pass` is not free.** When you pass, use `notes` to state the evidence — which source items you confirmed present and meaning-preserved, and how (section names / line numbers). An empty `notes` on a pass means you did not do the work. This is the same evidence bar a fail meets when it cites a concern.
 
 ## Delta re-validation (iterations 2+)
 
