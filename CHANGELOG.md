@@ -2,6 +2,38 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.18.0] - 2026-08-21
+
+**New `/agentic-sdlc:brainstorm` command** — an independent brainstorming skill for
+software, IoT/hardware, and general-engineering ideas, decoupled from the
+run/program state machine so it can be used any time, before a run even exists.
+
+### Added
+- **`idea-generator` agent** (opus): divergent pass producing a wide spread of raw
+  concepts from a seed prompt, plus an expand mode (more ideas / revision notes).
+  Opus is reserved for this one creativity-ceiling step (consistent with
+  phase-planner / architect).
+- **`idea-critic` agent** (sonnet): convergent pass that scores every concept
+  (Impact / Feasibility / Cost / Risk / Novelty), kills the weak ones with a
+  stated reason, and shortlists the strongest 2-3 — carries the same
+  anti-sycophancy stance as the 0.17.0 reviewers: even the shortlisted top pick
+  must carry a stated **Strongest objection**, no idea advances "for free".
+- **`concept-detailer` agent** (sonnet): expands one already-chosen, already-scored
+  concept into a full deep-dive brief. Split out of the generator and kept on
+  sonnet deliberately — it is structured elaboration (≈ tech-lead / fix-planner
+  work), so the 2-3 deep-dive calls per session don't run on opus for nothing.
+- **`write-brainstorm` skill**: templates for `session-input.md`, `concepts.md`
+  (raw concepts + scoring matrix + mermaid `quadrantChart` prioritization +
+  critic notes), per-concept deep-dive `brief.md` (mermaid `flowchart` +
+  `sequenceDiagram`), and `summary.md`.
+- **`brainstorm.md` command**: intake → divergent pass (idea-generator) → convergent
+  pass (idea-critic) → user picks what to deep-dive → briefs (concept-detailer) →
+  summary → optional handoff into
+  `/agentic-sdlc:start-run` (the chosen brief seeds `original-input.md`
+  verbatim). Writes to a new top-level `brainstorms/<brainstorm-id>/` directory;
+  no branch or commit happens automatically since this is exploratory writing,
+  not shippable code.
+
 ## [0.17.0] - 2026-08-14
 
 **Anti-sycophancy pass across the agents and gates.** The pipeline's mechanical spine
