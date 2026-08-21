@@ -64,6 +64,9 @@ At the start of every invocation, read `app_type` (default `"web"` if absent) an
   co-located inside `frontend_src`.
 - **electron:** `src_paths.electron` is the monorepo root — pass it to electron
   agents as `electron_root`. The final stage is `packaging`, not `devops`.
+- **embedded:** `src_paths.embedded` is the ESP-IDF project root — pass it to
+  embedded agents as `embedded_root`. The final stage is `packaging` (same stage id
+  as electron; `stage-packaging` branches by `app_type`), not `devops`.
 
 ## Dispatch table
 

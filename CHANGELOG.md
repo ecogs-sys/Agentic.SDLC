@@ -2,6 +2,35 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [0.19.0] - 2026-08-21
+
+**New `embedded` track** — a third `app_type` (alongside `web` and `electron`) for
+IoT firmware development: C/C++ on ESP32 using ESP-IDF only (Arduino framework
+support deferred). The final stage validates the firmware **builds** (produces a
+`.bin`/`.elf` within its partition budget) but never flashes physical hardware —
+that step stays manual.
+
+### Added
+- **`embedded-engineer` / `embedded-reviewer` / `embedded-test-engineer` /
+  `embedded-test-reviewer` agents**: per-story implementation, review, and testing
+  for the `embedded` track, mirroring the `electron-*` agent shapes. Testing runs
+  on ESP-IDF's Linux host target (Unity framework) so no physical device or QEMU
+  is required.
+- **`embedded-packager` / `embedded-packager-reviewer` agents**: final-stage
+  build-config (sdkconfig/partitions/OTA) and build-artifact verification. These
+  reuse the existing `packaging` stage id (`stage-packaging` now branches by
+  `app_type` between electron and embedded) rather than introducing a new stage.
+- **`embedded-conventions`, `embedded-testing`, `scaffold-embedded` skills**:
+  ESP-IDF component layout, non-negotiable safety rules (HAL-abstracted peripheral
+  access, no allocation/blocking in ISRs, checked `esp_err_t`), and the one-time
+  project scaffold.
+- **Embedded coverage section** added to the shared `coverage-report` skill
+  (gcov/lcov via the ESP-IDF host target).
+- `app_type = embedded` support threaded through `start-run` (archetype prompt,
+  brownfield detection), `code-surveyor` (auto-detection heuristic),
+  `write-tech-spec` (stack block), `write-stories` (track assignment), and
+  `stage-development` (per-story dispatch).
+
 ## [0.18.0] - 2026-08-21
 
 **New `/agentic-sdlc:brainstorm` command** — an independent brainstorming skill for

@@ -7,7 +7,7 @@ description: Template and conventions for writing technical specs. Used by the A
 
 ## Stack (depends on app_type)
 
-Read `app_type` from state.json. It selects one of two fixed stacks:
+Read `app_type` from state.json. It selects one of three fixed stacks:
 
 **`app_type = web` (default):**
 - Backend: .NET 8, ASP.NET Core Web API
@@ -23,6 +23,22 @@ Read `app_type` from state.json. It selects one of two fixed stacks:
 - Tests: Vitest + @vitest/coverage-v8, jsdom for renderer
 - Security: contextIsolation + sandbox on, nodeIntegration off, zod-validated IPC (see the `agentic-sdlc:electron-conventions` skill)
 - There is **no** .NET backend, database, or docker-compose for electron runs. The `Backend architecture` and `Mandatory infrastructure components` sections below apply to `web` runs only.
+
+**`app_type = embedded`:**
+- Framework: ESP-IDF (C/C++), FreeRTOS-based, target chip ESP32 unless the
+  requirements name a different chip in the ESP32 family
+- Build: `idf.py build` (CMake-based), component model (`main/` + `components/*`)
+- Tests: Unity, run on ESP-IDF's Linux host target (no physical hardware or QEMU)
+  — see the `agentic-sdlc:embedded-testing` skill
+- Packaging: `sdkconfig.defaults` + `partitions.csv`, optional `esp_https_ota`
+  wiring if OTA is in scope — configured by the Embedded Packager, verified by
+  build only (the plugin never flashes a physical device)
+- Non-negotiables: peripheral access behind a HAL interface (see the
+  `agentic-sdlc:embedded-conventions` skill), every `esp_err_t` checked, no
+  allocation/blocking inside an ISR
+- There is **no** .NET backend, database, docker-compose, or Electron shell for
+  embedded runs. The `Backend architecture` and `Mandatory infrastructure
+  components` sections below apply to `web` runs only.
 
 ## Backend architecture: Clean Architecture (mandatory)
 
@@ -53,7 +69,7 @@ mark them `Layer: Frontend`).
 - Every TECH must implement at least one REQ.
 - Every REQ must be implemented by at least one TECH.
 
-## Mandatory infrastructure components *(web runs only — skip for `app_type = electron`)*
+## Mandatory infrastructure components *(web runs only — skip for `app_type = electron` or `app_type = embedded`)*
 Every **web** tech spec MUST include these regardless of user requirements (the DevOps Reviewer's smoke tests depend on them):
 
 - **TECH-HEALTH:** Backend `/health` endpoint returning HTTP 200 with a small JSON body (e.g. `{"status":"ok"}`). This is what `docker compose up`'s readiness check and the DevOps reviewer's smoke test hit. Mark it `Implements: [INFRA]` (no REQ traceback needed — it is infrastructure, not feature).
@@ -101,14 +117,14 @@ Version: <n>
 <All environment variables required: DATABASE_URL, CORS_ORIGIN, etc.>
 
 **Infra change:** none | required — <what changes: new service / port / env var / dependency>
-<web brownfield: whether docker-compose.yml, .env.example, Dockerfile(s), or nginx.conf must change vs the existing setup. web greenfield: always `required` (the whole stack is new). For `app_type = electron`, this line describes packaging changes instead — new OS target, updater feed, or native dependency; greenfield electron is always `required` (packaging is new).>
+<web brownfield: whether docker-compose.yml, .env.example, Dockerfile(s), or nginx.conf must change vs the existing setup. web greenfield: always `required` (the whole stack is new). For `app_type = electron`, this line describes packaging changes instead — new OS target, updater feed, or native dependency; greenfield electron is always `required` (packaging is new). For `app_type = embedded`, this line describes build-config changes instead — new target chip, partition table layout, or OTA enablement; greenfield embedded is always `required` (the project config is new).>
 ```
 
 ## Quality checklist (self-check before finishing)
 - [ ] Every REQ-ID from req-spec.md appears in at least one TECH's Implements list
 - [ ] Every TECH has at least one REQ in its Implements list (or `[INFRA]` for infrastructure TECHs)
 - [ ] Every backend TECH declares a valid `Layer` (Domain | Application | Infrastructure | Api) and no `Depends on` crosses a layer boundary outward
-- [ ] **(web runs only) TECH-HEALTH (`/health` endpoint) is present** (Layer: Api). Electron runs omit it.
+- [ ] **(web runs only) TECH-HEALTH (`/health` endpoint) is present** (Layer: Api). Electron and embedded runs omit it.
 - [ ] Deployment topology includes all ports (label them `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`) and all required env vars
 - [ ] Deployment topology includes the `**Infra change:**` line (`none`, or `required — <what>`)
 - [ ] Stack section matches the fixed stack above
