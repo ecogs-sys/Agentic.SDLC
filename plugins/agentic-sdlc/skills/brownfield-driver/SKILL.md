@@ -13,8 +13,10 @@ agents. See the dispatcher.)
 1. Read `mode`, `tier`, `pipeline`, `current_stage`, `infra_change_required`,
    `app_type` (default `"web"`), `src_paths`, and `test_baseline` from state.json.
    For `app_type = electron`, `src_paths` has a single `electron` key (the monorepo
-   root) — pass it to the electron agents as `electron_root`; the pipeline's final
-   stage is `packaging` rather than `devops`.
+   root) — pass it to the electron agents as `electron_root`. For `app_type =
+   embedded`, `src_paths` has a single `embedded` key (the project root) — pass it
+   to the embedded agents as `embedded_root`. For both, the pipeline's final stage
+   is `packaging` rather than `devops`.
 2. Run the handler for `current_stage` (table below). Always pass `mode =
    brownfield`, the run-id, and the `runs/<run-id>/codebase-context.md` path to
    every agent so they follow the brownfield-mode skill.
@@ -33,7 +35,7 @@ agents. See the dispatcher.)
 | `tech_lead` / `tech_lead_validation` / `user_review_stories` | `agentic-sdlc:stage-tech-lead` skill |
 | `user_review_evals` | `agentic-sdlc:stage-evals` skill |
 | `development` | `agentic-sdlc:stage-development` skill |
-| `devops` (web) / `packaging` (electron) | `agentic-sdlc:stage-devops` / `stage-packaging` skill, gated by `infra_change_required` |
+| `devops` (web) / `packaging` (electron or embedded) | `agentic-sdlc:stage-devops` / `stage-packaging` skill, gated by `infra_change_required` |
 
 ## Fix-plan handler (bug_fix + small_change tiers)
 

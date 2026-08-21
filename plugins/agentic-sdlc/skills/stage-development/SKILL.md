@@ -7,7 +7,7 @@ description: Orchestrator handler for the development stage — drives each stor
 
 Read the archetype's source paths from `state.src_paths` (by `app_type`): web runs
 read `backend_src`, `backend_test`, `frontend_src`; electron runs read `electron`
-as `electron_root`.
+as `electron_root`; embedded runs read `embedded` as `embedded_root`.
 
 **Stage-entry summary** (print on entry):
 > **Stage <k>/<n> — development.** <S> stories in <W> waves (<counts per track>).
@@ -39,14 +39,17 @@ For each pending story:
      - react: `src_path = frontend_src`, `test_path = frontend_src` (co-located).
    - **electron run** — every story's track is `electron`:
      - `src_path = test_path = electron_root` (pass as `electron_root`).
+   - **embedded run** — every story's track is `embedded`:
+     - `src_path = test_path = embedded_root` (pass as `embedded_root`).
 
 ## 3. Engineer → Reviewer loop (max 5 iterations — `reviewer_iterations`)
 
 a. Invoke the track's engineer (`dotnet-engineer` / `react-engineer` /
-   `electron-engineer`). Pass **paths, not contents**: run-id, story ID, the story
-   file path `runs/<run-id>/stories/STORY-XXX.md`, the tech-spec path (instructing:
-   read only the sections the story's Implements list names), and `src_path` /
-   `test_path` (electron: `electron_root`). Agent description: `"STORY-XXX engineer iter <i>"`.
+   `electron-engineer` / `embedded-engineer`). Pass **paths, not contents**: run-id,
+   story ID, the story file path `runs/<run-id>/stories/STORY-XXX.md`, the
+   tech-spec path (instructing: read only the sections the story's Implements list
+   names), and `src_path` / `test_path` (electron: `electron_root`; embedded:
+   `embedded_root`). Agent description: `"STORY-XXX engineer iter <i>"`.
 
 b. **Commit — engineer draft/revision** (include `<test_path>` — the dotnet scaffold
    creates the test project under it; this commit also carries any pending
@@ -58,8 +61,9 @@ b. **Commit — engineer draft/revision** (include `<test_path>` — the dotnet 
    ```
 
 c. Invoke the track's reviewer (`dotnet-reviewer` / `react-reviewer` /
-   `electron-reviewer`). Pass: run-id, story ID, story file path, modified-files
-   list, src_path (electron: `electron_root`). Description: `"STORY-XXX review iter <i>"`.
+   `electron-reviewer` / `embedded-reviewer`). Pass: run-id, story ID, story file
+   path, modified-files list, src_path (electron: `electron_root`; embedded:
+   `embedded_root`). Description: `"STORY-XXX review iter <i>"`.
    **Re-review (iterations 2+):** also pass your previous review's issue list and
    `git diff <last_review_commit> -- <src_path>` (names + hunks); the reviewer
    follows its **Re-review mode** — verify each prior finding and review only the
@@ -83,8 +87,9 @@ d. Route (reviewer outcomes get no standalone commit — the state ships with th
 ## 4. Test Engineer → Test Reviewer loop (max 5 iterations — `test_reviewer_iterations`)
 
 a. Invoke the track's test engineer (`dotnet-test-engineer` / `react-test-engineer`
-   / `electron-test-engineer`). Pass: run-id, story ID, story file path, src_path,
-   test_path (electron: `electron_root`). Description: `"STORY-XXX tests iter <i>"`.
+   / `electron-test-engineer` / `embedded-test-engineer`). Pass: run-id, story ID,
+   story file path, src_path, test_path (electron: `electron_root`; embedded:
+   `embedded_root`). Description: `"STORY-XXX tests iter <i>"`.
 
 b. **Commit — test engineer draft/revision** (also carries the pending reviewer-PASS
    state):
@@ -94,7 +99,8 @@ b. **Commit — test engineer draft/revision** (also carries the pending reviewe
    ```
 
 c. Invoke the track's test reviewer. Pass: run-id, story ID, story file path,
-   src_path, test_path (electron: `electron_root`), **and the `full_suite` flag**:
+   src_path, test_path (electron: `electron_root`; embedded: `embedded_root`),
+   **and the `full_suite` flag**:
    - `full_suite = true` when this story is the **last story of its wave** (highest
      story-ID in the wave), **or** the run is brownfield (the baseline comparison
      needs the whole suite).
@@ -148,7 +154,7 @@ SDLC set-stage <run-dir> development complete
 # web:
 SDLC set-field <run-dir>/state.json current_stage devops
 SDLC set-stage <run-dir> packaging skipped
-# electron:
+# electron or embedded:
 SDLC set-field <run-dir>/state.json current_stage packaging
 SDLC set-stage <run-dir> devops skipped
 SDLC commit-step --run <run-dir> "docs(<run-id>): all stories complete"
@@ -158,8 +164,8 @@ SDLC commit-step --run <run-dir> "docs(<run-id>): all stories complete"
 Promotion mints this run's bound criteria into the permanent `evals/` corpus at the
 workspace root (so it ships in the PR); replay is the criteria-keyed regression
 gate — meaningful once the corpus spans more than this run (later phases,
-brownfield). `<test-paths>` = `<backend_test> <frontend_src>` (web) or
-`<electron_root>` (electron).
+brownfield). `<test-paths>` = `<backend_test> <frontend_src>` (web),
+`<electron_root>` (electron), or `<embedded_root>` (embedded).
 ```bash
 EVALS promote <run-dir>                       # → evals/registry.json + evals/EVAL-*.json
 EVALS replay --corpus evals <test-paths>      # non-zero = a prior criterion lost its test
@@ -171,7 +177,8 @@ broke it (fix the code/test and re-run) or the change *intentionally* altered th
 behavior — in which case `EVALS retire <EVAL-ID> "<reason>"` (or `supersede`) as a
 reviewed part of the change (see `agentic-sdlc:brownfield-mode`), then re-run replay.
 Immediately invoke the final stage's skill by `app_type`:
-`agentic-sdlc:stage-devops` (web) or `agentic-sdlc:stage-packaging` (electron).
+`agentic-sdlc:stage-devops` (web) or `agentic-sdlc:stage-packaging` (electron or
+embedded).
 (Brownfield driver: return to the driver instead — it owns the transition and the
 `infra_change_required` gate.)
 

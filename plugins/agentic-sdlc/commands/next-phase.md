@@ -118,8 +118,9 @@ Say:
    `phase_number = N`, `branch = "agentic-sdlc/<program-id>/phase-0N"`,
    `current_stage = "ba"`, `spec_frozen = false`, and the program's `app_type` and
    `src_paths`. (Copy `app_type` from `program.json` — default `"web"` if absent for
-   older programs — so an electron program's later phases keep routing to the
-   `electron` track and the packaging done-gate instead of defaulting to web/devops.)
+   older programs — so an electron or embedded program's later phases keep routing
+   to their single track and the packaging done-gate instead of defaulting to
+   web/devops.)
    **If `program.json` `mode == "brownfield"`,** also copy `mode: "brownfield"`,
    `codebase_context_path`, `infra_change_required`, and `test_baseline` from
    `program.json` into the phase `state.json` so the phase runs brownfield-aware (its

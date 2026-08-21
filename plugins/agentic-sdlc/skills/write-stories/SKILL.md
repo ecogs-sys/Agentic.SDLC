@@ -36,6 +36,13 @@ The valid track set depends on the run's `app_type` (from state.json):
   **process area** (main | preload | renderer | package) in its description so the
   engineer knows where the code lands.
 
+**Embedded runs (`app_type = embedded`):**
+- `embedded` track: the entire ESP-IDF firmware project — drivers, app logic,
+  RTOS tasks, and build config. Every story is `embedded`.
+- One story still belongs to exactly one track (`embedded`). Note each story's
+  **component area** (driver | app-logic | rtos-task | build-config) in its
+  description so the engineer knows where the code lands.
+
 ## Traceability rules
 - Every TECH-ID from the tech spec must be covered by at least one story.
 - Each story's `Implements` field lists the TECH-IDs it delivers.
@@ -54,7 +61,7 @@ The valid track set depends on the run's `app_type` (from state.json):
 ```markdown
 # STORY-001: <short name (3–6 words)>
 Run ID: <run-id>
-**Track:** dotnet | react
+**Track:** dotnet | react | electron | embedded
 **Wave:** 1
 **Implements:** [TECH-001, TECH-002]
 **Depends on:** []
@@ -123,7 +130,7 @@ The `Complexity` column copies each story's `**Estimated complexity:**` value (S
 
 ## Quality checklist (self-check before finishing)
 - [ ] Every TECH-ID from tech-spec.md appears in at least one story's Implements list
-- [ ] Each story belongs to exactly one track (dotnet or react for web runs; electron for electron runs)
+- [ ] Each story belongs to exactly one track (dotnet or react for web runs; electron for electron runs; embedded for embedded runs)
 - [ ] Acceptance criteria are specific enough to write a failing test for
 - [ ] Every acceptance criterion carries a write-once `AC-n` id (unique within its story, never renumbered)
 - [ ] `index.md` exists with the `## Execution plan` diagram and `## Story index` table

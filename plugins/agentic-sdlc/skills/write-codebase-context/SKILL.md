@@ -41,7 +41,7 @@ Version: <n>
 
 ## Impact map
 - Request: <one-line restatement of the user's request>
-- Affected track(s): dotnet | react | both
+- Affected track(s): dotnet | react | both | electron | embedded
 - Likely-affected files/modules:
   - <relative/path> — <why it is touched>
 - Affected areas: <feature/area names>

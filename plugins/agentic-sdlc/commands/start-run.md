@@ -68,7 +68,7 @@ number. If none, use `001`.
 
 ### Step 2 — Collect the requirement
 If the user didn't provide their requirement with the command, ask:
-> "I will generate a runnable application. Greenfield runs support two fixed archetypes: **web** (.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose) or **electron** (TypeScript + Electron + electron-vite + electron-builder desktop app). You'll pick which after describing the requirement. If you need something outside both (Vue web app, Python backend, native mobile, etc.), this plugin won't fit — let me know and we can stop here.
+> "I will generate a runnable application. Greenfield runs support three fixed archetypes: **web** (.NET 8 Web API + React 18 + Vite + TypeScript + PostgreSQL + Docker Compose), **electron** (TypeScript + Electron + electron-vite + electron-builder desktop app), or **embedded** (C/C++ ESP-IDF firmware for ESP32 — no .NET/React/database). You'll pick which after describing the requirement. If you need something outside all three (Vue web app, Python backend, native mobile, Arduino-framework firmware, etc.), this plugin won't fit — let me know and we can stop here.
 >
 > Please describe what you want to build. Be as detailed as you like."
 
@@ -100,10 +100,14 @@ Wait for response:
 Inspect the detected source paths for real, existing application code:
 - **Backend has code** if Glob finds `<backend_src>/**/*.csproj` (or any `*.sln`).
 - **Frontend has code** if Glob finds `<frontend_src>/**/package.json`.
+- **Embedded (ESP-IDF) has code** if Glob finds an `idf_component.yml`, a
+  `CMakeLists.txt` containing `idf_component_register`, or a root `sdkconfig`
+  anywhere in the workspace. Without this check an existing ESP-IDF project would
+  be misclassified as greenfield (it has neither a `.csproj` nor a `package.json`).
 
-- If **neither** side has code → **greenfield**. Continue with the existing flow
+- If **none** of the above has code → **greenfield**. Continue with the existing flow
   (Step 4 onward: program init → Phase Planner → ...). Nothing else changes.
-- If **either** side has code → **brownfield**. Announce and confirm:
+- If **any** of the above has code → **brownfield**. Announce and confirm:
   > "I detected existing code, so I'll run in **brownfield** mode (right-sized for a
   > bug fix / small change / new feature on this codebase). Reply **Enter** to
   > continue, or type `greenfield` to force a from-scratch build instead."
@@ -112,12 +116,13 @@ Inspect the detected source paths for real, existing application code:
     greenfield Steps 4–9.
 
 ### Step 3c — Choose the application archetype (greenfield only)
-Greenfield runs build one of two archetypes. Ask:
+Greenfield runs build one of three archetypes. Ask:
 > "What kind of application is this?
 > - **web** (default) — .NET 8 Web API + React 18 + PostgreSQL, shipped with docker-compose.
 > - **electron** — a cross-platform Electron desktop app (TypeScript pnpm monorepo, electron-vite, electron-builder). No .NET backend or database.
+> - **embedded** — ESP32 firmware in C/C++ with ESP-IDF. No .NET backend, database, or Electron shell. Tests run on ESP-IDF's Linux host target; nothing gets flashed to a physical device automatically.
 >
-> Reply **web** (or Enter) or **electron**."
+> Reply **web** (or Enter), **electron**, or **embedded**."
 
 - **electron:** set `app_type = "electron"`. The generated code lives in an Electron
   monorepo, so `src_paths` uses a single root: `{ "electron": "<electron_root>" }`
@@ -125,6 +130,12 @@ Greenfield runs build one of two archetypes. Ask:
   path detection from Step 3 — announce: "This Electron app will be generated into
   `<electron_root>/` (apps/desktop + packages/*). Reply with a different root or press
   Enter to continue."
+- **embedded:** set `app_type = "embedded"`. The generated code lives in a single
+  ESP-IDF project, so `src_paths` uses a single root: `{ "embedded":
+  "<embedded_root>" }` where `<embedded_root>` defaults to the workspace root (`.`).
+  Skip the .NET/React path detection from Step 3 — announce: "This ESP-IDF firmware
+  project will be generated into `<embedded_root>/` (main/ + components/). Reply
+  with a different root or press Enter to continue."
 - **web / Enter (default):** set `app_type = "web"` and keep the `src_paths`
   (backend/backend_test/frontend) detected in Step 3.
 
@@ -158,6 +169,11 @@ Ensure these entries are present:
 node_modules/
 dist/
 
+# ESP-IDF build artifacts
+**/build/
+managed_components/
+sdkconfig.old
+
 # Test coverage
 **/coverage*/
 
@@ -190,8 +206,8 @@ Write `runs/<program-id>/program.json`:
 {
   "program_id": "<program-id>",
   "parent_branch": "<PARENT_BRANCH>",
-  "app_type": "<web | electron>",
-  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
+  "app_type": "<web | electron | embedded>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}; embedded: {embedded: <embedded_root>}" },
   "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
   "current_phase": 0,
   "phases": []
@@ -289,8 +305,8 @@ Wait for response:
   "parent_branch": "<PARENT_BRANCH>",
   "current_stage": "ba",
   "spec_frozen": false,
-  "app_type": "<web | electron>",
-  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}" },
+  "app_type": "<web | electron | embedded>",
+  "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}; embedded: {embedded: <embedded_root>}" },
   "stages": {
     "ba": { "status": "in_progress", "iterations": 0 },
     "ba_validation": { "status": "pending", "iterations": 0 },
@@ -402,19 +418,20 @@ Resolve the confirmed `tier`:
 
 **Resolve `app_type` from the survey.** Read the surveyor's proposed `app_type` from
 `runs/<run-id>/codebase-context.md` (its Stack section) and set `state.app_type`
-(`web` or `electron`). For an `electron` app_type, also collapse `state.src_paths` to
-a single monorepo root: `{ "electron": "<monorepo root, default '.'>" }` (the code is
-edited in place, so this is the existing repo root).
+(`web`, `electron`, or `embedded`). For an `electron` or `embedded` app_type, also
+collapse `state.src_paths` to a single project root: `{ "electron": "<monorepo
+root, default '.'>" }` or `{ "embedded": "<project root, default '.'>" }`
+respectively (the code is edited in place, so this is the existing repo root).
 
 Then set `state.tier`, set `state.pipeline` to the confirmed tier's profile, mark
 `survey`/`survey_validation`/`user_review_triage` complete, and initialize a
 `stages` entry (`status: "pending"`, `iterations: 0` where applicable) for every
 remaining pipeline stage. Set `current_stage` to the first remaining stage. **For
-`app_type = electron`, replace the profile's trailing `"devops"` entry with
-`"packaging"`** (the electron done-gate) before seeding stages, so the final stage is
-`packaging`. (If the user picks the new_feature **split** option below, this flat
-pipeline is discarded when the run is converted to a program — see Brownfield program
-flow.)
+`app_type = electron` or `app_type = embedded`, replace the profile's trailing
+`"devops"` entry with `"packaging"`** (the non-web done-gate) before seeding
+stages, so the final stage is `packaging`. (If the user picks the new_feature
+**split** option below, this flat pipeline is discarded when the run is converted
+to a program — see Brownfield program flow.)
 
 **Tier profiles (the `pipeline` array):**
 ```text
@@ -486,12 +503,12 @@ machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried
    {
      "program_id": "<program-id>",
      "mode": "brownfield",
-     "app_type": "<web | electron — from the change run's state.json>",
+     "app_type": "<web | electron | embedded — from the change run's state.json>",
      "parent_branch": "<PARENT_BRANCH>",
      "codebase_context_path": "runs/<program-id>/codebase-context.md",
      "infra_change_required": false,
      "test_baseline": { "captured": true, "preexisting_failures": [] },
-     "src_paths": "<from the change run's state.json — web: {backend, backend_test, frontend}; electron: {electron: <root>}>",
+     "src_paths": "<from the change run's state.json — web: {backend, backend_test, frontend}; electron: {electron: <root>}; embedded: {embedded: <root>}>",
      "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
      "current_phase": 0,
      "phases": []
@@ -522,8 +539,8 @@ At Step 8's "approve" branch, create `runs/<program-id>/phase-01/state.json` wit
 `"infra_change_required": <from program.json>`, and `"test_baseline": <from
 program.json>`. There is **no** survey/triage stage in the phase — the program-level
 survey already ran; `current_stage = "ba"`. (Carrying `app_type` here — and via
-`/agentic-sdlc:next-phase` for later phases — keeps an electron brownfield program on
-the `electron` track and the packaging done-gate.)
+`/agentic-sdlc:next-phase` for later phases — keeps an electron or embedded
+brownfield program on its single track and the packaging done-gate.)
 
 ### Step BP4 — Hand off
 Invoke the `agentic-sdlc:advance-stage` skill — it finds the program via the normal

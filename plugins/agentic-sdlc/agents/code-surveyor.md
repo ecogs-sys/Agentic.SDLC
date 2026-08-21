@@ -23,18 +23,27 @@ write-codebase-context skill for the exact format.
 1. **Detect the stack and app_type.** Glob `**/*.csproj` and read the nearest
    `Program.cs` for .NET version + registration style; Glob `**/package.json` for
    React/Electron; find `**/*DbContext.cs` / `**/Migrations/*.cs` for the database;
-   check for `docker-compose.yml` and CI config. **Determine `app_type`:** if you find
-   `electron` in a `package.json`'s dependencies/devDependencies, a
-   `pnpm-workspace.yaml`, or an `electron.vite.config.*`, the app_type is `electron`
-   (a desktop app — no .NET/db); otherwise `web`. Record the proposed `app_type` in
+   check for `docker-compose.yml` and CI config. Also Glob for `idf_component.yml`,
+   a `CMakeLists.txt` containing `idf_component_register`, or a root `sdkconfig`
+   (ESP-IDF firmware). **Determine `app_type`:** if you find `electron` in a
+   `package.json`'s dependencies/devDependencies, a `pnpm-workspace.yaml`, or an
+   `electron.vite.config.*`, the app_type is `electron` (a desktop app — no
+   .NET/db); if you find `idf_component.yml`, `idf_component_register`, or a root
+   `sdkconfig`, the app_type is `embedded` (ESP-IDF C/C++ firmware — no .NET/db,
+   no Electron shell); otherwise `web`. Record the proposed `app_type` in
    codebase-context.md's Stack section.
 2. **Capture conventions.** Note Clean-Architecture layout (which projects exist,
-   where `DbContext` lives), naming, and the test framework on each side.
+   where `DbContext` lives), naming, and the test framework on each side. For an
+   `embedded` app_type, note the ESP-IDF component layout, target chip
+   (`sdkconfig`'s `CONFIG_IDF_TARGET`), and whether peripheral access is already
+   behind HAL interfaces per `agentic-sdlc:embedded-conventions`.
 3. **Build the impact map.** From the request, Grep/Glob for the relevant
    symbols/areas. List the files most likely to change and why; decide the affected
    track(s). For a `web` app_type: dotnet, react, or both. For an `electron` app_type:
    the single `electron` track (note the process area(s) — main / preload / renderer /
-   package — most affected).
+   package — most affected). For an `embedded` app_type: the single `embedded` track
+   (note the component area(s) — driver / app-logic / rtos-task / build-config —
+   most affected).
 4. **Capture the test baseline.** Run the existing suite ONCE and record the real
    result. Use the discipline in dotnet-conventions / react-conventions (one run, no
    concurrency). Excerpt only the first ~5 distinct failures. Record any

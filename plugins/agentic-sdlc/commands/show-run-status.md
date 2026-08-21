@@ -42,6 +42,7 @@ Read state.json and display a clear status summary.
 5. Check existence of the archetype's code paths (by `app_type`, default `web`):
    - **web:** `<backend_src>/` (src_paths.backend), `<backend_test>/` (src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (src_paths.frontend), and `docker-compose.yml` at workspace root.
    - **electron:** the monorepo root `<electron_root>/` (src_paths.electron), `<electron_root>/apps/desktop/`, and `<electron_root>/electron-builder.yml`.
+   - **embedded:** the project root `<embedded_root>/` (src_paths.embedded), `<embedded_root>/main/`, and `<embedded_root>/sdkconfig.defaults`.
 6. Display:
 
 ```
@@ -52,12 +53,14 @@ Read state.json and display a clear status summary.
   Branch:        <branch>
   Current stage: <current_stage>
   Spec frozen:   yes | no
-  App type:      <web | electron>
+  App type:      <web | electron | embedded>
   <web archetype:>
   Backend src:   <src_paths.backend>
   Frontend src:  <src_paths.frontend>
   <electron archetype:>
   Electron root: <src_paths.electron>
+  <embedded archetype:>
+  Embedded root: <src_paths.embedded>
 
   Program:       <program-id>
   Phase plan:    <phase_plan.status> (<phase_count> phase(s))
@@ -93,7 +96,7 @@ Read state.json and display a clear status summary.
   FINAL PHASE  (web archetype)
   ─────────────────────────────────────────
   DevOps                   [<stages.devops.status>] iter: <n>
-  FINAL PHASE  (electron archetype)
+  FINAL PHASE  (electron or embedded archetype)
   ─────────────────────────────────────────
   Packager                 [<stages.packaging.status>] iter: <n>
 
@@ -115,6 +118,9 @@ Read state.json and display a clear status summary.
   <electron archetype:>
   <electron_root>/apps/desktop/          exists | missing
   <electron_root>/electron-builder.yml   exists | missing
+  <embedded archetype:>
+  <embedded_root>/main/                  exists | missing
+  <embedded_root>/sdkconfig.defaults     exists | missing
 ═══════════════════════════════════════════
 ```
 
@@ -142,15 +148,17 @@ progressing on its own — surface it, don't bury it in the ladder.
   Branch:        <branch>
   Current stage: <current_stage>
   Spec frozen:   yes | no
-  App type:      <web | electron>
+  App type:      <web | electron | embedded>
   Infra change:  required | not required
   <web archetype:>
   Backend src:   <src_paths.backend>
   Frontend src:  <src_paths.frontend>
   <electron archetype:>
   Electron root: <src_paths.electron>
+  <embedded archetype:>
+  Embedded root: <src_paths.embedded>
 
-  PIPELINE  (from state.pipeline, in order — electron runs end in `packaging`, web runs in `devops`)
+  PIPELINE  (from state.pipeline, in order — electron/embedded runs end in `packaging`, web runs in `devops`)
   ─────────────────────────────────────────
   <for each stage in pipeline: "<stage>  [<stages[stage].status or '-'>]"; mark ◀ active at current_stage>
 

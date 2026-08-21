@@ -57,7 +57,7 @@ Version: <n>
 
 ## Stories
 ### STORY-001 — <title>
-- track: dotnet | react | electron
+- track: dotnet | react | electron | embedded
 - wave: 1
 - description: <what to implement>
 - acceptance criteria:
