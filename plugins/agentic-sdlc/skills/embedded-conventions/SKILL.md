@@ -23,7 +23,9 @@ Reviewer rejects any change that violates a "must"/"never" rule below.
         ├── include/<component-name>/*.h   # public headers (the component's API surface)
         ├── src/*.c(pp)                     # implementation
         ├── CMakeLists.txt                  # idf_component_register(...)
-        └── test/                           # Unity host-target tests for this component (see embedded-testing)
+        └── test/                           # its OWN self-contained idf.py project (project()
+                                             # root + main/), not just a folder of test files —
+                                             # see agentic-sdlc:embedded-testing for the exact layout
 ```
 
 - Every component exposes its public API only through `include/<component-name>/`.

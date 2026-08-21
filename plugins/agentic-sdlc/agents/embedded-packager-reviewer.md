@@ -35,9 +35,12 @@ idf.py build 2>&1
 idf.py size 2>&1
 ls -la build/*.bin
 
-# 3. Run the full host-target test suite
-#    (see agentic-sdlc:embedded-testing — every component's test/ built for the
-#    Linux target and run)
+# 3. Run the full host-target test suite — each component's test/ is its own
+#    self-contained idf.py project (see agentic-sdlc:embedded-testing), so build
+#    and run each one in turn, letting the binary exit on its own (never kill it):
+for d in components/*/test; do
+  ( cd "$d" && idf.py --preview set-target linux && idf.py build && ./build/*_test.elf )
+done
 ```
 
 Compare the `.bin` size reported by `idf.py size` (or the file size on disk)

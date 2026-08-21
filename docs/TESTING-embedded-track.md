@@ -2,17 +2,20 @@
 
 Branch: `feat/embedded-track`. This adds a third `app_type` (`embedded`, alongside
 `web` and `electron`) for ESP-IDF C/C++ firmware development. It was written and
-type/prose-reviewed on Windows without ESP-IDF installed, so none of the actual
-`idf.py` command paths have been run for real yet. Test in the order below —
-cheapest and highest-risk first — so a wrong assumption is caught before it costs
-a full pipeline run.
+prose-reviewed on Windows without ESP-IDF installed; step 1 below has since been
+verified for real on Linux and the skills/agents were corrected accordingly (see
+"Findings from the first Linux pass"). Test in the order below — cheapest and
+highest-risk first — so a wrong assumption is caught before it costs a full
+pipeline run.
 
-## 1. Verify the host-target testing mechanism (do this first)
+## 1. Verify the host-target testing mechanism (done — see findings below)
 
-This is the single riskiest unverified assumption in the whole track: that
+This was the single riskiest unverified assumption in the whole track: that
 ESP-IDF's Linux/host target lets you build and run Unity tests **without physical
 hardware**. `skills/embedded-testing/SKILL.md` and the "build-only, no hardware"
-design decision both depend on this working as described.
+design decision both depend on this working. It does — but not the way the first
+draft assumed; see the findings below. If you're re-verifying on a different
+ESP-IDF version, the smoke test is now:
 
 ```bash
 idf.py create-project test_probe && cd test_probe
@@ -21,11 +24,34 @@ idf.py build
 ./build/test_probe.elf
 ```
 
-If the flag/target name differs on your installed ESP-IDF version, or the host
-target doesn't build cleanly, fix `plugins/agentic-sdlc/skills/embedded-testing/SKILL.md`
-(and the matching commands in `agents/embedded-test-engineer.md`,
-`agents/embedded-test-reviewer.md`, and the "Embedded coverage" section of
+If this doesn't work cleanly on your ESP-IDF version, fix
+`plugins/agentic-sdlc/skills/embedded-testing/SKILL.md` (and the matching commands
+in `agents/embedded-test-engineer.md`, `agents/embedded-test-reviewer.md`,
+`agents/embedded-packager-reviewer.md`, and the "Embedded coverage" section of
 `skills/coverage-report/SKILL.md`) before trusting anything downstream.
+
+### Findings from the first Linux pass (already fixed in the skills/agents above)
+
+- **`idf.py build` needs a real project root, not a bare component.** A
+  `components/<name>/test/CMakeLists.txt` with just `idf_component_register(...)`
+  isn't enough — `idf.py` fails trying to configure it as a project. Each
+  component's `test/` is now its own **self-contained idf.py project**: its own
+  `CMakeLists.txt` calling `project()` (with `EXTRA_COMPONENT_DIRS` pointing at
+  the component under test) plus a `test/main/` with `idf_component_register` and
+  a one-time `test_runner_main.c`.
+- **The Linux target needs `libbsd-dev`.** Without it, every component fails to
+  build with `bsd/sys/cdefs.h: No such file or directory`. One-time host setup:
+  `apt-get install libbsd-dev` (Debian/Ubuntu).
+- **The test binary must call `exit()` itself.** After `UNITY_END()`, the FreeRTOS
+  scheduler keeps running — the process does not exit on its own.
+  `test_runner_main.c` now ends with `exit(failures)`. Never run the binary under
+  a hard kill/timeout instead of letting it exit itself: a killed process never
+  reaches `exit()`, so gcov's `atexit` flush never fires and coverage silently
+  comes back as 0 `.gcda` files even though the tests genuinely ran and passed.
+- **Coverage needs `lcov`, and the real CMake flag names.** `apt-get install
+  lcov`. The linker flag must be `-DCMAKE_EXE_LINKER_FLAGS="--coverage"` (not
+  `EXTRA_LDFLAGS`) — without it the gcov runtime isn't linked in and no `.gcda`
+  files are ever written even though the build succeeds.
 
 ## 2. Re-run the existing test suite on Linux
 
@@ -76,6 +102,7 @@ greenfield or `web`. Exercises the detection heuristic added to `start-run.md`
 
 ---
 
-Step 1 is the one most likely to need a fix — everything else is prose-branch
-plumbing following the same pattern as the existing `electron` track, which
-already works in production.
+Step 1 was the one most likely to need a fix, and did — now corrected. Steps 2–5
+are prose-branch plumbing following the same pattern as the existing `electron`
+track, which already works in production; still worth running through once before
+trusting the track for real work.

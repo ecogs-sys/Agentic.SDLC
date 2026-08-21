@@ -13,9 +13,12 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 | Requirements | Business Analyst | BA Validator |
 | Architecture | Architect | Architect Validator |
 | Story breakdown | Tech Lead | Tech Lead Validator |
-| .NET backend | .NET Engineer + Reviewer | .NET Test Engineer + Reviewer |
-| React frontend | React Engineer + Reviewer | React Test Engineer + Reviewer |
-| Containerization | DevOps Engineer | DevOps Reviewer |
+| .NET backend (web) | .NET Engineer + Reviewer | .NET Test Engineer + Reviewer |
+| React frontend (web) | React Engineer + Reviewer | React Test Engineer + Reviewer |
+| Desktop app (electron) | Electron Engineer + Reviewer | Electron Test Engineer + Reviewer |
+| Firmware (embedded) | Embedded Engineer + Reviewer | Embedded Test Engineer + Reviewer |
+| Containerization (web) | DevOps Engineer | DevOps Reviewer |
+| Packaging (electron / embedded) | Electron/Embedded Packager | Electron/Embedded Packager Reviewer |
 
 ## Workflow diagram
 
@@ -80,7 +83,7 @@ flowchart TD
     subgraph DEV ["④ Development — stories processed wave-by-wave"]
         NEXT["📋 Next pending story"] --> TRACK{"Track?"}
 
-        subgraph DOTNET [".NET Track"]
+        subgraph DOTNET [".NET Track (app_type = web)"]
             DNE["🤖 .NET Engineer<br/>implements story"] --> DNR["🔍 .NET Reviewer"]
             DNR -- "FAIL / iter < 5<br/>revise" --> DNE
             DNR -- PASS --> DNTE["🤖 .NET Test Engineer<br/>writes tests"]
@@ -89,7 +92,7 @@ flowchart TD
             DNTR -- BACK_TO_ENGINEER --> DNE
         end
 
-        subgraph REACT ["React Track"]
+        subgraph REACT ["React Track (app_type = web)"]
             RE["🤖 React Engineer<br/>implements story"] --> RR["🔍 React Reviewer"]
             RR -- "FAIL / iter < 5<br/>revise" --> RE
             RR -- PASS --> RTE["🤖 React Test Engineer<br/>writes tests"]
@@ -98,18 +101,40 @@ flowchart TD
             RTR -- BACK_TO_ENGINEER --> RE
         end
 
+        subgraph ELECTRON ["Electron Track (app_type = electron)"]
+            ELE["🤖 Electron Engineer<br/>implements story"] --> ELR["🔍 Electron Reviewer"]
+            ELR -- "FAIL / iter < 5<br/>revise" --> ELE
+            ELR -- PASS --> ELTE["🤖 Electron Test Engineer<br/>writes tests"]
+            ELTE --> ELTR["🔍 Electron Test Reviewer<br/>coverage check"]
+            ELTR -- BACK_TO_TEST_ENGINEER --> ELTE
+            ELTR -- BACK_TO_ENGINEER --> ELE
+        end
+
+        subgraph EMBEDDED ["Embedded Track (app_type = embedded)"]
+            EME["🤖 Embedded Engineer<br/>implements story"] --> EMR["🔍 Embedded Reviewer"]
+            EMR -- "FAIL / iter < 5<br/>revise" --> EME
+            EMR -- PASS --> EMTE["🤖 Embedded Test Engineer<br/>writes tests<br/>(ESP-IDF host target)"]
+            EMTE --> EMTR["🔍 Embedded Test Reviewer<br/>coverage check"]
+            EMTR -- BACK_TO_TEST_ENGINEER --> EMTE
+            EMTR -- BACK_TO_ENGINEER --> EME
+        end
+
         TRACK -- ".NET" --> DNE
         TRACK -- "React" --> RE
+        TRACK -- "Electron" --> ELE
+        TRACK -- "Embedded" --> EME
         DNTR -- "DONE · git commit" --> ALLDONE{"All stories<br/>complete?"}
         RTR -- "DONE · git commit" --> ALLDONE
+        ELTR -- "DONE · git commit" --> ALLDONE
+        EMTR -- "DONE · git commit" --> ALLDONE
         ALLDONE -- No --> NEXT
     end
 
     ALLDONE -- Yes --> ADV4(["▶ /advance-stage"])
 
-    ADV4 --> DVE
+    ADV4 --> ARCHETYPE{"app_type?"}
 
-    subgraph DEVOPS ["⑤ DevOps"]
+    subgraph DEVOPS ["⑤ DevOps (app_type = web)"]
         DVE["🤖 DevOps Engineer<br/>Dockerfile · docker-compose.yml<br/>.env.example · nginx.conf"] --> DVR["🔍 DevOps Reviewer<br/>docker build & smoke tests"]
         DVR -- "BACK_TO_DEVOPS<br/>iter < 5" --> DVE
         DVR -- "BACK_TO_DOTNET_ENGINEER" --> DNEF["🤖 .NET Engineer (fix)"]
@@ -122,7 +147,24 @@ flowchart TD
         ESC5 -- "user guidance" --> DVE
     end
 
+    subgraph PACKAGING ["⑤ Packaging (app_type = electron | embedded)"]
+        PKE["🤖 Packager<br/>electron-builder config<br/>or sdkconfig/partitions.csv"] --> PKR["🔍 Packager Reviewer<br/>build & smoke-launch (electron)<br/>build & size-vs-partition check (embedded)"]
+        PKR -- "BACK_TO_PACKAGER<br/>iter < 5" --> PKE
+        PKR -- "BACK_TO_ELECTRON_ENGINEER" --> ELEF["🤖 Electron Engineer (fix)"]
+        PKR -- "BACK_TO_EMBEDDED_ENGINEER" --> EMEF["🤖 Embedded Engineer (fix)"]
+        PKR -- "HUMAN_REVIEW_REQUIRED" --> HU2["👤 User Decision"]
+        ELEF --> PKE
+        EMEF --> PKE
+        HU2 --> PKE
+        PKR -- "iter = 5" --> ESC6["⚠️ Escalate to User"]
+        ESC6 -- "user guidance" --> PKE
+    end
+
+    ARCHETYPE -- "web" --> DVE
+    ARCHETYPE -- "electron / embedded" --> PKE
+
     DVR -- DONE --> COMPLETE(["🎉 Run Complete!<br/>Open PR: agentic-sdlc/run-id → default branch"])
+    PKR -- DONE --> COMPLETE
 
     COMPLETE -. "/next-phase (if more phases)" .-> PP
 ```
@@ -202,7 +244,7 @@ flowchart TD
     TG -- "new_feature" --> D3["Deep survey → BA → Architect → Stories → Development"]
     D1 --> IC{"infra change?"}
     D3 --> IC
-    IC -- "yes" --> DO["DevOps<br/>(update existing infra)"]
+    IC -- "yes" --> DO["DevOps / Packaging<br/>(update existing infra or build-config)"]
     IC -- "no" --> PR(["🎉 Open PR → parent branch"])
     DO --> PR
 ```
