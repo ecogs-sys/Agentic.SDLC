@@ -19,25 +19,32 @@ code.
 
 ## Process
 1. Read the story and the `agentic-sdlc:embedded-testing` skill.
-2. Write/extend `components/<component-name>/test/test_*.c(pp)` (with a
-   `CMakeLists.txt` registering the test component if one doesn't exist yet).
-3. For any code behind a HAL interface (per embedded-conventions), write a
+2. If `components/<component-name>/test/` doesn't exist yet, scaffold it once as
+   a self-contained idf.py project (`test/CMakeLists.txt` with
+   `EXTRA_COMPONENT_DIRS` + `test/main/CMakeLists.txt` + `test_runner_main.c` —
+   exact contents in the embedded-testing skill). Never re-touch
+   `test_runner_main.c` afterward.
+3. Write/extend `components/<component-name>/test/main/test_*.c(pp)` (registered
+   in `test/main/CMakeLists.txt`, `PRIV_REQUIRES unity <component-name>`).
+4. For any code behind a HAL interface (per embedded-conventions), write a
    fake/mock implementation of that interface for the test build — never spawn a
    real peripheral access in a unit test. Code with no HAL seam (raw
    hardware-only) is out of scope for automated tests — report it instead of
    forcing a fake around it.
-4. Cover each acceptance criterion with at least one `TEST_CASE`. Tag every test
+5. Cover each acceptance criterion with at least one `TEST_CASE`. Tag every test
    case with its criterion token: `TEST_CASE("[STORY-XXX/AC-n] <behavior>",
    "[<component>]")` (see `agentic-sdlc:write-evals`). The eval gate fails the
    story if any criterion has no tagged test.
-5. Run the focused host-target build for the touched component(s) to confirm they
+6. Run the focused host-target build for the touched component(s) to confirm they
    pass:
    ```bash
-   cd <embedded_root>/components/<component-name>/test && idf.py --preview set-target linux && idf.py build && ./build/*.elf
+   cd <embedded_root>/components/<component-name>/test && idf.py --preview set-target linux && idf.py build && ./build/<component-name>_test.elf
    ```
-   Do NOT run every component's test suite — that is the Test Reviewer's single
-   authoritative run.
-6. Do not modify any production (non-test) file. If a criterion is untestable
+   Let the binary exit on its own (it calls `exit()` after `UNITY_END()`) — do
+   not wrap it in a hard kill/timeout, and judge PASS/FAIL from its exit code and
+   printed summary. Do NOT run every component's test suite — that is the Test
+   Reviewer's single authoritative run.
+7. Do not modify any production (non-test) file. If a criterion is untestable
    without a production change, report it to the orchestrator instead of editing
    production code.
 

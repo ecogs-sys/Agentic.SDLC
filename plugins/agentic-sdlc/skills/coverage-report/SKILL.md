@@ -53,15 +53,27 @@ Default: **80% statement coverage**, **90% on critical paths**.
 
 ## Embedded coverage (ESP-IDF host target)
 
+Requires the `lcov` system package (e.g. `apt-get install lcov`) in addition to
+the `libbsd-dev` prerequisite from `agentic-sdlc:embedded-testing`.
+
 ### Run
 Build the host-target test binary with gcov instrumentation, then run it (this
-executes the tests and emits `.gcda` coverage data):
+executes the tests and emits `.gcda` coverage data). Each component's `test/` is
+its own idf.py project — see `agentic-sdlc:embedded-testing` for that layout.
+The gcov-linking flags must be the real CMake variables
+(`CMAKE_C_FLAGS`/`CMAKE_CXX_FLAGS`/`CMAKE_EXE_LINKER_FLAGS`) — a plain build
+already compiles with `--coverage`, but without `CMAKE_EXE_LINKER_FLAGS` the gcov
+runtime isn't linked in and no `.gcda` files are ever written:
 ```bash
 cd <embedded_root>/components/<component-name>/test
 idf.py --preview set-target linux
-idf.py build -DEXTRA_CFLAGS="--coverage" -DEXTRA_CXXFLAGS="--coverage" -DEXTRA_LDFLAGS="--coverage"
-./build/*.elf
+idf.py build -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+./build/<component-name>_test.elf
 ```
+Let the binary run to its own `exit()` — do not kill it. A killed process never
+reaches the gcov `atexit` flush, so `.gcda` silently comes back empty even though
+the tests ran and passed (see "Process exit" in `agentic-sdlc:embedded-testing`).
+
 For a full-suite run, repeat across every component's `test/` directory under
 `<embedded_root>`.
 
