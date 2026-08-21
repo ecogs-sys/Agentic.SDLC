@@ -348,10 +348,38 @@ via `/agentic-sdlc:next-phase`.
         └── phase-02/ …                  ← created by /next-phase, its own branch + PR
 ```
 
+## Brainstorming (independent of runs)
+
+```
+/agentic-sdlc:brainstorm
+```
+
+Explore an idea — software, IoT/hardware, or general engineering — before
+committing to a run. No active run/program is required, and it does not touch
+`state.json` or the pipeline. Three right-sized agents run in turn: an **Idea
+Generator** (opus — the one creativity-ceiling step) produces a wide divergent
+spread of raw concepts, an **Idea Critic** (sonnet) scores and stress-tests them
+(adversarial by design — every idea, including the top pick, carries a stated
+objection) and shortlists the strongest 2-3, then a **Concept Detailer** (sonnet)
+expands each shortlisted concept into a deep-dive brief with architecture and
+flow diagrams. Everything is written to `brainstorms/<brainstorm-id>/` — no branch
+or commit happens automatically. At the end you can hand a chosen concept straight
+to `/agentic-sdlc:start-run` as the requirement, or leave it as notes.
+
+```
+brainstorms/brainstorm-2026-08-21-001/
+  session-input.md          ← seed prompt + domain + constraints
+  concepts.md                ← raw concepts + scoring matrix + prioritization + critic notes
+  concept-01-<slug>/brief.md  ← deep-dive: architecture + flow diagrams, risks, effort
+  concept-02-<slug>/brief.md
+  summary.md                  ← comparison table + recommendation
+```
+
 ## Other commands
 
 | Command | Purpose |
 |---|---|
+| `/agentic-sdlc:brainstorm` | Explore ideas independent of any run — see above |
 | `/agentic-sdlc:show-run-status` | Show current stage, artifact status, and recent activity |
 | `/agentic-sdlc:cancel-run` | Cancel and clean up the current run |
 | `/agentic-sdlc:next-phase` | Start the next phase once the current one is merged |
