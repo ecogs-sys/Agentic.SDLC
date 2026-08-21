@@ -1,6 +1,6 @@
 # Agentic SDLC Marketplace
 
-A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a multi-agent SDLC pipeline that takes a plain-language requirement and produces a runnable .NET + React application. The pipeline supports both **greenfield** builds (from scratch, driven by a multi-phase program plan) and **brownfield changes** (bug fixes, small changes, and new features on an existing codebase, auto-detected at `/start-run`).
+A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a multi-agent SDLC pipeline that takes a plain-language requirement and produces a runnable application. Three application archetypes are supported: **web** (.NET 8 + React 18 + PostgreSQL), **electron** (TypeScript Electron desktop app), and **embedded** (C/C++ ESP-IDF firmware for ESP32). The pipeline supports both **greenfield** builds (from scratch, driven by a multi-phase program plan) and **brownfield changes** (bug fixes, small changes, and new features on an existing codebase, auto-detected at `/start-run`).
 
 ## Pipeline overview
 
@@ -45,9 +45,9 @@ plugins/
   agentic-sdlc/
     .claude-plugin/
       plugin.json            ← plugin manifest (name, version)
-    agents/                  ← 18 subagent definitions
-    skills/                  ← 10 reusable skill files
-    commands/                ← 5 slash commands
+    agents/                  ← 37 subagent definitions
+    skills/                  ← 33 reusable skill files
+    commands/                ← 6 slash commands
     README.md                ← plugin user documentation
 CHANGELOG.md
 LICENSE
