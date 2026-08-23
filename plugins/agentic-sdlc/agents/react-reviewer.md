@@ -71,26 +71,26 @@ A structured review report printed to your response.
 9. Check for obvious bugs: unhandled promise rejections, missing null checks on API responses.
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "STORY-XXX",
+  "status": "pass",
+  "checks": { "build": "pass" },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "file.tsx:line or test name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "CRITICAL", "description": "...", "location": "file.tsx:line"}],
+  "notes": "1-2 sentence summary"
+}
 ```
-## Review: STORY-XXX — <story name>
+If the build fails, set `checks.build` to `"fail"` and put the failure excerpt in
+`notes`.
 
-**Status:** PASS | FAIL
-
-**Build:** PASS | FAIL
-<build output excerpt if failed>
-
-**Verified:** <AC-n → the observation (file:line / test) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [CRITICAL] <description> — file.tsx:line
-- [WARNING] <description>
-- (none)
-
-**Summary:** <1-2 sentences>
-```
-
-PASS requires: build passes AND no CRITICAL issues (including raw hex colors in components, fetch/axios calls inside components or pages, Clean Architecture dependency-rule violations, fetch logic inside render components, and cross-component CSS selectors).
+`status: "pass"` requires `checks.build == "pass"` AND no `CRITICAL`-severity issue
+in `issues` (including raw hex colors in components, fetch/axios calls inside
+components or pages, Clean Architecture dependency-rule violations, fetch logic
+inside render components, and cross-component CSS selectors). `WARNING`-severity
+issues don't block a pass.
 
 ## Re-review mode
 When your context includes your previous findings and a diff since the last review:

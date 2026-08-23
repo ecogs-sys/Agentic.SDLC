@@ -72,4 +72,4 @@ There may be no `tech-spec.md`; use `runs/<run-id>/codebase-context.md` (and
 actually needs an infra change.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during the DevOps phase.
+You must NEVER modify the req-spec (`runs/<program-id>/req-spec.md` master, or `runs/<run-id>/req-spec.md` for a flat run), `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen during the DevOps phase.

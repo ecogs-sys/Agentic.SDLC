@@ -48,33 +48,33 @@ against the app partition's size in `partitions.csv` — flag it if the binary
 exceeds the partition's slot size (a FAIL: it would fail to flash).
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "routing": "DONE",
+  "target_story": null,
+  "checks": {
+    "build": "pass",
+    "artifact_size": { "result": "pass", "size_bytes": 0, "partition_slot_bytes": 0 },
+    "tests": { "passed": 12, "failed": 0 }
+  },
+  "verified": [{"ac": "check name", "evidence": "exit code / size / test count"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "PACKAGING", "description": "...", "location": "file:line"}],
+  "notes": "2-3 sentence summary"
+}
 ```
-## Embedded Packager Review: <run-id>
-
-**Routing decision:** DONE | BACK_TO_PACKAGER | BACK_TO_EMBEDDED_ENGINEER <story-id> | HUMAN_REVIEW_REQUIRED
-
-**Build (idf.py build):** PASS | FAIL
-**Artifact size vs. partition budget:** PASS (<size> / <slot size>) | FAIL (exceeds slot)
-**Tests:** PASS (<N>) | FAIL (<N> failed)
-
-**Verified:** <check → the observation (exit code / size / test count) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [PACKAGING] <sdkconfig / partition table / OTA wiring issue> — file:line
-- [APP_BUG] <a bug traceable to a story> — file:line
-- [AMBIGUITY] <needs human decision>
-- (none)
-
-**Summary:** <2-3 sentences>
-```
+`issues[].severity` is `PACKAGING` (sdkconfig/partition table/OTA wiring), `APP_BUG`
+(a bug traceable to a story), or `AMBIGUITY` (needs a human decision). `target_story`
+is the `STORY-XXX` an `APP_BUG` traces to when routing is `BACK_TO_EMBEDDED_ENGINEER`;
+`null` otherwise.
 
 Routing decisions:
 - `DONE`: build succeeds, artifact fits its partition budget, all tests pass.
 - `BACK_TO_PACKAGER`: `sdkconfig.defaults`, `partitions.csv`, or OTA wiring issues
-  (including a binary that doesn't fit its partition).
-- `BACK_TO_EMBEDDED_ENGINEER <story-id>`: a build failure or test failure traceable
-  to a story's code.
+  (including a binary that doesn't fit its partition — see `checks.artifact_size`).
+- `BACK_TO_EMBEDDED_ENGINEER`: a build failure or test failure traceable to
+  `target_story`.
 - `HUMAN_REVIEW_REQUIRED`: ambiguity with no clear correct side — do not auto-route.
 
 ## Brownfield mode

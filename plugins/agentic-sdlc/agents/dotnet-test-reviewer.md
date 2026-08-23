@@ -48,26 +48,25 @@ A structured report with routing decision.
 5. When tests fail, list the failing test names and only the first ~5 distinct errors in your report — not full stack traces (see the dotnet-testing skill, "Test-execution discipline").
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "STORY-XXX",
+  "routing": "DONE",
+  "checks": {
+    "tests": { "passed": 12, "failed": 0, "failing_names": [] },
+    "coverage": { "lines": 85, "threshold": 80, "result": "pass" }
+  },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "test name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "TEST_BUG", "description": "...", "location": "TestFile.cs:line"}],
+  "notes": "1-2 sentences explaining the routing decision"
+}
 ```
-## Test Review: STORY-XXX — <story name>
-
-**Routing decision:** DONE | BACK_TO_TEST_ENGINEER | BACK_TO_ENGINEER
-
-**Tests:** PASS (<N> tests) | FAIL (<N> failed)
-<failing test names if any>
-
-**Coverage:** Lines: <XX>% (threshold: <YY>%) — PASS | FAIL
-
-**Verified:** <AC-n → the tagged test that proves it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [TEST BUG] <test is incorrect> — TestFile.cs:line
-- [PRODUCTION BUG] <test exposes production bug> — ProductionFile.cs:line
-- (none)
-
-**Summary:** <1-2 sentences explaining the routing decision>
-```
+`issues[].severity` is `TEST_BUG` (test is incorrect) or `PRODUCTION_BUG` (test
+exposes a production bug). When tests fail, list failing test names in
+`checks.tests.failing_names` — only the first ~5 distinct errors (see the
+dotnet-testing skill, "Test-execution discipline"), not full stack traces.
 
 Routing:
 - `DONE`: all tests pass AND coverage ≥ threshold AND no trivially-passing tests AND every `AC-n` has a criterion-tagged test

@@ -8,10 +8,10 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 
 | Stage | Agent | Validator |
 |---|---|---|
-| Phase planning | Phase Planner | Phase Planner Validator |
 | Codebase survey (brownfield) | Code Surveyor | Code Surveyor Validator |
-| Requirements | Business Analyst | BA Validator |
-| Architecture | Architect | Architect Validator |
+| Requirements (once per program) | Business Analyst | BA Validator |
+| Phase planning (splits the req-spec by REQ-ID) | Phase Planner | Phase Planner Validator |
+| Architecture (per phase) | Architect | Architect Validator |
 | Story breakdown | Tech Lead | Tech Lead Validator |
 | .NET backend (web) | .NET Engineer + Reviewer | .NET Test Engineer + Reviewer |
 | React frontend (web) | React Engineer + Reviewer | React Test Engineer + Reviewer |
@@ -25,9 +25,20 @@ Each stage of the SDLC is handled by a specialized AI agent with a paired valida
 ```mermaid
 flowchart TD
     Start(["🚀 /start-run — user provides requirement"])
-    Start --> PP
+    Start --> BA
 
-    subgraph PHASE ["⓪ Phase Planning"]
+    subgraph REQ ["⓪ Requirements (once per program)"]
+        BA["🤖 BA Agent<br/>writes master req-spec.md"] --> BAV["🔍 BA Validator"]
+        BAV -- "fail / iter < 5<br/>re-run with diff" --> BA
+        BAV -- "fail / iter = 5" --> ESC1["⚠️ Escalate to User"]
+        ESC1 -- "user guidance" --> BA
+    end
+
+    BAV -- pass --> RG1{{"👤 User Review Gate<br/>req-spec.md"}}
+    RG1 -- "request changes" --> BA
+    RG1 -- "approve · freeze req-spec" --> PP
+
+    subgraph PHASE ["① Phase Planning (splits req-spec.md by REQ-ID)"]
         PP["🤖 Phase Planner<br/>writes phase-plan.md"] --> PPV["🔍 Phase Planner Validator"]
         PPV -- "fail / iter < 5<br/>re-run with report" --> PP
         PPV -- "fail / iter = 5" --> ESC0["⚠️ Escalate to User"]
@@ -36,22 +47,11 @@ flowchart TD
 
     PPV -- pass --> RG0{{"👤 User Review Gate<br/>phase-plan.md"}}
     RG0 -- "request changes" --> PP
-    RG0 -- "approve · freeze plan" --> BA
-
-    subgraph REQ ["① Requirements"]
-        BA["🤖 BA Agent<br/>writes req-spec.md"] --> BAV["🔍 BA Validator"]
-        BAV -- "fail / iter < 5<br/>re-run with diff" --> BA
-        BAV -- "fail / iter = 5" --> ESC1["⚠️ Escalate to User"]
-        ESC1 -- "user guidance" --> BA
-    end
-
-    BAV -- pass --> RG1{{"👤 User Review Gate<br/>req-spec.md"}}
-    RG1 -- "request changes" --> BA
-    RG1 -- "approve" --> ADV1(["▶ /advance-stage"])
+    RG0 -- "approve · freeze plan · create Phase 1" --> ADV1(["▶ /advance-stage"])
 
     ADV1 --> ARC
 
-    subgraph ARCH ["② Architecture"]
+    subgraph ARCH ["② Architecture (per phase — reads its REQ-ID slice)"]
         ARC["🤖 Architect<br/>writes tech-spec.md"] --> ARCV["🔍 Architect Validator"]
         ARCV -- "fail / iter < 5<br/>re-run with diff" --> ARC
         ARCV -- "fail / iter = 5" --> ESC2["⚠️ Escalate to User"]
@@ -166,7 +166,7 @@ flowchart TD
     DVR -- DONE --> COMPLETE(["🎉 Run Complete!<br/>Open PR: agentic-sdlc/run-id → default branch"])
     PKR -- DONE --> COMPLETE
 
-    COMPLETE -. "/next-phase (if more phases)" .-> PP
+    COMPLETE -. "/next-phase (if more phases — starts at Architect;<br/>BA does not re-run per phase)" .-> ARC
 ```
 
 ## Core principles
@@ -268,16 +268,16 @@ Paste your requirement when prompted. Then:
 /agentic-sdlc:advance-stage
 ```
 
-Repeat `/advance-stage` after each approval. You'll be asked to review and approve at five gates (phase plan, requirement spec, technical spec, stories, evals).
+Repeat `/advance-stage` after each approval. You'll be asked to review and approve at five gates (requirement spec, phase plan, technical spec, stories, evals).
 
 ## Pipeline order
 
 ```
-/start-run          → Phase Planner → Validator (loop) → [user review phase plan]
-                    → freeze plan → create Phase 1 run → detect src paths
-                    → git branch agentic-sdlc/<program-id>/phase-01
-                    → BA → BA Validator (loop) → [user review req spec]
-/advance-stage      → Architect → Architect Validator (loop) → [user review tech spec]
+/start-run          → detect src paths → git branch agentic-sdlc/<program-id>/phase-01
+                    → BA → BA Validator (loop, once per program) → [user review req spec]
+                    → freeze req-spec → Phase Planner → Validator (loop, splits by REQ-ID)
+                    → [user review phase plan] → freeze plan → create Phase 1 run
+/advance-stage      → Architect (reads its REQ-ID slice) → Architect Validator (loop) → [user review tech spec]
 /advance-stage      → Tech Lead → Tech Lead Validator (loop) → [user review stories]
                     → author evals → [user review evals]
                     ══ SPEC FREEZE ══
@@ -315,14 +315,13 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 <your-workspace>/                       ← workspace root (git repo)
 ├── runs/
 │   └── program-YYYY-MM-DD-001/         ← one big requirement
-│       ├── program.json                ← program state machine (phases, current_phase)
+│       ├── program.json                ← program state machine (req_spec, phase_plan, phases[].req_ids, current_phase)
 │       ├── original-input.md           ← full requirement, verbatim
-│       ├── phase-plan.md               ← Phase Planner output (frozen)
-│       └── phase-01/                   ← a full run, scoped to Phase 1
-│           ├── state.json              ← per-phase state machine
+│       ├── req-spec.md                 ← BA output — the master spec, REQ-ID by REQ-ID (runs once, not per phase)
+│       ├── phase-plan.md               ← Phase Planner output (frozen) — splits req-spec.md by REQ-ID
+│       └── phase-01/                   ← a full run, scoped to Phase 1's REQ-IDs
+│           ├── state.json              ← per-phase state machine (req_ids, master_req_spec_path; current_stage starts at "architect")
 │           ├── progress.log            ← append-only activity feed (tail -f it during long stages)
-│           ├── raw-input.md            ← this phase's scope
-│           ├── req-spec.md             ← BA output
 │           ├── tech-spec.md            ← Architect output
 │           └── stories/                ← Tech Lead output (index.md + STORY-N.md)
 │
@@ -377,20 +376,22 @@ Branch `agentic-sdlc/change-YYYY-MM-DD-001` → one PR.
 
 ### Brownfield program (existing repo → new-feature split into several features)
 
-Reuses the program/phase machinery, brownfield-flagged. The Code Surveyor runs once at
-the program level (shared `codebase-context.md`); each phase ships its own branch + PR
-via `/agentic-sdlc:next-phase`.
+Reuses the program/phase machinery, brownfield-flagged. The Code Surveyor and the
+program-level BA both run once at the program level (shared `codebase-context.md`
+and master `req-spec.md`); each phase ships its own branch + PR via
+`/agentic-sdlc:next-phase`.
 
 ```
 <your-workspace>/
 └── runs/
     └── program-YYYY-MM-DD-002/
-        ├── program.json                 ← mode:brownfield · codebase_context_path · infra_change_required · test_baseline
+        ├── program.json                 ← mode:brownfield · codebase_context_path · infra_change_required · test_baseline · req_spec
         ├── original-input.md            ← the change request
         ├── codebase-context.md          ← program-level survey (shared by all phases)
-        ├── phase-plan.md                ← Phase Planner (features added to the existing system)
-        ├── phase-01/                    ← mode:brownfield (no survey/triage stage)
-        │   ├── state.json  raw-input.md  req-spec.md  tech-spec.md
+        ├── req-spec.md                  ← program-level BA, brownfield-aware (delta framing; reads original-input.md + codebase-context.md)
+        ├── phase-plan.md                ← Phase Planner (splits req-spec.md by REQ-ID; features added to the existing system)
+        ├── phase-01/                    ← mode:brownfield (no survey/triage/BA stage)
+        │   ├── state.json  tech-spec.md
         │   └── stories/
         └── phase-02/ …                  ← created by /next-phase, its own branch + PR
 ```

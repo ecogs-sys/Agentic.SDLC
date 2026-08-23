@@ -2,6 +2,58 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.0.0] - 2026-08-23
+
+**Program-level BA + REQ-ID-driven Phase Planning** — the Phase Planner used to
+split the raw, unanalyzed `original-input.md` into phases before any BA pass had
+extracted requirements, so phase boundaries were a guess against prose. The BA now
+runs **once per program**, before the Phase Planner, producing a master
+`req-spec.md`; the Phase Planner splits that spec into phases **by REQ-ID**
+instead of by paragraph. This is a breaking change to the run/program state
+schema — see Breaking below.
+
+### Breaking
+- **`program.json`** gains a `req_spec` lifecycle field (mirrors `phase_plan`)
+  and `phases[].req_ids` (parsed mechanically from `phase-plan.md`'s new
+  `## Phase index` table — never hand-typed).
+- **Phase `state.json`** gains `req_ids` and `master_req_spec_path`, and its
+  `stages` map **drops `ba` / `ba_validation` / `user_review_req` entirely** —
+  those now run only once at the program level. A phase's `current_stage` starts
+  at `"architect"`, not `"ba"`. There is no per-phase `raw-input.md`.
+- No migration tooling for in-flight runs started under the pre-1.0 schema — start
+  a fresh program.
+- Brownfield flat `change-*` runs (bug_fix/small_change/non-split new_feature) are
+  **unaffected** — no Phase Planner involved, no schema change. The brownfield
+  "new_feature split → convert to program" path gets a program-level,
+  brownfield-aware BA pass (reads both `original-input.md` and
+  `codebase-context.md`) inserted between Step BP1 and the Phase Planner.
+
+### Added
+- **`skills/artifact-slicing/SKILL.md`**: the shared scoped-read / scoped-edit
+  ("Revision mode") primitives, factored out of `ba`, `architect`, `tech-lead`,
+  `phase-planner`, and `fix-planner` into one skill those agents now reference.
+  Also the mechanism the Architect uses to read only its assigned `### REQ-NNN`
+  blocks out of the (potentially large, multi-phase) master req-spec.
+- **Mid-phase requirements reopen**: if the Architect (or a later stage) flags
+  that the master req-spec is wrong/incomplete for the phase it's working, the
+  `stage-architect` skill reopens the BA ↔ BA-Validator loop against the
+  program-level req-spec — scoped to the phase's own REQ-IDs, guarded against
+  touching an already-`complete`/spec-frozen phase, and gated by a lightweight
+  git-diff re-approval — without resetting the in-flight Architect loop.
+- **`## Phase index` table** in `phase-plan.md` (`Phase | Title | REQ-IDs |
+  Depends on | Folder`) — the phase-plan analog of the existing `## Story index`
+  table convention; `phase-planner-validator`'s coverage check is now a
+  mechanical REQ-ID set comparison instead of prose diffing.
+
+### Fixed
+- **M1 (deferred from 0.5.0): unified all 11 reviewer agents on structured
+  JSON** (`dotnet`/`react`/`electron`/`embedded` reviewers and test-reviewers,
+  `devops-reviewer`, `electron-packager-reviewer`, `embedded-packager-reviewer`),
+  replacing narrative Markdown, for their internal, non-human-facing handoffs to
+  `stage-development` / `stage-devops` / `stage-packaging`. Human-facing gates
+  (req-spec, tech-spec, stories, phase-plan, evals) are unaffected — still
+  Markdown.
+
 ## [0.19.0] - 2026-08-21
 
 **New `embedded` track** — a third `app_type` (alongside `web` and `electron`) for

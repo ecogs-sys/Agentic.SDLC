@@ -22,9 +22,15 @@ description: Template and conventions for writing requirement specs. Used by the
 
 ## Format
 
+The header line is `Program ID: <program-id>` when the BA is running once at
+the program level (the master req-spec, before the Phase Planner) or
+`Run ID: <run-id>` for a flat brownfield change-run — never both. The
+`**Source:**` field names whichever input document was read (`original-input.md`
+or `raw-input.md`).
+
 ```markdown
 # Requirement spec
-Run ID: <run-id>
+Program ID: <program-id>  [or: Run ID: <run-id>]
 Status: draft | approved
 Version: <n>
 
@@ -37,7 +43,7 @@ Version: <n>
 **Acceptance criteria:**
 - <observable outcome that proves this is done, written as "user can..." or "system does...">
 - <second criterion>
-**Source:** raw-input.md, paragraph <n>
+**Source:** original-input.md, paragraph <n>  [or: raw-input.md, paragraph <n>]
 
 ### REQ-002: ...
 ```

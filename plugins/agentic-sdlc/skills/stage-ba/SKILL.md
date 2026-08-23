@@ -1,13 +1,16 @@
 ---
 name: stage-ba
-description: Orchestrator handler for the BA stage — runs the BA → BA Validator loop and the requirement-spec user gate. Loaded by /advance-stage when current_stage = ba (including routes back from the tech-spec gate).
+description: Orchestrator handler for the BA stage on a flat brownfield change-run (bug_fix/small_change/non-split new_feature) — runs the BA → BA Validator loop and the requirement-spec user gate. Loaded by /advance-stage when current_stage = ba. Not used by program/phase runs — there, the BA runs once at the program level (see start-run.md Steps 7-8) and a mid-phase reopen is handled inline by the stage-architect skill, not this one.
 ---
 
 # Stage: BA
 
-Runs when `current_stage = "ba"` — the first pass of a phase, a re-entry after a
-"requirements change" route from the tech-spec gate, or the brownfield `ba` pipeline
-stage. Follow the `agentic-sdlc:validation-loop` protocol with:
+Runs when `current_stage = "ba"` on a **flat brownfield `change-*` run** — the
+`new_feature` (non-split) pipeline's BA stage. This never runs for a program/phase
+run: there, the BA runs once at the program level before the Phase Planner (see
+`start-run.md` Steps 7–8), and a mid-phase requirements fix is a reopen of that
+program-level req-spec, handled inline by the `agentic-sdlc:stage-architect` skill.
+Follow the `agentic-sdlc:validation-loop` protocol with:
 
 | Parameter | Value |
 |---|---|

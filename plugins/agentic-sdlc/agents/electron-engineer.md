@@ -62,4 +62,4 @@ directly touch — do not re-survey the codebase or re-read the full spec.
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill in addition to your normal process: read `runs/<run-id>/codebase-context.md` first, reuse its documented conventions, and implement only the **delta** — never re-scaffold an existing workspace. Edit existing files in place.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or any file under `runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.
+You must NEVER modify the req-spec (`runs/<program-id>/req-spec.md` master, or `runs/<run-id>/req-spec.md` for a flat run), `runs/<run-id>/tech-spec.md`, or any file under `runs/<run-id>/stories/`. Those artifacts are frozen during development. If a story's intent is unclear, report the ambiguity to the orchestrator and stop — do not "fix" the story by editing it.

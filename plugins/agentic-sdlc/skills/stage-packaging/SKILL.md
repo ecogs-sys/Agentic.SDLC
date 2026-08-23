@@ -38,7 +38,7 @@ c. Invoke the track's packager reviewer (`electron-packager-reviewer` /
    the tech-spec path. Description: `"packaging review iter <i>"`. Print the
    `✔`/`✖` banner.
 
-d. Route on the reviewer's `**Routing decision:**` (no standalone outcome commits):
+d. Route on the reviewer's JSON `routing` field (no standalone outcome commits):
    - **DONE:**
      ```bash
      SDLC set-stage <run-dir> packaging complete
@@ -51,8 +51,8 @@ d. Route on the reviewer's `**Routing decision:**` (no standalone outcome commit
    - **BACK_TO_PACKAGER:** `SDLC bump-iter <run-dir> packaging`; if < 5 re-invoke
      the track's packager with the issues; if = 5 → `escalated`, commit, escalation
      block.
-   - **`BACK_TO_ELECTRON_ENGINEER <story-id>` / `BACK_TO_EMBEDDED_ENGINEER
-     <story-id>`:**
+   - **`BACK_TO_ELECTRON_ENGINEER` / `BACK_TO_EMBEDDED_ENGINEER`** (story id
+     from the report's `target_story` field):
      1. `SDLC story-iter <run-dir> <story-id> fix_iterations reset` (fresh
         cross-loop entry from packaging).
      2. Re-run that story's Engineer → Reviewer loop (stage-development skill,

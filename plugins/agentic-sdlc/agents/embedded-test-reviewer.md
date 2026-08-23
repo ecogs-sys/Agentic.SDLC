@@ -50,25 +50,24 @@ coverage against the story's threshold, and produce a routing decision.
      the test, is wrong).
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "<story-id>",
+  "routing": "DONE",
+  "checks": {
+    "tests": { "passed": 12, "failed": 0 },
+    "coverage": { "lines": 85, "threshold": 80, "result": "met" },
+    "criteria_coverage": { "result": "adequate", "gaps": [] }
+  },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "TEST_CASE name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "TEST", "description": "...", "location": "file:line"}],
+  "notes": "2-3 sentence summary"
+}
 ```
-## Embedded Test Review: <story-id>
-
-**Routing decision:** DONE | BACK_TO_TEST_ENGINEER | BACK_TO_ENGINEER
-
-**Tests:** PASS (<N>) | FAIL (<N> failed)
-**Coverage:** lines <x>% / threshold <y>% — MET | BELOW
-**Criteria coverage:** adequate | gaps: <which criteria>
-
-**Verified:** <AC-n → the tagged test that proves it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [TEST] <flaky/weak/missing test> — file:line
-- [PROD_BUG] <production bug surfaced by a test> — file:line
-- (none)
-
-**Summary:** <2-3 sentences>
-```
+`issues[].severity` is `TEST` (flaky/weak/missing test) or `PROD_BUG` (production
+bug surfaced by a test).
 
 ## Re-review mode
 When your context includes your previous findings and a diff since the last
