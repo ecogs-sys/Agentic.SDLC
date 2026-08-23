@@ -90,9 +90,10 @@ NOT tell the user to re-run a command.
 ## Shared disciplines (apply in every stage skill)
 
 - **Spec freeze check.** Before invoking any agent: if `spec_frozen = true` and the
-  stage would modify req-spec.md, tech-spec.md, or `runs/<run-id>/stories/` — stop:
-  "The spec is frozen. To make upstream changes, use /agentic-sdlc:cancel-run and
-  start a new run."
+  stage would modify the req-spec (`runs/<program-id>/req-spec.md` master for a
+  phase run, or `runs/<run-id>/req-spec.md` for a flat run), tech-spec.md, or
+  `runs/<run-id>/stories/` — stop: "The spec is frozen. To make upstream changes,
+  use /agentic-sdlc:cancel-run and start a new run."
 - **Status lifecycle.** Allowed values: `pending → in_progress → complete`, plus
   `escalated` / `skipped` / `cancelled`. Set `in_progress` via `SDLC set-stage`
   **before** invoking a stage's first agent (fold the write into that step's

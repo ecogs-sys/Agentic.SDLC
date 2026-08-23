@@ -19,20 +19,21 @@ Read state.json and display a clear status summary.
     `runs/change-*/state.json` with `mode == "brownfield"`. If one exists and it is
     not superseded by a newer active program, render the **Brownfield status**
     layout below and stop.
-2. Read program.json: `phase_plan`, `current_phase`, `phase_count`
+2. Read program.json: `req_spec`, `phase_plan`, `current_phase`, `phase_count`
    (`phase_plan.phase_count`), `phases`, `app_type` (default `web` if absent),
    `src_paths`.
-3. If `phases` is empty OR `current_phase == 0`, the program is still in the Phase
-   Planner stage — no phase has been finalized. Skip the per-phase detail (steps 4–5
-   and the PLANNING/DEVELOPMENT/DEVOPS/ARTIFACTS blocks); show the header, the
-   `Phase plan` line, and a PHASE LADDER reading "Phase planning in progress (no
-   phases finalized yet)". Otherwise, the active phase is the `phases[]` entry whose
-   `phase` field equals `current_phase`; its run dir is
-   `runs/<program-id>/<phase-folder>/` and its state.json drives the per-stage
-   detail below.
-4. For each artifact (req-spec.md, tech-spec.md, stories/index.md) **under the
-   active phase dir**, check existence and read its `Version:` line. If the file
-   exists but has no `Version:` line, report version as `?`.
+3. If `phases` is empty OR `current_phase == 0`, the program is still in the BA
+   or Phase Planner stage — no phase has been finalized. Skip the per-phase detail
+   (steps 4–5 and the PLANNING/DEVELOPMENT/DEVOPS/ARTIFACTS blocks); show the
+   header, the `Req spec` and `Phase plan` lines, and a PHASE LADDER reading
+   "Phase planning in progress (no phases finalized yet)". Otherwise, the active
+   phase is the `phases[]` entry whose `phase` field equals `current_phase`; its
+   run dir is `runs/<program-id>/<phase-folder>/` and its state.json drives the
+   per-stage detail below.
+4. Read the master `runs/<program-id>/req-spec.md`'s `Version:` line (program
+   level — the BA runs once, not per phase). For each artifact (tech-spec.md,
+   stories/index.md) **under the active phase dir**, check existence and read its
+   `Version:` line. If a file exists but has no `Version:` line, report version as `?`.
 4b. Read the run's recent activity — the last 10 lines of the active run dir's
    `progress.log`:
    ```bash
@@ -63,6 +64,7 @@ Read state.json and display a clear status summary.
   Embedded root: <src_paths.embedded>
 
   Program:       <program-id>
+  Req spec:      <req_spec.status> (v<n>) iter: <req_spec.iterations>
   Phase plan:    <phase_plan.status> (<phase_count> phase(s))
 
   PHASE LADDER
@@ -74,9 +76,7 @@ Read state.json and display a clear status summary.
 
   PLANNING PHASE
   ─────────────────────────────────────────
-  BA                       [<status>] iter: <n>
-  BA Validation            [<status>] iter: <n>
-  User Review (Req Spec)   [<status>]
+  (BA runs once at the program level — see "Req spec" above, not per phase)
   Architect                [<status>] iter: <n>
   Architect Validation     [<status>] iter: <n>
   User Review (Tech Spec)  [<status>]
@@ -106,8 +106,7 @@ Read state.json and display a clear status summary.
 
   ARTIFACTS
   ─────────────────────────────────────────
-  runs/<program-id>/<phase-folder>/raw-input.md    exists | missing
-  runs/<program-id>/<phase-folder>/req-spec.md     exists (v<n>) | missing
+  runs/<program-id>/req-spec.md                    exists (v<n>) | missing  (master — program level)
   runs/<program-id>/<phase-folder>/tech-spec.md    exists (v<n>) | missing
   runs/<program-id>/<phase-folder>/stories/index.md  exists (v<n>) | missing
   <web archetype:>

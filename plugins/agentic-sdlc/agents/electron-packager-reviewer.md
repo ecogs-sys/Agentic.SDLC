@@ -49,32 +49,32 @@ If the app exposes no `--smoke-test` flag, launch it under the timeout and treat
 a non-zero crash exit before the timeout is a FAIL.
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "routing": "DONE",
+  "target_story": null,
+  "checks": {
+    "build": "pass",
+    "package": "pass",
+    "smoke_launch": { "result": "pass", "detail": "reached ready" },
+    "tests": { "passed": 12, "failed": 0 }
+  },
+  "verified": [{"ac": "check name", "evidence": "exit code / \"ready\" log / test count"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "PACKAGING", "description": "...", "location": "file:line"}],
+  "notes": "2-3 sentence summary"
+}
 ```
-## Electron Packager Review: <run-id>
-
-**Routing decision:** DONE | BACK_TO_PACKAGER | BACK_TO_ELECTRON_ENGINEER <story-id> | HUMAN_REVIEW_REQUIRED
-
-**Build (pnpm build):** PASS | FAIL
-**Package (package:dir):** PASS | FAIL
-**Smoke launch:** PASS (reached ready) | FAIL (<crash reason>)
-**Tests:** PASS (<N>) | FAIL (<N> failed)
-
-**Verified:** <check → the observation (exit code / "ready" log / test count) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [PACKAGING] <electron-builder / updater / icon config issue> — file:line
-- [APP_BUG] <runtime crash traceable to a story> — file:line
-- [AMBIGUITY] <needs human decision>
-- (none)
-
-**Summary:** <2-3 sentences>
-```
+`issues[].severity` is `PACKAGING` (electron-builder/updater/icon config), `APP_BUG`
+(runtime crash traceable to a story), or `AMBIGUITY` (needs a human decision).
+`target_story` is the `STORY-XXX` an `APP_BUG` traces to when routing is
+`BACK_TO_ELECTRON_ENGINEER`; `null` otherwise.
 
 Routing decisions:
 - `DONE`: build + package succeed, app smoke-launches, all tests pass.
 - `BACK_TO_PACKAGER`: electron-builder config, updater wiring, or icon issues.
-- `BACK_TO_ELECTRON_ENGINEER <story-id>`: a runtime crash traceable to a story's code.
+- `BACK_TO_ELECTRON_ENGINEER`: a runtime crash traceable to `target_story`.
 - `HUMAN_REVIEW_REQUIRED`: ambiguity with no clear correct side — do not auto-route.
 
 ## Brownfield mode

@@ -98,4 +98,4 @@ re-read everything.
 - If `dotnet build <backend_src>` still fails to compile the test project after 3 fix attempts: stop, report the compiler output to the orchestrator, and do not attempt a fourth. Excerpt only the first ~5 distinct errors (see the dotnet-testing skill, "Test-execution discipline") — do not paste the full trace.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.
+You must NEVER modify the req-spec (`runs/<program-id>/req-spec.md` master, or `runs/<run-id>/req-spec.md` for a flat run), `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.

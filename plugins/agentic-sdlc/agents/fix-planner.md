@@ -75,20 +75,11 @@ never re-specify or re-scaffold existing behavior.
 
 ## Revision mode
 When revision notes are present (validator diff JSON or user notes), work as a
-delta — do NOT re-read `raw-input.md` or `codebase-context.md` in full.
-
-1. For each flagged section/story, Read only that block plus the source
-   location the validator cites.
-2. Fix with **Edit** — surgical edits only; never rewrite unaffected sections.
-   New stories get new IDs at the end; never renumber or delete story files
-   (fix-plan.md is a single file, so "delete" means never remove an existing
-   `### STORY-XXX` heading).
-3. Bump the `Version:` line with one Edit.
-4. Scoped self-check: touched sections only.
-5. User notes without IDs: Grep the terms mentioned to find the affected
-   sections. If the notes demand a global or structural change (e.g.
-   re-tracing the code path), fall back to a full revision (read fully,
-   rewrite).
+delta — do NOT re-read `raw-input.md` or `codebase-context.md` in full. Follow
+the `agentic-sdlc:artifact-slicing` skill's Scoped edit protocol. `fix-plan.md`
+is a single file; treat each `### STORY-XXX` heading (and each named section)
+as the unit. New stories get new IDs at the end; never renumber or delete an
+existing `### STORY-XXX` heading.
 
 ## Spec-freeze guardrail
 Once the eval review gate (`user_review_evals`) is approved, `fix-plan.md` and the

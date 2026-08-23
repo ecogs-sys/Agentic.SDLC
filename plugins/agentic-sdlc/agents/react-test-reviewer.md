@@ -41,26 +41,23 @@ A structured report with routing decision.
 4. Apply the decision tree from coverage-report skill.
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "STORY-XXX",
+  "routing": "DONE",
+  "checks": {
+    "tests": { "passed": 12, "failed": 0, "failing_names": [] },
+    "coverage": { "statements": 85, "threshold": 80, "result": "pass" }
+  },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "test name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "TEST_BUG", "description": "...", "location": "TestFile.test.tsx:line"}],
+  "notes": "1-2 sentences explaining the routing decision"
+}
 ```
-## Test Review: STORY-XXX — <story name>
-
-**Routing decision:** DONE | BACK_TO_TEST_ENGINEER | BACK_TO_ENGINEER
-
-**Tests:** PASS (<N> tests) | FAIL (<N> failed)
-<failing test names if any>
-
-**Coverage:** Statements: <XX>% (threshold: <YY>%) — PASS | FAIL
-
-**Verified:** <AC-n → the tagged test that proves it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [TEST BUG] <description> — TestFile.test.tsx:line
-- [PRODUCTION BUG] <description> — Component.tsx:line
-- (none)
-
-**Summary:** <1-2 sentences>
-```
+`issues[].severity` is `TEST_BUG` or `PRODUCTION_BUG`. When tests fail, list
+failing test names in `checks.tests.failing_names`.
 
 Routing:
 - `DONE`: all tests pass AND coverage ≥ threshold AND every `AC-n` has a criterion-tagged test

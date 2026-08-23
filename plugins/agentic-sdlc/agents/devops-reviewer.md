@@ -63,35 +63,36 @@ docker compose down
 ```
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "routing": "DONE",
+  "target_story": null,
+  "checks": {
+    "build": "pass",
+    "backend_health": { "port": 5000, "status_code": 200, "result": "pass" },
+    "frontend_health": { "port": 3000, "status_code": 200, "bundle_present": true, "result": "pass" },
+    "dotnet_tests": { "passed": 12, "failed": 0 },
+    "react_tests": { "passed": 8, "failed": 0 }
+  },
+  "verified": [{"ac": "check name", "evidence": "status code / test count / log line"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "DEVOPS", "description": "...", "location": "file:line"}],
+  "notes": "2-3 sentence summary"
+}
 ```
-## DevOps Review: <run-id>
+`issues[].severity` is `DEVOPS` (docker/nginx/config), `DOTNET_BUG` (runtime error
+in .NET code — cite the story), `REACT_BUG` (runtime error in React code — cite the
+story), or `AMBIGUITY` (spec ambiguity requiring a human decision).
 
-**Routing decision:** DONE | BACK_TO_DEVOPS | BACK_TO_DOTNET_ENGINEER <story-id> | BACK_TO_REACT_ENGINEER <story-id> | HUMAN_REVIEW_REQUIRED
-
-**Build:** PASS | FAIL
-**Backend health (http://localhost:<BACKEND_PORT>/health):** 200 PASS | <code> FAIL
-**Frontend health (http://localhost:<FRONTEND_PORT>):** 200 + bundle present PASS | <code or no-bundle> FAIL
-**.NET tests:** PASS (<N>) | FAIL (<N> failed)
-**React tests:** PASS (<N>) | FAIL (<N> failed)
-
-**Verified:** <check → the observation (status code / test count / log line) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [DEVOPS] <docker/nginx/config issue> — file:line
-- [DOTNET_BUG] <runtime error in .NET code, story STORY-XXX> — file:line
-- [REACT_BUG] <runtime error in React code, story STORY-XXX> — file:line
-- [AMBIGUITY] <spec ambiguity requiring human decision>
-- (none)
-
-**Summary:** <2-3 sentences>
-```
+`target_story` is the `STORY-XXX` a `DOTNET_BUG`/`REACT_BUG` traces to when routing
+is `BACK_TO_DOTNET_ENGINEER`/`BACK_TO_REACT_ENGINEER`; `null` otherwise.
 
 Routing decisions:
 - `DONE`: all smoke tests pass AND all unit tests pass
 - `BACK_TO_DEVOPS`: Docker config, Dockerfile, nginx, or env var issues
-- `BACK_TO_DOTNET_ENGINEER <story-id>`: .NET runtime bug traceable to a story
-- `BACK_TO_REACT_ENGINEER <story-id>`: React runtime bug traceable to a story
+- `BACK_TO_DOTNET_ENGINEER`: .NET runtime bug traceable to `target_story`
+- `BACK_TO_REACT_ENGINEER`: React runtime bug traceable to `target_story`
 - `HUMAN_REVIEW_REQUIRED`: API contract mismatch with no clear correct side — do not auto-route
 
 ## Brownfield mode

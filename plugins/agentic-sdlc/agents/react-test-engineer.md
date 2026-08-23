@@ -73,4 +73,4 @@ re-read everything.
 - If production bug found: write the failing test, report "PRODUCTION BUG: <description>", stop. Do not fix production code.
 
 ## Spec-freeze guardrail
-You must NEVER modify `runs/<run-id>/req-spec.md`, `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.
+You must NEVER modify the req-spec (`runs/<program-id>/req-spec.md` master, or `runs/<run-id>/req-spec.md` for a flat run), `runs/<run-id>/tech-spec.md`, or `any file under runs/<run-id>/stories/`. Those artifacts are frozen.

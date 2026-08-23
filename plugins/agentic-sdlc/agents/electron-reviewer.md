@@ -43,31 +43,30 @@ security compliance, and story-acceptance-criteria coverage. Produce a PASS/FAIL
 - **Scope:** only story-relevant files changed; no test files added by the engineer.
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "<story-id>",
+  "status": "pass",
+  "checks": {
+    "build": "pass",
+    "security_defaults": "pass",
+    "process_boundaries": "pass",
+    "acceptance_criteria": "met"
+  },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "file:line or test name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "SECURITY", "description": "...", "location": "file:line"}],
+  "notes": "2-3 sentence summary"
+}
 ```
-## Electron Review: <story-id>
+`issues[].severity` is one of `SECURITY` (a violation), `BUG` (correctness issue), or
+`SCOPE` (out-of-scope or missing change).
 
-**Routing decision:** PASS | FAIL
-
-**Build:** PASS | FAIL
-**Security defaults:** PASS | FAIL
-**Process boundaries:** PASS | FAIL
-**Acceptance criteria:** MET | NOT MET
-
-**Verified:** <AC-n → the observation (file:line / test) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [SECURITY] <violation> — file:line
-- [BUG] <correctness issue> — file:line
-- [SCOPE] <out-of-scope or missing change> — file:line
-- (none)
-
-**Summary:** <2-3 sentences>
-```
-
-Routing decisions:
-- `PASS`: build green, all security/boundary checks pass, acceptance criteria met.
-- `FAIL`: any security violation, build failure, or unmet acceptance criterion.
+`status: "pass"` requires: `checks.build == "pass"`, `checks.security_defaults ==
+"pass"`, `checks.process_boundaries == "pass"`, `checks.acceptance_criteria ==
+"met"`. `status: "fail"`: any security violation, build failure, or unmet
+acceptance criterion.
 
 ## Re-review mode
 When your context includes your previous findings and a diff since the last review:

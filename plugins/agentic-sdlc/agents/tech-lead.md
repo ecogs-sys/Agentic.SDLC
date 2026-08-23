@@ -45,23 +45,13 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 
 ## Revision mode
 When revision notes are present (validator diff JSON or user notes), work as a
-delta — do NOT re-read `tech-spec.md` or the whole `stories/` directory. The
-revision scope is the flagged `STORY-XXX.md` files plus their rows in
-`stories/index.md`:
-
-1. For each flagged story, Read only that `STORY-XXX.md` file, plus the
-   tech-spec section its `source_location` cites (Grep the `### TECH-NNN`
-   heading; Read that block only).
-2. Fix with **Edit** — surgical edits in the flagged story files and their
-   `index.md` rows only; never rewrite unaffected files. New stories get new
-   files at the end of the numbering; never renumber or delete story files.
-3. Bump the Version line in `index.md` with one Edit.
-4. Scoped self-check: touched stories' TECH coverage, their index rows, and
-   re-check waves only if a `Depends on` line changed; your Edits must be the
-   only changes.
-5. User notes without IDs: Grep the terms the user mentions to find the affected
-   stories. If the notes demand a global or structural change (e.g. re-cutting
-   story boundaries), fall back to a full revision (read fully, rewrite).
+delta — do NOT re-read `tech-spec.md` or the whole `stories/` directory.
+Follow the `agentic-sdlc:artifact-slicing` skill's Scoped edit protocol,
+adapted for a multi-file artifact: the revision scope is the flagged
+`STORY-XXX.md` files plus their rows in `stories/index.md`; source citations
+point at `### TECH-NNN` blocks in `tech-spec.md`. New stories get new files
+at the end of the numbering; never renumber or delete story files. Re-check
+waves only if a `Depends on` line changed.
 
 ## Brownfield mode
 When your context says `mode = brownfield`, follow the `agentic-sdlc:brownfield-mode` skill (read `runs/<run-id>/codebase-context.md` first; story-ize the delta only; never re-specify existing code).

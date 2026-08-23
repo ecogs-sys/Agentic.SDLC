@@ -31,7 +31,7 @@ b. **Commit — draft/revision** (carries any pending reviewer state):
 c. Invoke `devops-reviewer`. Pass: run-id, backend_src, frontend_src.
    Description: `"devops review iter <i>"`. Print the `✔`/`✖` banner with its decision.
 
-d. Route on the reviewer's `**Routing decision:**` (no standalone outcome commits):
+d. Route on the reviewer's JSON `routing` field (no standalone outcome commits):
    - **DONE:**
      ```bash
      SDLC set-stage <run-dir> devops complete
@@ -49,7 +49,8 @@ d. Route on the reviewer's `**Routing decision:**` (no standalone outcome commit
    - **BACK_TO_DEVOPS:** `SDLC bump-iter <run-dir> devops`; if < 5 re-invoke
      `devops-engineer` with the issues (repeat from a); if = 5 → `SDLC set-stage
      <run-dir> devops escalated`, commit, escalation block.
-   - **BACK_TO_DOTNET_ENGINEER <story-id>** / **BACK_TO_REACT_ENGINEER <story-id>:**
+   - **BACK_TO_DOTNET_ENGINEER** / **BACK_TO_REACT_ENGINEER** (story id from
+     the report's `target_story` field):
      1. `SDLC story-iter <run-dir> <story-id> fix_iterations reset` (fresh
         cross-loop entry — dev-phase counters do NOT apply).
      2. Re-run that story's Engineer → Reviewer loop (stage-development skill,

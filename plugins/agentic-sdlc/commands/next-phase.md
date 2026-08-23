@@ -1,5 +1,5 @@
 ---
-description: Start the next phase of the active Agentic SDLC program. Requires the current phase to be complete and its PR merged. Optionally replans remaining phases, then creates the next phase run and drives it through the BA → BA Validator loop and requirement-spec gate.
+description: Start the next phase of the active Agentic SDLC program. Requires the current phase to be complete and its PR merged. Optionally replans remaining phases (splitting the existing master req-spec differently — the BA does not re-run), then creates the next phase run and drives it through the Architect → Architect Validator loop and tech-spec gate.
 ---
 
 # /agentic-sdlc:next-phase
@@ -9,7 +9,9 @@ You are the Agentic SDLC orchestrator.
 ## Your job
 Spawn the next phase of the active program: confirm the current phase is shipped,
 optionally replan remaining phases, branch the next phase from updated master, and
-drive it up to the requirement-spec review gate.
+drive it up to the tech-spec review gate. The program-level master req-spec was
+already produced once by the BA in `/agentic-sdlc:start-run` — it does not run again
+per phase.
 
 ## Process
 
@@ -76,17 +78,19 @@ Say:
 > **'keep'** to use the existing plan."
 
 - **"replan"**:
-  1. Invoke `phase-planner`. Pass: program-id, original-input.md, the frozen
-     already-shipped phases (1..current_phase) with a one-line summary of each, and
-     a note that only phases > current_phase may change. Set
-     `phase_plan.status = "in_progress"` and `phase_plan.iterations = 0` at the
-     start of the replan; on the user's approval it returns to `"frozen"`.
+  1. Invoke `phase-planner`. Pass: program-id, `req-spec.md` (the master req-spec
+     — unaffected by a phase replan, since only phase boundaries change, not
+     REQ-IDs), the frozen already-shipped phases (1..current_phase) with a
+     one-line summary of each, and a note that only phases > current_phase may
+     change. Set `phase_plan.status = "in_progress"` and `phase_plan.iterations
+     = 0` at the start of the replan; on the user's approval it returns to
+     `"frozen"`.
   2. Commit the revision (lands on the phase branch created in Step 4):
      ```bash
      SDLC commit-step "docs(<program-id>): phase plan replan (after phase <current_phase>)" runs/<program-id>/phase-plan.md runs/<program-id>/program.json
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
-     start-run Step 7. On pass, state the path **`runs/<program-id>/phase-plan.md`**
+     start-run Step 9. On pass, state the path **`runs/<program-id>/phase-plan.md`**
      and display the revised remaining phases, then ask the user to **approve**. On **approve**, update `phase_count`
      (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
      continue to Step 6. On **any other response**, treat it as revision notes and
@@ -96,28 +100,16 @@ Say:
 
 ### Step 6 — Create the Phase N run
 1. Create `runs/<program-id>/phase-0N/`.
-2. Write `runs/<program-id>/phase-0N/raw-input.md` — Phase N's scope plus a short
-   "already shipped" context block:
-   ```markdown
-   # Raw Input
-   Run ID: <program-id>/phase-0N
-   Phase: N of <phase_count>
-   Captured: <YYYY-MM-DD HH:MM>
-
-   ## Already shipped (context — do not re-build)
-   Phases 1..N-1 are already implemented and merged. Treat them as an existing
-   system you are extending, not greenfield:
-   <one or two sentences per shipped phase: its title and what it delivered,
-   taken from phase-plan.md>
-
-   ## This phase
-   <Phase N goal + scope, copied from phase-plan.md Phase N>
-   ```
-3. Write `runs/<program-id>/phase-0N/state.json` using the same schema as the
+2. Write `runs/<program-id>/phase-0N/state.json` using the same schema as the
    Phase 1 state.json in start-run, with `run_id = "<program-id>/phase-0N"`,
    `phase_number = N`, `branch = "agentic-sdlc/<program-id>/phase-0N"`,
-   `current_stage = "ba"`, `spec_frozen = false`, and the program's `app_type` and
-   `src_paths`. (Copy `app_type` from `program.json` — default `"web"` if absent for
+   `current_stage = "architect"`, `spec_frozen = false`,
+   `master_req_spec_path = "runs/<program-id>/req-spec.md"`, `req_ids` copied
+   from the Phase N `phases[]` entry (populated when the phase plan was
+   approved/replanned — see start-run Step 10), and the program's `app_type` and
+   `src_paths`. There is no `raw-input.md` and no `ba` / `ba_validation` /
+   `user_review_req` entry in `stages` — the BA already ran once at the program
+   level. (Copy `app_type` from `program.json` — default `"web"` if absent for
    older programs — so an electron or embedded program's later phases keep routing
    to their single track and the packaging done-gate instead of defaulting to
    web/devops.)
@@ -125,14 +117,16 @@ Say:
    `codebase_context_path`, `infra_change_required`, and `test_baseline` from
    `program.json` into the phase `state.json` so the phase runs brownfield-aware (its
    agents read `codebase-context.md` and work the delta against the existing system).
-4. Set `program.json` `current_phase = N` and the Phase N `phases[]` entry
+3. Set `program.json` `current_phase = N` and the Phase N `phases[]` entry
    `status = "in_progress"`.
-5. **Commit — Phase N started:**
+4. **Commit — Phase N started:**
    ```bash
    SDLC commit-step "docs(<program-id>): Phase N started" runs/<program-id>/program.json runs/<program-id>/phase-0N/
    ```
 
-### Step 7 — Drive the BA loop
+### Step 7 — Drive the Architect loop
 Invoke the `agentic-sdlc:advance-stage` skill and follow its instructions. It will
-discover the active phase (Phase N) and run the BA → BA Validator loop and the
-requirement-spec gate, then continue the pipeline as normal.
+discover the active phase (Phase N, `current_stage = "architect"`) and run the
+Architect → Architect Validator loop and the tech-spec gate, then continue the
+pipeline as normal. BA does not run per phase — it already ran once at the
+program level.

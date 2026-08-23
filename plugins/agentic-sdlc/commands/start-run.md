@@ -1,5 +1,5 @@
 ---
-description: Start a new Agentic SDLC program. Collects the user's requirement, creates the program directory and branch, drives the Phase Planner → Validator loop and phase-plan gate, then creates the Phase 1 run and hands off to advance-stage for the BA loop and first user review gate.
+description: Start a new Agentic SDLC program. Collects the user's requirement, creates the program directory and branch, drives the program-level BA → Validator loop and requirement-spec gate (once, producing the master req-spec.md), then the Phase Planner → Validator loop and phase-plan gate (splitting that spec into phases by REQ-ID), then creates the Phase 1 run and hands off to advance-stage for the Architect loop and first user review gate.
 ---
 
 # /agentic-sdlc:start-run
@@ -8,9 +8,11 @@ You are the Agentic SDLC orchestrator.
 
 ## Your job
 Start a new program: collect the requirement, initialize the program, create the
-git branch, split the requirement into phases (Phase Planner + Validator loop +
-phase-plan gate), then create the Phase 1 run and hand off to
-`agentic-sdlc:advance-stage` (which drives the BA loop and everything after).
+git branch, analyze it into a master requirement spec (BA + Validator loop +
+requirement-spec gate, run once), split that spec into phases by REQ-ID (Phase
+Planner + Validator loop + phase-plan gate), then create the Phase 1 run and hand
+off to `agentic-sdlc:advance-stage` (which drives the Architect loop and
+everything after — BA does not run per phase).
 
 ## Helper script
 State updates, commits, and progress logging go through the helper:
@@ -21,7 +23,10 @@ SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
 ## Composite run IDs
 Each phase is a normal run whose `run_id` is the composite `<program-id>/phase-0N`.
 This makes every `runs/<run-id>/…` path resolve to `runs/<program-id>/phase-0N/…`,
-so the BA, Architect, Tech Lead, and development agents need no changes.
+so the Tech Lead and development agents need no changes. The BA runs once at the
+program root (`runs/<program-id>/req-spec.md`), not per phase; the Architect reads
+that master spec via `state.master_req_spec_path`, scoped to `state.req_ids`
+(see the Phase 1 state.json schema below).
 
 ## User-review gate convention
 Follow the gate convention in the `agentic-sdlc:validation-loop` skill: at every
@@ -208,6 +213,7 @@ Write `runs/<program-id>/program.json`:
   "parent_branch": "<PARENT_BRANCH>",
   "app_type": "<web | electron | embedded>",
   "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}; embedded: {embedded: <embedded_root>}" },
+  "req_spec": { "status": "pending", "iterations": 0 },
   "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
   "current_phase": 0,
   "phases": []
@@ -219,7 +225,67 @@ Write `runs/<program-id>/program.json`:
 SDLC commit-step "chore(<program-id>): initialize program" .gitignore runs/<program-id>/original-input.md runs/<program-id>/program.json
 ```
 
-### Step 7 — Phase Planner loop (max 5 iterations)
+### Step 7 — Program-level BA loop (max 5 iterations)
+
+This is the `agentic-sdlc:validation-loop` protocol applied at the **program**
+level, run **once** — before the Phase Planner splits the result into phases.
+State lives in `program.json` (`req_spec.status` is a lifecycle field: pending
+→ in_progress → frozen → escalated — do NOT store the validator's pass/fail in
+it; iterations live in `req_spec.iterations`).
+
+Before the first iteration set `req_spec.status = "in_progress"`
+(`SDLC set-field runs/<program-id>/program.json req_spec.status in_progress` —
+ships with the first draft commit) and leave it `in_progress` for the whole loop.
+
+**On each iteration:**
+
+a. Banner `▶ [req-spec] ba (iter <i>/5)`; invoke the `ba` agent (description:
+   `"req-spec iter <i>"`). Pass: program-id, the path to
+   `runs/<program-id>/original-input.md`, revision notes (empty on first iteration).
+
+b. **Commit — draft/revision:**
+   ```bash
+   SDLC commit-step "docs(<program-id>): BA req-spec draft" runs/<program-id>/req-spec.md runs/<program-id>/program.json
+   # revisions: "docs(<program-id>): BA req-spec revision (iter <n>)"
+   ```
+
+c. Invoke `ba-validator`. Pass: program-id, paths to original-input.md and
+   req-spec.md. Print the `✔`/`✖` banner with its status.
+
+d. Route (validation outcomes get no standalone commit — the state ships with the
+   next commit):
+   - **fail, iterations < 5:** `SDLC set-field runs/<program-id>/program.json
+     req_spec.iterations <n+1>`, re-invoke `ba` with the validator's report as
+     revision notes. Repeat from (a).
+   - **fail, iterations = 5:** set `req_spec.status = "escalated"`, commit
+     (`"docs(<program-id>): req-spec escalated"`), emit the escalation block
+     (validation-loop skill), and wait. On guidance, re-invoke `ba` (the
+     counter does not reset). If the user cancels, stop.
+   - **pass:** proceed to Step 8.
+
+### Step 8 — User review gate: requirement spec
+
+Apply the gate convention on **`runs/<program-id>/req-spec.md`** (full contents
+on first review; diff + validator notes on a re-review).
+
+Say:
+> "The Business Analyst has produced the master requirement spec (Version <n>).
+> Reply **'approve'** to freeze it and continue to phase planning, or describe
+> what to change."
+
+Wait for response:
+- **"approve"** (case-insensitive):
+  1. Set `program.json` `req_spec.status = "frozen"`.
+  2. **Commit — requirement spec approved:**
+     ```bash
+     SDLC commit-step "docs(<program-id>): requirement spec approved" runs/<program-id>/program.json
+     ```
+  3. Proceed to Step 9.
+- **Any other response**: treat as revision notes. Increment `req_spec.iterations`,
+  then re-invoke `ba` with those notes. Repeat from Step 7. (User revision counts
+  toward the 5-iteration limit.)
+
+### Step 9 — Phase Planner loop (max 5 iterations)
 
 This is the `agentic-sdlc:validation-loop` protocol applied at the **program**
 level: state lives in `program.json` (`phase_plan.status` is a lifecycle field:
@@ -234,7 +300,7 @@ ships with the first draft commit) and leave it `in_progress` for the whole loop
 
 a. Banner `▶ [phase-plan] phase-planner (iter <i>/5)`; invoke the `phase-planner`
    agent (description: `"phase plan iter <i>"`). Pass: program-id, the path to
-   `runs/<program-id>/original-input.md`, revision notes (empty on first iteration).
+   `runs/<program-id>/req-spec.md` (the approved master req-spec), revision notes (empty on first iteration).
 
 b. **Commit — draft/revision:**
    ```bash
@@ -242,7 +308,7 @@ b. **Commit — draft/revision:**
    # revisions: "docs(<program-id>): phase plan revision (iter <n>)"
    ```
 
-c. Invoke `phase-planner-validator`. Pass: program-id, paths to original-input.md
+c. Invoke `phase-planner-validator`. Pass: program-id, paths to req-spec.md
    and phase-plan.md. Print the `✔`/`✖` banner with its status.
 
 d. Route (validation outcomes get no standalone commit — the state ships with the
@@ -254,9 +320,9 @@ d. Route (validation outcomes get no standalone commit — the state ships with 
      (`"docs(<program-id>): phase plan escalated"`), emit the escalation block
      (validation-loop skill), and wait. On guidance, re-invoke `phase-planner`
      (the counter does not reset). If the user cancels, stop.
-   - **pass:** proceed to Step 8.
+   - **pass:** proceed to Step 10.
 
-### Step 8 — User review gate: phase plan
+### Step 10 — User review gate: phase plan
 Apply the gate convention on **`runs/<program-id>/phase-plan.md`** (full contents
 on first review; diff + validator notes on a re-review).
 
@@ -267,32 +333,26 @@ Say:
 Wait for response:
 - **"approve"** (case-insensitive):
   1. Set `program.json` `phase_plan.status = "frozen"`, `phase_plan.phase_count =
-     <N>`, `current_phase = 1`, and populate `phases` from the plan — one entry per
-     phase:
+     <N>`, `current_phase = 1`, and populate `phases` from the plan's `## Phase
+     index` table — one entry per phase, `req_ids` parsed mechanically from the
+     table's `REQ-IDs` column (never hand-typed):
      ```json
-     { "phase": 1, "folder": "phase-01", "title": "<phase 1 title>", "status": "in_progress" }
+     { "phase": 1, "folder": "phase-01", "title": "<phase 1 title>", "status": "in_progress", "req_ids": ["REQ-001", "REQ-002"] }
      ```
      (Phases 2..N get `"status": "pending"` and `"folder": "phase-0N"`.)
   2. Create `runs/<program-id>/phase-01/`.
-  3. Write `runs/<program-id>/phase-01/raw-input.md` containing **only Phase 1's
-     scope**, extracted from the phase plan:
-     ```markdown
-     # Raw Input
-     Run ID: <program-id>/phase-01
-     Phase: 1 of <N>
-     Captured: <YYYY-MM-DD HH:MM>
-
-     <Phase 1 goal + scope, copied from phase-plan.md Phase 1>
-     ```
-  4. Write `runs/<program-id>/phase-01/state.json` (see schema below).
-  5. **Commit — phase plan frozen, Phase 1 created:**
+  3. Write `runs/<program-id>/phase-01/state.json` (see schema below). There is
+     no `raw-input.md` for a phase — the BA already ran once at the program
+     level; the Architect reads its assigned REQ-ID blocks directly from the
+     master `req-spec.md` (see `master_req_spec_path` below).
+  4. **Commit — phase plan frozen, Phase 1 created:**
      ```bash
      SDLC commit-step "docs(<program-id>): phase plan frozen — Phase 1 started" runs/<program-id>/program.json runs/<program-id>/phase-01/
      ```
-  6. Proceed to Step 9 (hand off).
+  5. Proceed to Step 11 (hand off).
 - **Any other response**: treat as revision notes. Increment
   `phase_plan.iterations`, then re-invoke `phase-planner` with those notes. Repeat
-  from Step 7. (User revision counts toward the 5-iteration limit.)
+  from Step 9. (User revision counts toward the 5-iteration limit.)
 
 ### Phase 1 state.json schema
 ```json
@@ -301,17 +361,16 @@ Wait for response:
   "program_id": "<program-id>",
   "phase_number": 1,
   "phase_plan_path": "runs/<program-id>/phase-plan.md",
+  "master_req_spec_path": "runs/<program-id>/req-spec.md",
+  "req_ids": ["REQ-001", "REQ-002"],
   "branch": "agentic-sdlc/<program-id>/phase-01",
   "parent_branch": "<PARENT_BRANCH>",
-  "current_stage": "ba",
+  "current_stage": "architect",
   "spec_frozen": false,
   "app_type": "<web | electron | embedded>",
   "src_paths": { "...": "web: {backend, backend_test, frontend}; electron: {electron: <electron_root>}; embedded: {embedded: <embedded_root>}" },
   "stages": {
-    "ba": { "status": "in_progress", "iterations": 0 },
-    "ba_validation": { "status": "pending", "iterations": 0 },
-    "user_review_req": { "status": "pending" },
-    "architect": { "status": "pending", "iterations": 0 },
+    "architect": { "status": "in_progress", "iterations": 0 },
     "architect_validation": { "status": "pending", "iterations": 0 },
     "user_review_tech": { "status": "pending" },
     "tech_lead": { "status": "pending", "iterations": 0 },
@@ -325,11 +384,16 @@ Wait for response:
   "stories": {}
 }
 ```
+There is no `ba` / `ba_validation` / `user_review_req` entry in a phase's
+`stages` map — the BA runs once at the program level (Steps 7–8), not per
+phase. `req_ids` and `master_req_spec_path` are write-once, copied from
+`program.json` at phase-creation time.
 
-### Step 9 — Hand off to advance-stage
+### Step 11 — Hand off to advance-stage
 Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
-instructions — it discovers the Phase 1 run (`current_stage = "ba"`) and drives
-the BA → BA Validator loop, the requirement-spec gate, and everything after. Do
+instructions — it discovers the Phase 1 run (`current_stage = "architect"`) and
+drives the Architect → Architect Validator loop, the tech-spec gate, and
+everything after (BA already ran once at the program level in Steps 7–8). Do
 NOT tell the user to run any command — continue the pipeline without pausing.
 
 ## Spec freeze
@@ -479,10 +543,10 @@ skill). Do NOT ask the user to run a command — continue without pausing.
 ## Brownfield program flow (multi-feature new-feature)
 
 Entered from Step B4 when the user chose **split**. Converts the provisional
-`change-*` run into a brownfield **program** and runs the Phase Planner, so each
-feature ships as its own phase PR. The program reuses the greenfield program/phase
-machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried on
-`program.json` and every phase `state.json`.
+`change-*` run into a brownfield **program** and runs the program-level BA and
+Phase Planner, so each feature ships as its own phase PR. The program reuses the
+greenfield program/phase machinery; brownfield-awareness comes from the
+`mode: "brownfield"` flag carried on `program.json` and every phase `state.json`.
 
 ### Step BP1 — Convert the change run into a program
 1. Generate a program id `program-YYYY-MM-DD-NNN` (scan `runs/` for `program-*`).
@@ -509,6 +573,7 @@ machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried
      "infra_change_required": false,
      "test_baseline": { "captured": true, "preexisting_failures": [] },
      "src_paths": "<from the change run's state.json — web: {backend, backend_test, frontend}; electron: {electron: <root>}; embedded: {embedded: <root>}>",
+     "req_spec": { "status": "pending", "iterations": 0 },
      "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
      "current_phase": 0,
      "phases": []
@@ -521,29 +586,42 @@ machinery; brownfield-awareness comes from the `mode: "brownfield"` flag carried
    SDLC commit-step --all "chore(<program-id>): convert brownfield change to program"
    ```
 
-### Step BP2 — Phase Planner loop, then phase-plan gate
-Run the greenfield **Step 7 (Phase Planner loop)** and **Step 8 (phase-plan gate)**
-exactly as written, with these brownfield deltas:
-- Pass `runs/<program-id>/codebase-context.md` and `mode = brownfield` to the
-  `phase-planner`. The planner plans phases as features **added to the existing
-  system** — it must not re-plan existing functionality. (The
-  `phase-planner-validator` runs unchanged — it checks plan ↔ original-input
-  coverage.)
-- The requirement source is `runs/<program-id>/original-input.md` (already written).
+### Step BP2 — Program-level brownfield BA loop, then requirement-spec gate
+Run the greenfield **Step 7 (Program-level BA loop)** and **Step 8 (requirement
+spec gate)** exactly as written, with these brownfield deltas:
+- Pass both `runs/<program-id>/original-input.md` **and**
+  `runs/<program-id>/codebase-context.md`, plus `mode = brownfield`, to the `ba`
+  agent. Per the `agentic-sdlc:brownfield-mode` skill, it specifies the delta
+  only — requirements **added to the existing system** — and writes the master
+  `runs/<program-id>/req-spec.md`. (The `ba-validator` runs unchanged — it
+  checks req-spec ↔ original-input coverage.)
+- This replaces the pre-v1.0 behavior of feeding `codebase-context.md` straight
+  to the Phase Planner with no BA pass.
 
-### Step BP3 — Create the Phase 1 run (brownfield)
-At Step 8's "approve" branch, create `runs/<program-id>/phase-01/state.json` with the
-**Phase 1 state.json schema** (above), copying `app_type` and `src_paths` from
-`program.json`, plus these brownfield fields: `"mode": "brownfield"`,
+### Step BP3 — Phase Planner loop, then phase-plan gate
+Run the greenfield **Step 9 (Phase Planner loop)** and **Step 10 (phase-plan
+gate)** exactly as written, with this brownfield delta:
+- Pass `runs/<program-id>/codebase-context.md` and `mode = brownfield` to the
+  `phase-planner` **in addition to** `runs/<program-id>/req-spec.md` (the
+  approved master req-spec from Step BP2) — the codebase context prevents the
+  planner from re-planning existing functionality; the REQ-IDs to split come
+  from `req-spec.md`, not from `codebase-context.md` directly.
+
+### Step BP4 — Create the Phase 1 run (brownfield)
+At Step BP3's "approve" branch, create `runs/<program-id>/phase-01/state.json` with the
+**Phase 1 state.json schema** (above — `req_ids` and `master_req_spec_path`
+included), copying `app_type` and `src_paths` from `program.json`, plus these
+brownfield fields: `"mode": "brownfield"`,
 `"codebase_context_path": "runs/<program-id>/codebase-context.md"`,
 `"infra_change_required": <from program.json>`, and `"test_baseline": <from
 program.json>`. There is **no** survey/triage stage in the phase — the program-level
-survey already ran; `current_stage = "ba"`. (Carrying `app_type` here — and via
+survey already ran; `current_stage = "architect"`. (Carrying `app_type` here — and via
 `/agentic-sdlc:next-phase` for later phases — keeps an electron or embedded
 brownfield program on its single track and the packaging done-gate.)
 
-### Step BP4 — Hand off
+### Step BP5 — Hand off
 Invoke the `agentic-sdlc:advance-stage` skill — it finds the program via the normal
-program scan and drives each phase's brownfield-aware greenfield sequence (the BA
-reads `codebase-context.md` and writes a normal `req-spec.md`). Subsequent phases
-are started with `/agentic-sdlc:next-phase` after each phase's PR merges.
+program scan and drives each phase's brownfield-aware greenfield sequence (starting
+at `architect`, since the BA already ran once at the program level in Step BP2).
+Subsequent phases are started with `/agentic-sdlc:next-phase` after each phase's
+PR merges.

@@ -47,26 +47,24 @@ A structured review report printed to your response.
 7. Check for obvious bugs: null dereferences on user input, missing await, wrong HTTP status codes.
 
 ## Output format
+Wrap your report in a code block:
+```json
+{
+  "story": "STORY-XXX",
+  "status": "pass",
+  "checks": { "build": "pass" },
+  "verified": [{"ac": "STORY-XXX/AC-1", "evidence": "file.cs:line or test name"}],
+  "could_not_verify": [],
+  "issues": [{"severity": "CRITICAL", "description": "...", "location": "file.cs:line"}],
+  "notes": "1-2 sentence summary"
+}
 ```
-## Review: STORY-XXX — <story name>
+If the build fails, set `checks.build` to `"fail"` and put the first ~5 distinct
+errors (see the dotnet-conventions skill, "Build execution discipline") in `notes`
+— not the full trace.
 
-**Status:** PASS | FAIL
-
-**Build:** PASS | FAIL
-<build output excerpt if failed>
-
-**Verified:** <AC-n → the observation (file:line / test) that satisfied it; one line each>
-**Could not verify:** <items, or "none">
-
-**Issues:**
-- [CRITICAL] <description> — file.cs:line
-- [WARNING] <description>
-- (none)
-
-**Summary:** <1-2 sentences>
-```
-
-PASS requires: build passes AND no CRITICAL issues.
+`status: "pass"` requires `checks.build == "pass"` AND no `CRITICAL`-severity issue
+in `issues`. `WARNING`-severity issues don't block a pass.
 
 ## Re-review mode
 When your context includes your previous findings and a diff since the last review:

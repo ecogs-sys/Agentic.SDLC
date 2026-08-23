@@ -74,11 +74,11 @@ c. Invoke the track's reviewer (`dotnet-reviewer` / `react-reviewer` /
    Print `✔`/`✖` banner with the verdict:
    `✖ [development] STORY-XXX — reviewer: FAIL (iter <i>/5) — <n> CRITICAL`.
 
-d. Route (reviewer outcomes get no standalone commit — the state ships with the
-   next commit):
+d. Route on the reviewer's JSON `status` field (`"pass"`/`"fail"`; reviewer outcomes
+   get no standalone commit — the state ships with the next commit):
    - **FAIL, `reviewer_iterations` < 5:** `SDLC story-iter <run-dir> STORY-XXX
-     reviewer_iterations bump`, re-invoke the engineer with the reviewer's issues.
-     Repeat from (a).
+     reviewer_iterations bump`, re-invoke the engineer with the reviewer's `issues`
+     array. Repeat from (a).
    - **FAIL, = 5:** `SDLC story-status <run-dir> STORY-XXX escalated`, `SDLC
      commit-step --run <run-dir> "feat(STORY-XXX): reviewer loop escalated"`, emit
      the escalation block (validation-loop skill), wait for guidance.
@@ -117,7 +117,7 @@ c. Invoke the track's test reviewer. Pass: run-id, story ID, story file path,
    SDLC set-field <run-dir>/state.json stories.STORY-XXX.last_test_review_commit "$(git rev-parse --short HEAD)"
    ```
 
-d. Route on the reviewer's decision (no standalone outcome commit):
+d. Route on the reviewer's JSON `routing` field (no standalone outcome commit):
    - **DONE:** the story's tests are green. Before closing it, run the **eval gate**
      — a deterministic backstop that every one of the story's acceptance criteria
      resolves to a passing tagged test (see the `agentic-sdlc:write-evals` skill):
