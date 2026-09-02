@@ -153,6 +153,103 @@ test('set-kind rejects a bad kind and an unknown id', () => {
   assert.equal(evals('set-kind', run, 'STORY-999/AC-9', 'judge').code, 1);
 });
 
+test('scan binds a Unity TEST_CASE tag in a .c file (ESP-IDF)', () => {
+  const { run, testsDir } = scaffold();
+  writeFileSync(join(testsDir, 'test_scaffold.c'),
+    'TEST_CASE("[STORY-001/AC-2] POST creates the todo", "[api]")\n{\n  TEST_ASSERT_TRUE(1);\n}\n');
+  evals('author', run);
+  evals('scan', run, testsDir);
+  const m = readJson(join(run, 'evals', 'manifest.json'));
+  const ev = m.evals.find((e) => e.id === 'STORY-001/AC-2');
+  assert.equal(ev.check.tests.length, 1);
+  assert.match(ev.check.tests[0], /test_scaffold\.c:1 POST creates the todo$/);
+});
+
+test('author refuses ids another run already owns, and re-authors its own run fine', () => {
+  const { run, testsDir } = scaffold();
+  const corpus = join(dir, 'evals');
+  evals('author', run, '--corpus', corpus);
+  evals('scan', run, testsDir, '--corpus', corpus);
+  evals('promote', run, corpus);
+  // same run, same ids → allowed (re-author after a revision)
+  assert.equal(evals('author', run, '--corpus', corpus).code, 0);
+  // a different run reusing STORY-001/002 → refused before any code is written
+  writeFileSync(join(run, 'state.json'), JSON.stringify({ run_id: 'phase-02' }));
+  const clash = evals('author', run, '--corpus', corpus);
+  assert.equal(clash.code, 1);
+  assert.match(clash.out, /already owned by another run/);
+  assert.match(clash.out, /STORY-001\/AC-1 → phase-01/);
+});
+
+test('scan ignores tags owned by earlier runs but still warns on an unknown id', () => {
+  const { run, testsDir } = scaffold();
+  const corpus = join(dir, 'evals');
+  evals('author', run, '--corpus', corpus);
+  evals('scan', run, testsDir, '--corpus', corpus);
+  evals('promote', run, corpus);
+  // A later run's manifest covers only STORY-003; phase-01's tags are still in
+  // the shared tree, and one test carries a typo'd id.
+  const run2 = join(dir, 'run2');
+  mkdirSync(join(run2, 'stories'), { recursive: true });
+  writeFileSync(join(run2, 'state.json'), JSON.stringify({ run_id: 'phase-02' }));
+  writeFileSync(join(run2, 'stories', 'STORY-003.md'),
+    '# STORY-003: More\n**Implements:** [TECH-003]\n\n## Acceptance criteria\n- **AC-1:** it works\n');
+  writeFileSync(join(testsDir, 'c.test.ts'),
+    'it("[STORY-003/AC-1] works", () => {});\nit("[STORY-404/AC-9] typo", () => {});\n');
+  evals('author', run2, '--corpus', corpus);
+  const r = evals('scan', run2, testsDir, '--corpus', corpus);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /2 tag\(s\) belong to earlier runs — ignored/);
+  assert.match(r.out, /unknown criterion ids: STORY-404\/AC-9$/m);
+  assert.doesNotMatch(r.out, /unknown criterion ids:.*STORY-001/);
+});
+
+test('replay derives its scan roots from the corpus, not from the paths passed in', () => {
+  const { run, testsDir } = scaffold();
+  const corpus = join(dir, 'evals');
+  evals('author', run, '--corpus', corpus);
+  evals('scan', run, testsDir, '--corpus', corpus);
+  evals('promote', run, corpus);
+  // The caller names an unrelated path (the web-run case that used to report
+  // every other app_type's evals as lost) — and no path at all.
+  const other = join(dir, 'unrelated');
+  mkdirSync(other, { recursive: true });
+  assert.equal(evals('replay', '--corpus', corpus, other).code, 0);
+  const bare = evals('replay', '--corpus', corpus);
+  assert.equal(bare.code, 0);
+  assert.match(bare.out, /replay PASS — 2 active eval\(s\)/);
+});
+
+test('replay distinguishes a deleted test (MISSING) from a retagged one (RETAGGED)', () => {
+  const { run, testsDir } = scaffold();
+  const corpus = join(dir, 'evals');
+  evals('author', run, '--corpus', corpus);
+  evals('scan', run, testsDir, '--corpus', corpus);
+  evals('promote', run, corpus);
+  rmSync(join(testsDir, 'A.cs'));                       // proving test deleted
+  writeFileSync(join(testsDir, 'b.test.tsx'),           // still here, new criterion
+    'it("[STORY-009/AC-1] list renders", () => {});\n');
+  const r = evals('replay', '--corpus', corpus, testsDir);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /STORY-001\/AC-1\) MISSING — no test carries this id/);
+  assert.match(r.out, /STORY-002\/AC-1\) RETAGGED — "list renders".*now tags STORY-009\/AC-1/);
+});
+
+test('replay does not accept an unrelated file that merely mentions the criterion id', () => {
+  const { run, testsDir } = scaffold();
+  const corpus = join(dir, 'evals');
+  evals('author', run, '--corpus', corpus);
+  evals('scan', run, testsDir, '--corpus', corpus);
+  evals('promote', run, corpus);
+  rmSync(join(testsDir, 'b.test.tsx'));
+  // A prose mention of the id in another test file is not a tagged test.
+  writeFileSync(join(testsDir, 'notes.test.ts'),
+    '// see STORY-002/AC-1 for the list-rendering rules\nit("renders", () => {});\n');
+  const r = evals('replay', '--corpus', corpus, testsDir);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /STORY-002\/AC-1\) MISSING/);
+});
+
 test('unknown command exits non-zero', () => {
   const r = evals('frobnicate');
   assert.equal(r.code, 1);

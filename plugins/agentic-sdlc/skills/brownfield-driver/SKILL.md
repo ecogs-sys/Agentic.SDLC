@@ -45,7 +45,7 @@ The `agentic-sdlc:validation-loop` protocol with:
 |---|---|
 | CREATOR / VALIDATOR | `fix-planner` (following the **write-fix-plan** skill) / `fix-plan-validator` |
 | ARTIFACT | `runs/<run-id>/fix-plan.md` |
-| INPUTS | `runs/<run-id>/raw-input.md`, `runs/<run-id>/codebase-context.md`, `mode = brownfield` |
+| INPUTS | `runs/<run-id>/raw-input.md`, `runs/<run-id>/codebase-context.md`, `mode = brownfield`, `story_id_start` (from `SDLC next-story-id` — repo-unique story ids; re-use the same value across revision iterations) |
 | STAGE / VALIDATION_STAGE | `fix_plan` / `fix_plan_validation` |
 | MSG | `fix-plan` |
 
@@ -53,7 +53,9 @@ The validator compares request+impact-map → fix-plan per the
 validate-traceability schema (evidence citations, no assumptions, story
 coverage — see the fix-plan-validator agent). **user_review_fix_plan gate:**
 apply the gate convention on **`runs/<run-id>/fix-plan.md`**. On "approve":
-write `runs/<run-id>/stories/STORY-00N.md` files plus `index.md` from the plan's
+write `runs/<run-id>/stories/STORY-NNN.md` files (numbered from `SDLC
+next-story-id` — story ids are repo-unique, see `agentic-sdlc:write-stories`)
+plus `index.md` from the plan's
 `## Stories` section (write-stories format — each acceptance criterion carries a
 write-once `AC-n` id); populate `state.stories`; then **author the eval manifest**
 exactly as the tech-lead gate does (`EVALS author <run-dir>`; `SDLC set-field

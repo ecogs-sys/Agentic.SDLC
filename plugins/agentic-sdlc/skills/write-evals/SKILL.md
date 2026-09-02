@@ -27,6 +27,16 @@ test carries its criterion id as metadata; `evals.mjs scan` *derives* the bindin
 a rename of a test can never desync a manifest, and the eval never re-implements the
 assertion — it points at the test that owns it.
 
+### Story ids are repo-unique
+
+The tag is the bare `STORY-XXX/AC-n`, and every run in a repo shares **one test
+tree**. So story ids are allocated **across the whole repository**, not per run:
+the orchestrator calls `SDLC next-story-id` before the Tech Lead / Fix Planner and
+passes it as `story_id_start`. A phase-2 run starting at `STORY-038` is normal and
+correct — restarting at `STORY-001` would make the tag ambiguous, and one run's
+tests would bind and prove another run's criteria. `EVALS author` fails closed if a
+run authors an id the corpus already owns.
+
 ### Tag convention (test authors MUST follow)
 
 - **.NET (xUnit):** annotate the test method with a Trait whose key is `criterion`:
@@ -42,6 +52,16 @@ assertion — it points at the test that owns it.
   it("[STORY-003/AC-1] returns 200 with a JSON array", () => { … });
   ```
   Filterable with `vitest -t "[STORY-003/AC-1]"`.
+- **Embedded (Unity / ESP-IDF):** same bracketed token, first in the `TEST_CASE`
+  name (the second argument stays the Unity group tag):
+  ```c
+  TEST_CASE("[STORY-003/AC-1] rejects an out-of-range reading", "[sensor]")
+  ```
+  Filterable by the Unity runner's name filter.
+
+Whatever follows the `]` (or, for xUnit, the annotated method's name) is recorded
+as the eval's **locator** — it is how `replay` tells a deleted test apart from a
+retagged one, so give tests descriptive names.
 
 One criterion may have several tagged tests; one test tags exactly one criterion (the
 criterion it primarily proves). Structural criteria that the architect-validator/build
@@ -88,9 +108,9 @@ or `assert` check instead, not `test`.
 
 | Command | When | Effect |
 |---|---|---|
-| `author <run-dir> [stories-dir]` | when stories/fix-plan are approved | one stub per `STORY-XXX/AC-n` parsed from the approved `stories/` (`check` unbound, `kind: test`) |
+| `author <run-dir> [stories-dir]` | when stories/fix-plan are approved | one stub per `STORY-XXX/AC-n` parsed from the approved `stories/` (`check` unbound, `kind: test`). **Exits non-zero if another run already owns one of the ids** — the stories were numbered from the wrong start |
 | `set-kind <run-dir> <id> <kind>` | the eval review gate | reclassify one criterion's `check.kind` (`test`\|`assert`\|`judge`) — the ONLY sanctioned manifest edit; goes through the tool, never a hand-edit. Non-`test` marks `source: human` |
-| `scan <run-dir> <test-path…>` | after a story's tests pass review | derive `check.tests` by extracting criterion tags from the test files |
+| `scan <run-dir> <test-path…>` | after a story's tests pass review | derive `check.tests` by extracting criterion tags from the test files. Tags belonging to earlier runs are counted and ignored; only an id **no** run has ever owned is warned about (a typo) |
 | `run <run-dir> [--filter <id\|story,…>] [--suite-green]` | the story / end-of-run gate | verify every targeted criterion is bound (has a tagged test); exit non-zero on any unbound criterion. Pass `--suite-green` when the test-reviewer reported the suite green so covered evals stamp `pass` |
 | `report <run-dir>` | any time / the eval review gate | human-readable summary (id, `check.kind`, test count, criterion) |
 
@@ -125,10 +145,22 @@ run's definition of correctness, which becomes permanent corpus and is replayed 
 - `retire <eval-id> <reason>` / `supersede <eval-id> <new-check>` — the ONLY sanctioned
   way to change corpus expectations, used when a change *intentionally* alters prior
   behavior. Reviewed like code; prevents false regressions.
-- Replay: later runs and brownfield change-runs `run` the whole corpus; only NEW
+- `replay [--corpus <dir>] [test-path…]` — the permanent regression gate. **Call it
+  with no test paths.** The corpus spans every `app_type` ever built in the repo, so
+  it derives the roots to scan from the paths it recorded at promote time; paths you
+  pass are only *added* (for a tree nothing has been promoted from yet). An eval
+  passes when a test **carries its criterion id** — never because some file mentions
+  the string. Failures are classified:
+  - **`MISSING`** — no test carries the id: a real regression, or `retire`.
+  - **`RETAGGED`** — the recorded test still exists but now carries a different id
+    (a fixture rework re-pointed it). The behavior may be unchanged, but nothing
+    claims the old criterion any more: `supersede` it, naming the id that took over.
+- Later runs and brownfield change-runs replay the whole corpus; only NEW
   failures block (an upgrade of the brownfield `state.test_baseline`).
 
 ## Quality checklist
+- [ ] Story ids were allocated from `SDLC next-story-id` — repo-unique, not
+      restarted at `STORY-001` for this run
 - [ ] Every acceptance criterion has a write-once `AC-n` id (`write-stories` /
       `write-fix-plan` format)
 - [ ] Every `test`-kind criterion has ≥1 test tagged with its id (xUnit Trait or Vitest

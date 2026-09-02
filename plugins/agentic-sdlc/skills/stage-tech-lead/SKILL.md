@@ -17,6 +17,19 @@ Follow the `agentic-sdlc:validation-loop` protocol with:
 
 Pass the run's `app_type` to the tech-lead (it drives track assignment).
 
+**Before the first Tech Lead invocation, allocate the run's story ids:**
+```bash
+SDLC next-story-id                     # → e.g. STORY-038
+```
+Pass the result to the tech-lead **and its validator** as **`story_id_start`** —
+the tech-lead numbers its stories consecutively from there, the validator checks
+that it did. Story ids are unique across the repository, not per run:
+all runs share one test tree and the eval layer keys on the bare `STORY-XXX/AC-n`
+tag, so a reused id would let one run's tests prove another's criteria. Re-use the
+same `story_id_start` for every revision iteration of this stage (ids are
+write-once); `EVALS author` fails the stage if an id is already owned by another
+run.
+
 **Stage-entry summary** (print on entry):
 > **Stage <k>/<n> — Tech Lead.** Splitting the tech-spec into stories
 > (Tech Lead → validator loop, then your review gate). On approval the evals are
@@ -48,6 +61,9 @@ re-review. Offer to show any individual `STORY-XXX.md` (name its path) on reques
      `STORY-XXX/AC-n` (see the `agentic-sdlc:write-evals` skill):
      ```bash
      EVALS author <run-dir>                 # reads <run-dir>/stories/, writes <run-dir>/evals/manifest.json
+     # Fails if a story id is already owned by another run — the stories were
+     # numbered from the wrong start. Re-run `SDLC next-story-id`, send the
+     # tech-lead back to renumber from it, then re-author.
      SDLC set-field <run-dir>/state.json stages.evals '{"status":"in_progress"}'
      SDLC commit-step --run <run-dir> "docs(<run-id>): stories approved — evals authored" <run-dir>/evals
      ```

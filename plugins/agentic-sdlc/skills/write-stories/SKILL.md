@@ -10,12 +10,22 @@ The Tech Lead writes a `stories/` **directory**, not a single file:
 ```
 runs/<run-id>/stories/
   index.md          ← overview, execution-plan diagram, story table
-  STORY-001.md      ← one self-contained file per story
-  STORY-002.md
+  STORY-038.md      ← one self-contained file per story, numbered from
+  STORY-039.md        story_id_start (repo-unique — see ID assignment rules)
 ```
 
+(The examples below use `STORY-001…` for readability; a real run numbers from its
+own `story_id_start`.)
+
 ## ID assignment rules
-- IDs are STORY-001, STORY-002, ... in definition order.
+- IDs are **unique across the whole repository**, not per run. The orchestrator
+  passes you a **`story_id_start`** (from `SDLC next-story-id`); number
+  consecutively from there in definition order — a phase-2 run may well start at
+  `STORY-038`. Never restart at `STORY-001` because this run is new.
+  *Why:* every run shares one test tree, and the eval layer keys its
+  criterion→test bindings on the bare `STORY-XXX/AC-n` tag those tests carry. A
+  reused id would let one run's tests prove another run's criteria. `EVALS author`
+  fails the run if an id is already owned (see `agentic-sdlc:write-evals`).
 - IDs are **write-once** — never renumber or reuse.
 - When revising: only add new IDs at the end; never delete a story file.
 

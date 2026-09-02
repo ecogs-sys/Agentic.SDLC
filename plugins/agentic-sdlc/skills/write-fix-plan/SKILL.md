@@ -63,7 +63,9 @@ Version: <n>
 - acceptance criteria:
   - AC-1: <derived from the request + test plan>
   - AC-2: <…>
-(1–3 stories max; two tracks → separate stories. Each criterion carries a
+(1–3 stories max; two tracks → separate stories. Number them consecutively from
+the `story_id_start` you were given — story ids are unique across the repository,
+not per run (see `agentic-sdlc:write-stories`). Each criterion carries a
 write-once `AC-n` id — the STORY-XXX.md files written at the gate use
 write-stories format and the eval layer keys on `STORY-XXX/AC-n`.)
 ```

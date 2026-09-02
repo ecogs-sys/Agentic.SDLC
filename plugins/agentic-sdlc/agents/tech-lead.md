@@ -13,6 +13,8 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 ## Inputs (passed as context)
 - Run ID
 - `runs/<run-id>/tech-spec.md` — the approved technical spec
+- `story_id_start` — the first story id to use (e.g. `STORY-038`). Story ids are
+  unique across the repository, not per run — never restart at `STORY-001`.
 - Optional: revision notes from Tech Lead Validator or user feedback
 
 ## Outputs
@@ -27,7 +29,8 @@ Convert `tech-spec.md` into the `runs/<run-id>/stories/` directory — `index.md
 5. Set dependencies: if a react story uses a dotnet API, add the dotnet story to `Depends on`.
 6. Compute each story's wave from `Depends on` (per the write-stories skill) and write it into both the story file and the index table.
 7. Estimate complexity per the write-stories skill guidelines.
-8. Write one `runs/<run-id>/stories/STORY-XXX.md` per story.
+8. Write one `runs/<run-id>/stories/STORY-XXX.md` per story, numbering
+   consecutively from `story_id_start`.
 9. Write `runs/<run-id>/stories/index.md` with the `## Execution plan` Mermaid diagram and the `## Story index` table (Mermaid edges = union of all `Depends on`).
 10. Self-check: every TECH-ID appears in at least one story's Implements list; index rows ↔ story files in sync; waves correct; no cycles.
 11. If revising: increment Version in `index.md`; do not change existing STORY IDs or delete story files.

@@ -2,6 +2,52 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.1.0] - 2026-09-02
+
+**Repo-unique story ids + an eval corpus that can be trusted** — the eval layer
+keyed criterion→test bindings on the bare `STORY-XXX/AC-n` tag, but every phase
+restarted numbering at `STORY-001` while sharing one test tree. The same tag
+string legitimately named different criteria across runs, so `scan` and `replay`
+could bind the wrong test. Reported from a 19-story phase-2 run: ~100 spurious
+"unknown criterion id" warnings per scan, 48 false regressions per replay, and —
+found while investigating — 57 corpus evals reporting green on the strength of an
+unrelated test that merely shared a tag string.
+
+### Changed
+- **Story ids are now unique across the repository, not per run.** New
+  `SDLC next-story-id` prints the first free id (highest across
+  `runs/**/stories/` and the eval corpus, plus one); `stage-tech-lead` and the
+  brownfield fix-plan handler pass it as `story_id_start` to the creator and its
+  validator. A phase-2 run legitimately starts at e.g. `STORY-038`.
+- **`EVALS author` fails closed** when a run authors a criterion id the corpus
+  already owns, naming the owning run — a numbering slip is caught before any
+  code is written, not after the bindings are wrong.
+- **`EVALS replay` derives its own scan roots** from the test paths the corpus
+  recorded at promote time, so it no longer reports every *other* archetype's
+  evals as lost when called with one run's paths. Call it with **no test paths**;
+  `stage-development`'s completion block was updated (it previously instructed
+  `<backend_test> <frontend_src>` for web runs, which caused the false failures).
+- **`EVALS replay` proves a criterion by its tag, not by a substring match.** The
+  old last-resort "any scanned file contains the locator" fallback let a test
+  prove an unrelated criterion that shared a story number.
+- **`EVALS scan` no longer warns about earlier runs' tags.** They are valid ids
+  in a shared test tree — it counts them and warns only about an id no run has
+  ever owned (a genuine typo), which is what the warning is for.
+
+### Added
+- **Unity / ESP-IDF tag support.** `scan` now reads `.c/.h/.cpp/.hpp/.cc` files
+  and the `TEST_CASE("[STORY-XXX/AC-n] …", "[group]")` form. Embedded runs could
+  not bind a single criterion before this, which is why their manifests were
+  being hand-edited against the write-evals rules.
+- **Replay failures are classified.** `MISSING` (no test carries the id — a real
+  regression, or `retire`) vs `RETAGGED` (the recorded test still exists but now
+  carries a different id — `supersede`, naming the id that took over). A fixture
+  rework that merely re-points a test no longer reads as an unexplained loss.
+- Locators recorded for provenance are now the test's name — the rest of the
+  title after `[tag]`, or the xUnit method name (found past stacked
+  `[Theory]`/`[InlineData]` attributes, which previously fell back to a
+  placeholder no replay could ever match).
+
 ## [1.0.0] - 2026-08-23
 
 **Program-level BA + REQ-ID-driven Phase Planning** — the Phase Planner used to

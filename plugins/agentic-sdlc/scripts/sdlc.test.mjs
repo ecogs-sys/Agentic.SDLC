@@ -224,6 +224,28 @@ test('cleanup-branch requires a cancel-branch argument', () => {
   assert.match(r.out, /usage: cleanup-branch/);
 });
 
+// ---- next-story-id ----
+
+test('next-story-id starts at 001 on an empty repo', () => {
+  assert.equal(sdlc(dir, 'next-story-id').out.trim(), 'STORY-001');
+});
+
+test('next-story-id takes the highest id across nested phase runs and the corpus', () => {
+  const phase = join(dir, 'runs', 'program-2026-01-01-001', 'phase-01', 'stories');
+  mkdirSync(phase, { recursive: true });
+  writeFileSync(join(phase, 'STORY-001.md'), '# STORY-001\n');
+  writeFileSync(join(phase, 'STORY-012.md'), '# STORY-012\n');
+  assert.equal(sdlc(dir, 'next-story-id').out.trim(), 'STORY-013');
+  // a promoted run whose artifacts were pruned still owns its ids
+  mkdirSync(join(dir, 'evals'), { recursive: true });
+  writeFileSync(join(dir, 'evals', 'registry.json'), JSON.stringify({
+    registry_version: 1, next_id: 2,
+    source_index: { 'change-2026-02-02-001::STORY-047/AC-3': 'EVAL-0001' },
+    evals: {},
+  }));
+  assert.equal(sdlc(dir, 'next-story-id').out.trim(), 'STORY-048');
+});
+
 // ---- dispatcher ----
 
 test('unknown command exits non-zero', () => {

@@ -15,6 +15,7 @@ Verify that the `runs/<run-id>/stories/` directory correctly implements all of `
 - `runs/<run-id>/tech-spec.md`
 - `runs/<run-id>/stories/index.md`
 - `runs/<run-id>/stories/STORY-XXX.md` (all story files)
+- `story_id_start` — the first story id this run was allocated
 
 ## Outputs
 A JSON validation report printed to your response.
@@ -34,7 +35,13 @@ A JSON validation report printed to your response.
 12. **Index↔files sync:** every row in `index.md`'s `## Story index` table must have a matching `STORY-XXX.md` file (read each path from the `File` column). Conversely, every `STORY-XXX.md` file provided to you in the inputs must appear as a row in the table. Mismatch in either direction → `added_without_source` with `description: "Index/file mismatch: STORY-XXX"`.
 13. **Wave correctness:** for each story, recompute its wave from `Depends on` (wave 1 = empty deps; wave N = all deps in earlier waves). The recomputed wave must equal both the `**Wave:**` field in the story file and the `Wave` column in the index. Mismatch → `altered` with a note naming the story and the expected wave.
 14. **Diagram consistency:** the Mermaid edges in `## Execution plan` must equal the union of all `Depends on` entries (one `dependency --> story` edge per dependency). Missing or extra edges → `altered` with a note.
-15. Status: "pass" if `missing` and `added_without_source` are empty.
+15. **Story-id range check:** the lowest story id must equal the `story_id_start`
+    passed in your context, and ids must run consecutively from it. Story ids are
+    unique across the repository, not per run — a run that restarted at
+    `STORY-001` would make the eval layer's `STORY-XXX/AC-n` tags ambiguous with
+    an earlier run's. Wrong start or a gap → `added_without_source` with
+    `description: "Story ids must run consecutively from <story_id_start>"`.
+16. Status: "pass" if `missing` and `added_without_source` are empty.
 
 ## Re-validation mode
 When the orchestrator passes your previous diff report plus a git diff of the

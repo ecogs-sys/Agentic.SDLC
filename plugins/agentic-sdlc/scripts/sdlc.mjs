@@ -16,6 +16,7 @@
  *   node sdlc.mjs log          <run-dir> <event text...>
  *   node sdlc.mjs tail-log     <run-dir> [n]
  *   node sdlc.mjs cleanup-branch <cancel-branch> [parent-branch] [fallback-branch...]
+ *   node sdlc.mjs next-story-id [runs-dir] [corpus-dir]
  *
  * Every state-mutating command appends a timestamped line to <run-dir>/progress.log
  * (the run's live activity feed — `tail -f` it during long stages).
@@ -26,12 +27,18 @@
  * paths (fails fast rather than silently ignoring them). If nothing is staged
  * the command prints "nothing to commit" and exits 0 (idempotent).
  *
+ * next-story-id: story ids are unique across the WHOLE repository, not per run.
+ * Every run shares one test tree, and the eval layer keys its criterion→test
+ * bindings on the bare STORY-XXX/AC-n tag those tests carry — restarting at
+ * STORY-001 each phase would make that key ambiguous. Prints the first free id
+ * (the highest seen under runs/**\/stories/ and in the eval corpus, plus one).
+ *
  * cleanup-branch: discards uncommitted changes, switches to parent-branch (else
  * the fallback-branch args, defaulting to main, then master, if none given),
  * then deletes cancel-branch. Used by cancel-run.
  */
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -231,6 +238,42 @@ switch (cmd) {
     }
     const lines = readFileSync(file, 'utf8').trimEnd().split('\n');
     console.log(lines.slice(-Number(n)).join('\n'));
+    break;
+  }
+
+  case 'next-story-id': {
+    const [runsArg, corpusArg] = args;
+    const runsDir = runsArg || 'runs';
+    const corpusDir = corpusArg || 'evals';
+    let max = 0;
+    const note = (n) => { if (Number.isFinite(n) && n > max) max = n; };
+
+    // Every STORY-NNN.md anywhere in the runs tree (programs nest by phase).
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          if (['node_modules', '.git'].includes(entry.name)) continue;
+          walk(join(dir, entry.name));
+        } else {
+          const m = entry.name.match(/^STORY-(\d+)\.md$/);
+          if (m) note(Number(m[1]));
+        }
+      }
+    };
+    if (existsSync(runsDir)) walk(runsDir);
+
+    // Plus the permanent corpus — a run whose artifacts were pruned still owns
+    // its ids, because the tests it tagged are still in the tree.
+    const regFile = join(corpusDir, 'registry.json');
+    if (existsSync(regFile)) {
+      const reg = readJson(regFile);
+      for (const key of Object.keys(reg.source_index ?? {})) {
+        const m = key.match(/STORY-(\d+)\//);
+        if (m) note(Number(m[1]));
+      }
+    }
+
+    console.log('STORY-' + String(max + 1).padStart(3, '0'));
     break;
   }
 

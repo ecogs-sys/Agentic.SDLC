@@ -20,6 +20,9 @@ write-fix-plan skill.
 - `runs/<run-id>/codebase-context.md` — the surveyor's shallow recon (impact
   map, conventions, test baseline)
 - Tier: `bug_fix` or `small_change`
+- `story_id_start` — the first story id to use for the `## Stories` stubs (e.g.
+  `STORY-038`). Story ids are unique across the repository, not per run — never
+  restart at `STORY-001`.
 - Optional: revision notes from the Fix-Plan Validator or user feedback
 
 ## Outputs
