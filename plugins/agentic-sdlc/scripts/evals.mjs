@@ -11,13 +11,13 @@
  * works on Windows (Git Bash / PowerShell) and Linux CI.
  *
  * Usage:
- *   node evals.mjs author   <run-dir> [stories-dir]     # generate manifest stubs
- *   node evals.mjs scan     <run-dir> <test-path...>    # derive bindings from tags
+ *   node evals.mjs author   <run-dir> [stories-dir] [--corpus <dir>]  # manifest stubs
+ *   node evals.mjs scan     <run-dir> <test-path...> [--corpus <dir>] # bind from tags
  *   node evals.mjs run      <run-dir> [--filter <id,...>] [--suite-green]
  *   node evals.mjs report   <run-dir>                   # human-readable summary
  *   node evals.mjs set-kind <run-dir> <criterion-id> <test|assert|judge>   # human gate edit
  *   node evals.mjs promote   <run-dir> [corpus-dir]     # mint EVAL-NNNN into evals/
- *   node evals.mjs replay    [--corpus <dir>] <test-path...>   # regression gate
+ *   node evals.mjs replay    [--corpus <dir>] [test-path...]   # regression gate
  *   node evals.mjs retire    <eval-id> <reason> [--corpus <dir>]
  *   node evals.mjs supersede <eval-id> <reason> [--corpus <dir>]
  *
@@ -28,13 +28,22 @@
  * non-zero if any targeted criterion is unbound (the run-specific completeness
  * gate); `replay` exits non-zero if any active corpus eval lost its proving test
  * (the permanent regression gate — an intended change must retire/supersede first).
+ *
+ * Story ids are unique across the repository (see sdlc.mjs next-story-id), which
+ * is what makes the bare `STORY-XXX/AC-n` tag a safe key: runs share one test
+ * tree, so a per-run id would let one run's tests bind and prove another run's
+ * criteria. `author` fails closed if a run reuses an id the corpus already owns.
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
-import { join, basename, extname } from 'node:path';
+import { join, basename, extname, dirname, isAbsolute } from 'node:path';
 
 const MANIFEST_VERSION = 1;
-const TEST_EXTS = new Set(['.cs', '.ts', '.tsx', '.js', '.jsx', '.mts', '.cts']);
+const TEST_EXTS = new Set([
+  '.cs',                                          // xUnit
+  '.ts', '.tsx', '.js', '.jsx', '.mts', '.cts',   // Vitest
+  '.c', '.h', '.cpp', '.hpp', '.cc',              // Unity (ESP-IDF)
+]);
 
 function die(msg) {
   console.error(`evals: ${msg}`);
@@ -67,6 +76,30 @@ function loadManifest(runDir) {
   const file = manifestPath(runDir);
   if (!existsSync(file)) die(`no eval manifest at ${file} — run "author" first`);
   return readJson(file);
+}
+
+/** Load the permanent corpus registry, or null when the repo has no corpus yet. */
+function loadRegistry(corpusDir) {
+  const regFile = join(corpusDir, 'registry.json');
+  return existsSync(regFile) ? readJson(regFile) : null;
+}
+
+/** criterion-id → owning run, from the corpus source_index ("<run>::<id>" keys). */
+function corpusOwners(reg) {
+  const owners = new Map();
+  for (const key of Object.keys(reg?.source_index ?? {})) {
+    const sep = key.lastIndexOf('::');
+    if (sep !== -1) owners.set(key.slice(sep + 2), key.slice(0, sep));
+  }
+  return owners;
+}
+
+/** Pull one arg out of an argv array: `--name <value>` → value (or fallback). */
+function takeFlag(rest, name, fallback) {
+  const i = rest.indexOf(name);
+  if (i === -1) return fallback;
+  const [, value] = rest.splice(i, 2);
+  return value ?? fallback;
 }
 
 /** Recursively collect files with a test-ish extension under a path (file or dir). */
@@ -120,32 +153,48 @@ function parseStory(file) {
   return { story, tech, criteria };
 }
 
-/** Extract criterion-tag occurrences from a test file → [{ id, file, line, locator }]. */
+/**
+ * Extract criterion-tag occurrences from a test file → [{ id, file, line, locator }].
+ *
+ * The `locator` is provenance, and the evidence `replay` uses to tell a deleted
+ * test apart from one that was merely retagged — so it must name the test, not
+ * repeat the tag. For xUnit that is the method name; for Vitest/Unity, the rest
+ * of the test title after the `[tag]`.
+ */
 function extractTags(file) {
   const text = readFileSync(file, 'utf8');
   const lines = text.split(/\r?\n/);
   const hits = [];
   const push = (id, idx, locator) => {
-    if (AC_ID.test(id)) hits.push({ id, file, line: idx + 1, locator });
+    if (AC_ID.test(id)) hits.push({ id, file, line: idx + 1, locator: locator || id });
   };
 
   lines.forEach((line, idx) => {
     // xUnit: [Trait("criterion", "STORY-003/AC-1")]
     for (const m of line.matchAll(/\[Trait\(\s*"criterion"\s*,\s*"([^"]+)"\s*\)\]/g)) {
-      // locator = the next method-ish identifier below the attribute
-      let locator = 'xunit-trait';
-      for (let j = idx + 1; j < Math.min(idx + 6, lines.length); j++) {
-        const mm = lines[j].match(/\b(?:public|internal)\s+(?:async\s+)?[\w<>\[\],\s]+?\s+(\w+)\s*\(/);
+      // locator = the next method-ish identifier below the attribute. Traits stack
+      // with [Fact]/[Theory]/[InlineData(…)] blocks, so look well past them.
+      let locator = null;
+      for (let j = idx + 1; j < Math.min(idx + 25, lines.length); j++) {
+        const mm = lines[j].match(/\b(?:public|internal)\s+(?:static\s+)?(?:async\s+)?[\w<>\[\],\s]+?\s+(\w+)\s*\(/);
         if (mm) { locator = mm[1]; break; }
       }
       push(m[1], idx, locator);
     }
-    // Vitest / any runner: it("[STORY-003/AC-1] …" | test(`[…]` | describe('[…]'
-    for (const m of line.matchAll(/(?:\bit|\btest|\bdescribe)\s*(?:\.\w+)?\s*\(\s*[`'"]\s*\[([^\]]+)\]/g)) {
-      push(m[1], idx, m[1]);
+    // Vitest: it("[STORY-003/AC-1] …" | test(`[…]` | describe('[…]'
+    // Unity (ESP-IDF): TEST_CASE("[STORY-003/AC-1] …", "[group]")
+    for (const m of line.matchAll(
+      /(?:\bit|\btest|\bdescribe|\bTEST_CASE)\s*(?:\.\w+)?\s*\(\s*[`'"]\s*\[([^\]]+)\]\s*([^`'"]*)/g
+    )) {
+      push(m[1], idx, m[2].trim());
     }
   });
   return hits;
+}
+
+/** The set of criterion ids actually tagged in a test file. */
+function tagIdsIn(file) {
+  return new Set(extractTags(file).map((h) => h.id));
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
@@ -154,8 +203,10 @@ const [, , cmd, ...args] = process.argv;
 
 switch (cmd) {
   case 'author': {
-    const [runDir, storiesArg] = args;
-    if (!runDir) die('usage: author <run-dir> [stories-dir]');
+    const rest = [...args];
+    const corpusDir = takeFlag(rest, '--corpus', 'evals');
+    const [runDir, storiesArg] = rest;
+    if (!runDir) die('usage: author <run-dir> [stories-dir] [--corpus <dir>]');
     const storiesDir = storiesArg || join(runDir, 'stories');
     if (!existsSync(storiesDir)) die(`stories dir not found: ${storiesDir}`);
 
@@ -183,6 +234,21 @@ switch (cmd) {
     const runId = existsSync(join(runDir, 'state.json'))
       ? (readJson(join(runDir, 'state.json')).run_id ?? basename(runDir))
       : basename(runDir);
+
+    // Story ids are unique across the repository, not per run (see sdlc.mjs
+    // next-story-id). If this run reused an id another run already owns, its
+    // tests would carry an ambiguous tag and the eval layer would bind and
+    // replay the wrong criterion — so fail here, before any code is written.
+    const owners = corpusOwners(loadRegistry(corpusDir));
+    const collisions = evals
+      .map((e) => [e.id, owners.get(e.id)])
+      .filter(([, owner]) => owner && owner !== runId);
+    if (collisions.length) {
+      console.error(`evals: ${collisions.length} criterion id(s) are already owned by another run:`);
+      for (const [id, owner] of collisions) console.error(`  - ${id} → ${owner}`);
+      die('renumber this run\'s stories from the id "sdlc.mjs next-story-id" prints, then re-author');
+    }
+
     const manifest = {
       manifest_version: MANIFEST_VERSION,
       run: runId,
@@ -197,8 +263,10 @@ switch (cmd) {
   }
 
   case 'scan': {
-    const [runDir, ...paths] = args;
-    if (!runDir || paths.length === 0) die('usage: scan <run-dir> <test-path...>');
+    const rest = [...args];
+    const corpusDir = takeFlag(rest, '--corpus', 'evals');
+    const [runDir, ...paths] = rest;
+    if (!runDir || paths.length === 0) die('usage: scan <run-dir> <test-path...> [--corpus <dir>]');
     const manifest = loadManifest(runDir);
 
     // id → set of "file:line locator" for provenance
@@ -226,9 +294,18 @@ switch (cmd) {
     manifest.scanned = new Date().toISOString();
     writeJson(manifestPath(runDir), manifest);
 
+    // The scanned paths are a shared test tree: they also hold the tagged tests
+    // of every earlier run. Those tags are valid criterion ids, just not ours —
+    // only an id no run has ever owned is worth warning about (a typo).
+    const owners = corpusOwners(loadRegistry(corpusDir));
+    let priorRunTags = 0;
+    for (const id of orphanTags) {
+      if (owners.has(id)) { orphanTags.delete(id); priorRunTags++; }
+    }
+
     const total = manifest.evals.length;
     logEvent(runDir, `evals scan — ${bound}/${total} criteria bound to tagged tests`);
-    console.log(`bound ${bound}/${total} criteria`);
+    console.log(`bound ${bound}/${total} criteria${priorRunTags ? ` (${priorRunTags} tag(s) belong to earlier runs — ignored)` : ''}`);
     if (orphanTags.size) {
       console.log(`⚠ tagged tests reference unknown criterion ids: ${[...orphanTags].join(', ')}`);
     }
@@ -357,8 +434,8 @@ switch (cmd) {
           criterion: ev.criterion,
         },
         // Provenance = concrete tagged-test locators captured at promote time.
-        // Replay checks THESE (not a repo-wide tag scan) so run-scoped STORY ids
-        // that repeat across phases never collide.
+        // Replay derives its scan roots from these paths, and uses the locators
+        // to tell a deleted test apart from one that was merely retagged.
         check: { kind: ev.check.kind, tests: ev.check.tests ?? [] },
         created: prev?.created ?? new Date().toISOString(),
         updated: new Date().toISOString(),
@@ -373,48 +450,103 @@ switch (cmd) {
   }
 
   case 'replay': {
-    let corpusDir = 'evals';
-    const paths = [];
     const rest = [...args];
-    while (rest.length) {
-      const a = rest.shift();
-      if (a === '--corpus') corpusDir = rest.shift();
-      else paths.push(a);
-    }
-    if (paths.length === 0) die('usage: replay [--corpus <dir>] <test-path...>');
+    const corpusDir = takeFlag(rest, '--corpus', 'evals');
+    const paths = rest;
     const regFile = join(corpusDir, 'registry.json');
     if (!existsSync(regFile)) {
       console.log(`no corpus at ${regFile} — nothing to replay`);
       break;
     }
     const reg = readJson(regFile);
-
-    // Index the scanned test files once: basename → concatenated content.
-    const files = [];
-    for (const p of paths) for (const f of collectFiles(p)) files.push({ base: basename(f), text: readFileSync(f, 'utf8') });
-    const locatorPresent = (ref) => {
-      const sp = ref.lastIndexOf(' ');
-      const locator = sp === -1 ? ref : ref.slice(sp + 1);
-      const pathPart = ref.slice(0, ref.indexOf(':') === -1 ? ref.length : ref.indexOf(':'));
-      const base = basename(pathPart);
-      // Prefer a same-basename file that still contains the locator; fall back to
-      // any scanned file (a moved-but-present test is not a regression).
-      return files.some((f) => f.base === base && f.text.includes(locator)) || files.some((f) => f.text.includes(locator));
-    };
-
     const active = Object.values(reg.evals).filter((r) => r.status === 'active' && r.check.kind === 'test');
+
+    // The corpus outlives any one run and spans every app_type ever built here,
+    // so it — not the caller — decides what to scan. Roots are derived from the
+    // test paths the corpus itself recorded at promote time; the paths passed in
+    // are additive (they cover a test tree nothing has been promoted from yet).
+    // A provenance ref is "<path>:<line> <locator>". Both halves can contain
+    // spaces and the path can contain colons (a Windows drive), so anchor the
+    // split on the ":<digits> " between them.
+    const parseRef = (ref) => {
+      const m = ref.match(/^(.+):(\d+) (.*)$/);
+      return m ? { path: m[1], locator: m[3] } : { path: ref, locator: '' };
+    };
+    // Recorded paths are repo-relative, so their first segment is the test root
+    // (tests/, src/) — broad enough that a test moved within it is still found.
+    // An absolute path has no such root: scan its own directory instead, never
+    // the filesystem root it starts with.
+    const rootFor = (p) => {
+      if (isAbsolute(p)) return dirname(p);
+      const [first] = p.split(/[\\/]/);
+      return first && first !== '.' && first !== '..' ? first : dirname(p);
+    };
+    const roots = new Set(paths.filter((p) => existsSync(p)));
+    for (const rec of active) {
+      for (const ref of rec.check.tests ?? []) {
+        const root = rootFor(parseRef(ref).path);
+        if (root && existsSync(root)) roots.add(root);
+      }
+    }
+    if (roots.size === 0) die('nothing to scan — pass a test path, or promote a run first');
+
+    // Index every test file under those roots by the criterion ids it tags.
+    const hitsOf = new Map();
+    const textOf = new Map();
+    for (const root of roots) {
+      for (const file of collectFiles(root)) {
+        if (hitsOf.has(file)) continue;
+        hitsOf.set(file, extractTags(file));
+        textOf.set(file, readFileSync(file, 'utf8'));
+      }
+    }
+    const proven = new Set();
+    for (const hits of hitsOf.values()) for (const h of hits) proven.add(h.id);
+
+    // A criterion is proven when a test *carries its id* — never when some file
+    // merely mentions a string. Story ids are repo-unique, so this cannot bind
+    // across runs.
     const regressions = [];
     for (const rec of active) {
-      const refs = rec.check.tests ?? [];
-      const ok = refs.length > 0 && refs.some((r) => locatorPresent(r));
-      if (!ok) regressions.push(rec);
+      if (proven.has(rec.source.criterion_id)) continue;
+      // Not proven. Distinguish a deleted test from one that still exists but was
+      // retagged — the fix differs (fix the code, vs. supersede this eval).
+      let retag = null;
+      for (const ref of rec.check.tests ?? []) {
+        const { locator } = parseRef(ref);
+        if (!locator || AC_ID.test(locator)) continue; // no usable locator recorded
+        for (const [file, text] of textOf) {
+          const at = text.indexOf(locator);
+          if (at === -1) continue;
+          const line = text.slice(0, at).split(/\r?\n/).length;
+          const near = hitsOf.get(file)
+            .slice()
+            .sort((a, b) => Math.abs(a.line - line) - Math.abs(b.line - line))[0];
+          retag = { file, locator, id: near?.id };
+          break;
+        }
+        if (retag) break;
+      }
+      regressions.push({ rec, retag });
     }
+
     const total = active.length;
+    const rootList = [...roots].join(', ');
     if (regressions.length === 0) {
-      console.log(`✔ corpus replay PASS — ${total} active eval(s) still proven by a present test`);
+      console.log(`✔ corpus replay PASS — ${total} active eval(s) still proven by a tagged test (roots: ${rootList})`);
     } else {
-      console.log(`✖ corpus replay FAIL — ${regressions.length}/${total} eval(s) lost their proving test (regression, or the change must \`retire\`/\`supersede\` them):`);
-      for (const r of regressions) console.log(`  - ${r.eval_id} (${r.source.criterion_id}) — ${r.source.criterion}`);
+      console.log(`✖ corpus replay FAIL — ${regressions.length}/${total} eval(s) lost their proving test (roots: ${rootList}):`);
+      for (const { rec, retag } of regressions) {
+        if (retag) {
+          console.log(
+            `  - ${rec.eval_id} (${rec.source.criterion_id}) RETAGGED — "${retag.locator}" in ${retag.file} ` +
+            `now tags ${retag.id ?? 'no criterion'} — supersede this eval if that was intended`
+          );
+        } else {
+          console.log(`  - ${rec.eval_id} (${rec.source.criterion_id}) MISSING — no test carries this id — ${rec.source.criterion}`);
+        }
+      }
+      console.log('Fix the regression, or `EVALS retire|supersede <EVAL-ID> "<reason>"` if the change was intended.');
       process.exit(1);
     }
     break;

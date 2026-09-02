@@ -164,18 +164,25 @@ SDLC commit-step --run <run-dir> "docs(<run-id>): all stories complete"
 Promotion mints this run's bound criteria into the permanent `evals/` corpus at the
 workspace root (so it ships in the PR); replay is the criteria-keyed regression
 gate — meaningful once the corpus spans more than this run (later phases,
-brownfield). `<test-paths>` = `<backend_test> <frontend_src>` (web),
-`<electron_root>` (electron), or `<embedded_root>` (embedded).
+brownfield). **Pass no test paths:** the corpus spans every `app_type` ever built
+in this repo, and `replay` derives the roots to scan from the paths it recorded at
+promote time. Naming only this run's paths would report every other archetype's
+evals as lost.
 ```bash
 EVALS promote <run-dir>                       # → evals/registry.json + evals/EVAL-*.json
-EVALS replay --corpus evals <test-paths>      # non-zero = a prior criterion lost its test
+EVALS replay --corpus evals                   # non-zero = a prior criterion lost its test
 SDLC set-field <run-dir>/state.json stages.evals '{"status":"complete"}'
 SDLC commit-step --run <run-dir> "chore(<run-id>): promote evals to corpus" evals
 ```
-If **replay fails**, a prior-corpus criterion lost its proving test. Either this run
-broke it (fix the code/test and re-run) or the change *intentionally* altered that
-behavior — in which case `EVALS retire <EVAL-ID> "<reason>"` (or `supersede`) as a
-reviewed part of the change (see `agentic-sdlc:brownfield-mode`), then re-run replay.
+If **replay fails**, each line says which kind of failure it is:
+- **`MISSING`** — no test carries that criterion id any more. Either this run broke
+  it (fix the code/test and re-run) or the change *intentionally* removed that
+  behavior — then `EVALS retire <EVAL-ID> "<reason>"` (or `supersede`) as a reviewed
+  part of the change (see `agentic-sdlc:brownfield-mode`), and re-run replay.
+- **`RETAGGED`** — the proving test still exists but now carries a different
+  criterion id (a fixture rework re-pointed it). The old criterion genuinely has no
+  test claiming it: confirm the new id covers the behavior, then
+  `EVALS supersede <EVAL-ID> "<the criterion that now proves it>"`.
 Immediately invoke the final stage's skill by `app_type`:
 `agentic-sdlc:stage-devops` (web) or `agentic-sdlc:stage-packaging` (electron or
 embedded).
