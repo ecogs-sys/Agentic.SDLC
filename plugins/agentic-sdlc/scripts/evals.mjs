@@ -5,9 +5,10 @@
  * Turns frozen acceptance criteria into a machine-checkable, replayable eval
  * manifest, keyed by the write-once `STORY-XXX/AC-n` ids the Tech Lead / Fix
  * Planner assign. The criterion→test binding is NOT hand-authored here: tests
- * carry the criterion id as metadata (xUnit `[Trait("criterion", "…")]` or a
- * Vitest title token `[STORY-XXX/AC-n]`) and `scan` DERIVES the binding from that
- * metadata — the tests stay the single source of truth. Node built-ins only;
+ * carry the criterion id as metadata (xUnit `[Trait("criterion", "…")]`, a
+ * Vitest title token `[STORY-XXX/AC-n]`, or a Unity `TEST_CASE("[STORY-XXX/AC-n] …", …)`
+ * title token) and `scan` DERIVES the binding from that metadata — the tests stay
+ * the single source of truth. Node built-ins only;
  * works on Windows (Git Bash / PowerShell) and Linux CI.
  *
  * Usage:
@@ -39,11 +40,15 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { join, basename, extname, dirname, isAbsolute } from 'node:path';
 
 const MANIFEST_VERSION = 1;
+<<<<<<< HEAD
 const TEST_EXTS = new Set([
   '.cs',                                          // xUnit
   '.ts', '.tsx', '.js', '.jsx', '.mts', '.cts',   // Vitest
   '.c', '.h', '.cpp', '.hpp', '.cc',              // Unity (ESP-IDF)
 ]);
+=======
+const TEST_EXTS = new Set(['.cs', '.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.c', '.h']);
+>>>>>>> aa0fadc (fix(evals): recognize Unity TEST_CASE tags and .c/.h test files)
 
 function die(msg) {
   console.error(`evals: ${msg}`);
@@ -187,6 +192,10 @@ function extractTags(file) {
       /(?:\bit|\btest|\bdescribe|\bTEST_CASE)\s*(?:\.\w+)?\s*\(\s*[`'"]\s*\[([^\]]+)\]\s*([^`'"]*)/g
     )) {
       push(m[1], idx, m[2].trim());
+    }
+    // Unity (ESP-IDF host-target): TEST_CASE("[STORY-003/AC-1] description", "[tag]")
+    for (const m of line.matchAll(/\bTEST_CASE\s*\(\s*"\s*\[([^\]]+)\]/g)) {
+      push(m[1], idx, m[1]);
     }
   });
   return hits;
