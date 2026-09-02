@@ -334,17 +334,25 @@ Wait for response:
 - **"approve"** (case-insensitive):
   1. Set `program.json` `phase_plan.status = "frozen"`, `phase_plan.phase_count =
      <N>`, `current_phase = 1`, and populate `phases` from the plan's `## Phase
-     index` table — one entry per phase, `req_ids` parsed mechanically from the
-     table's `REQ-IDs` column (never hand-typed):
+     index` table — one entry per phase, `req_ids` and `app_type` parsed
+     mechanically from the table's `REQ-IDs`/`Stack` columns (never
+     hand-typed). `src_paths` is looked up for that `app_type`: the program's
+     own `src_paths` if it matches (the normal single-archetype case), or —
+     for a brownfield program whose `codebase-context.md` lists multiple
+     `Detected stacks` — that archetype's own `src_paths` entry from the
+     survey:
      ```json
-     { "phase": 1, "folder": "phase-01", "title": "<phase 1 title>", "status": "in_progress", "req_ids": ["REQ-001", "REQ-002"] }
+     { "phase": 1, "folder": "phase-01", "title": "<phase 1 title>", "status": "in_progress", "req_ids": ["REQ-001", "REQ-002"], "app_type": "web", "src_paths": { "backend": "...", "backend_test": "...", "frontend": "..." } }
      ```
      (Phases 2..N get `"status": "pending"` and `"folder": "phase-0N"`.)
   2. Create `runs/<program-id>/phase-01/`.
-  3. Write `runs/<program-id>/phase-01/state.json` (see schema below). There is
-     no `raw-input.md` for a phase — the BA already ran once at the program
-     level; the Architect reads its assigned REQ-ID blocks directly from the
-     master `req-spec.md` (see `master_req_spec_path` below).
+  3. Write `runs/<program-id>/phase-01/state.json` (see schema below), taking
+     `app_type`/`src_paths` from the Phase 1 `phases[]` entry just populated
+     (not from `program.json`'s top-level `app_type` — for a single-archetype
+     program these are the same value anyway). There is no `raw-input.md` for
+     a phase — the BA already ran once at the program level; the Architect
+     reads its assigned REQ-ID blocks directly from the master `req-spec.md`
+     (see `master_req_spec_path` below).
   4. **Commit — phase plan frozen, Phase 1 created:**
      ```bash
      SDLC commit-step "docs(<program-id>): phase plan frozen — Phase 1 started" runs/<program-id>/program.json runs/<program-id>/phase-01/
@@ -387,7 +395,12 @@ Wait for response:
 There is no `ba` / `ba_validation` / `user_review_req` entry in a phase's
 `stages` map — the BA runs once at the program level (Steps 7–8), not per
 phase. `req_ids` and `master_req_spec_path` are write-once, copied from
-`program.json` at phase-creation time.
+`program.json` at phase-creation time. `app_type` and `src_paths` are also
+write-once per phase, but copied from that **phase's own** `phases[]` entry
+(its `Stack`, from the phase plan) — not blindly from `program.json`'s
+top-level `app_type`. For the ordinary single-archetype program these are
+identical; they diverge only for a brownfield program whose phases span more
+than one `Detected stacks` archetype (see write-phase-plan's Stack section).
 
 ### Step 11 — Hand off to advance-stage
 Immediately invoke the `agentic-sdlc:advance-stage` skill and follow its
@@ -480,9 +493,14 @@ Resolve the confirmed `tier`:
 - a tier name → use that tier.
 - anything else → treat as revision notes for the surveyor; re-run B3.
 
-**Resolve `app_type` from the survey.** Read the surveyor's proposed `app_type` from
-`runs/<run-id>/codebase-context.md` (its Stack section) and set `state.app_type`
-(`web`, `electron`, or `embedded`). For an `electron` or `embedded` app_type, also
+**Resolve `app_type` from the survey.** Read `Proposed app_type` from
+`runs/<run-id>/codebase-context.md`'s Stack section and set `state.app_type`
+(`web`, `electron`, or `embedded`). This flat pipeline is single-archetype even
+when `Detected stacks` lists more than one — if the request genuinely needs
+both, tell the user this codebase has multiple archetypes and the change would
+be cleaner split into a program (Step B4's `new_feature` → `split` path) so
+each archetype gets its own phase; otherwise proceed with the one archetype the
+request actually touches. For an `electron` or `embedded` app_type, also
 collapse `state.src_paths` to a single project root: `{ "electron": "<monorepo
 root, default '.'>" }` or `{ "embedded": "<project root, default '.'>" }`
 respectively (the code is edited in place, so this is the existing repo root).
@@ -562,7 +580,12 @@ greenfield program/phase machinery; brownfield-awareness comes from the
    ```
 5. Write `runs/<program-id>/program.json` (brownfield program — read `parent_branch`,
    `app_type`, `infra_change_required`, and `test_baseline` from the change run's
-   `state.json` **before** deleting it in step 6, and copy them in):
+   `state.json` **before** deleting it in step 6, and copy them in). `app_type`/
+   `src_paths` here stay the **default** archetype (the one the flat change-run
+   was scoped to before it split) — used only as the fallback for a phase whose
+   own `Stack` isn't otherwise resolvable; each phase's `phases[]` entry carries
+   its own `app_type`/`src_paths` once the Phase Planner runs (Step BP3/BP4), and
+   those win when the two differ (a multi-stack codebase):
    ```json
    {
      "program_id": "<program-id>",
@@ -579,6 +602,10 @@ greenfield program/phase machinery; brownfield-awareness comes from the
      "phases": []
    }
    ```
+   If `codebase-context.md`'s `Detected stacks` lists more than one archetype,
+   the Phase Planner (Step BP3) is what actually routes REQ-IDs to each one —
+   this step does not need to enumerate them in `program.json`; they live in
+   `codebase-context.md` and, once frozen, in each phase's own `phases[]` entry.
 6. Delete the migrated `runs/<change-run-id>/` directory (the flat run is superseded).
 7. **Commit** (this migration renames a directory and moves files, so stage
    everything with `--all`):
@@ -600,24 +627,33 @@ spec gate)** exactly as written, with these brownfield deltas:
 
 ### Step BP3 — Phase Planner loop, then phase-plan gate
 Run the greenfield **Step 9 (Phase Planner loop)** and **Step 10 (phase-plan
-gate)** exactly as written, with this brownfield delta:
+gate)** exactly as written, with these brownfield deltas:
 - Pass `runs/<program-id>/codebase-context.md` and `mode = brownfield` to the
   `phase-planner` **in addition to** `runs/<program-id>/req-spec.md` (the
   approved master req-spec from Step BP2) — the codebase context prevents the
   planner from re-planning existing functionality; the REQ-IDs to split come
   from `req-spec.md`, not from `codebase-context.md` directly.
+- Pass `runs/<program-id>/codebase-context.md` to the `phase-planner-validator`
+  too, so it can check each phase's `Stack` against `Detected stacks` (see
+  phase-planner-validator's Inputs).
 
 ### Step BP4 — Create the Phase 1 run (brownfield)
 At Step BP3's "approve" branch, create `runs/<program-id>/phase-01/state.json` with the
 **Phase 1 state.json schema** (above — `req_ids` and `master_req_spec_path`
-included), copying `app_type` and `src_paths` from `program.json`, plus these
-brownfield fields: `"mode": "brownfield"`,
+included), copying `app_type` and `src_paths` from the Phase 1 `phases[]` entry
+Step BP3 (reusing Step 10) just populated from the phase plan's `Stack`
+column — **not** from `program.json`'s top-level `app_type`. For a
+single-stack codebase these are the same value; they diverge only when
+`codebase-context.md` listed more than one `Detected stacks` entry and the
+Phase Planner routed Phase 1 to one of them. Plus these brownfield fields:
+`"mode": "brownfield"`,
 `"codebase_context_path": "runs/<program-id>/codebase-context.md"`,
 `"infra_change_required": <from program.json>`, and `"test_baseline": <from
 program.json>`. There is **no** survey/triage stage in the phase — the program-level
 survey already ran; `current_stage = "architect"`. (Carrying `app_type` here — and via
 `/agentic-sdlc:next-phase` for later phases — keeps an electron or embedded
-brownfield program on its single track and the packaging done-gate.)
+phase on its single track and the packaging done-gate, whether or not other
+phases in the same program are a different archetype.)
 
 ### Step BP5 — Hand off
 Invoke the `agentic-sdlc:advance-stage` skill — it finds the program via the normal

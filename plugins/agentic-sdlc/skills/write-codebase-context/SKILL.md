@@ -31,6 +31,18 @@ Version: <n>
 - Frontend: <React version + CSS framework from package.json, or "none found">
 - Database: <provider from DbContext/migrations/connection strings, or "none found">
 - Infra: <docker-compose.yml present? CI config present?>
+- Detected stacks: <one entry per archetype actually found in the workspace —
+  a workspace can contain more than one (e.g. a web app plus a separate
+  firmware tree). Omit an archetype entirely if its marker files are absent;
+  never list one you didn't independently confirm.>
+  - web: src_paths = { "backend": "<path>", "backend_test": "<path>", "frontend": "<path>" }
+  - electron: src_paths = { "electron": "<root>" }
+  - embedded: src_paths = { "embedded": "<root>" }
+- Proposed app_type: web | electron | embedded — the single archetype this
+  request's Impact map is scoped to. Always one of the archetypes listed
+  under Detected stacks. This is the default for a flat (non-split) run; a
+  program that later splits into phases (see phase-planner) may assign a
+  different Detected stack per phase.
 
 ## Conventions
 - Backend: <DI/registration style, Clean-Architecture layout, naming, test framework>
@@ -76,3 +88,6 @@ Version: <n>
 - [ ] infra_change_required has a concrete rationale
 - [ ] Proposed tier matches the rubric
 - [ ] `Survey depth` matches what was actually filled in
+- [ ] Every archetype under `Detected stacks` was confirmed by its own marker
+      files (not inferred from another archetype's presence)
+- [ ] `Proposed app_type` is one of the listed `Detected stacks` entries

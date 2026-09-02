@@ -17,8 +17,11 @@ to `phase-plan.md` using the write-phase-plan skill.
 ## Inputs (passed as context)
 - Program ID (this agent operates at the program level, not the run level)
 - `runs/<program-id>/req-spec.md` — the approved master requirement spec, REQ-ID by REQ-ID
+- The program's `app_type` (greenfield: the single archetype chosen at
+  `start-run` Step 3c — every phase gets this Stack)
 - Brownfield only: `runs/<program-id>/codebase-context.md` — passed as context
-  so existing functionality is not re-planned (see Brownfield mode)
+  so existing functionality is not re-planned (see Brownfield mode), and to
+  read its `Detected stacks` list when deciding each phase's `Stack`
 - Optional: revision notes from the Phase Planner Validator or the user
 - Optional (replan only): the list of already-shipped phases that are frozen and
   must NOT be changed, plus a summary of what they delivered
@@ -33,11 +36,19 @@ to `phase-plan.md` using the write-phase-plan skill.
    numbering, scope, and REQ-IDs exactly; only revise phases that have not yet started.
 4. Apply the write-phase-plan sizing rules. Default to the fewest phases that
    satisfy coverage, ordering, and deliverability. Most req-specs are ONE phase.
-5. Follow the write-phase-plan skill format, including the machine-parsed
-   `## Phase index` table (REQ-IDs per phase).
-6. Write to `runs/<program-id>/phase-plan.md`.
-7. Self-check against the write-phase-plan Phase rules: (a) list every REQ-ID in req-spec.md and confirm each is assigned to exactly one phase; (b) confirm phases are ordered so each depends only on earlier phases; (c) confirm each phase has an "independently shippable" justification; (d) confirm the `## Phase index` table matches the `## Phases` sections exactly.
-8. If revising: increment the Version number.
+5. **Assign each phase's `Stack`.** If `codebase-context.md` lists exactly one
+   `Detected stacks` entry (the normal case) or this is a greenfield program,
+   every phase's `Stack` is that one archetype — no per-REQ judgment needed.
+   If it lists **more than one**, read each REQ-ID's wording against the
+   detected stacks' descriptions and assign it to the archetype it belongs to,
+   per the write-phase-plan skill's Stack section — this constraint (no phase
+   mixes archetypes) takes priority over the sizing rules in step 4, so prefer
+   more/smaller single-archetype phases over fewer mixed ones.
+6. Follow the write-phase-plan skill format, including the machine-parsed
+   `## Phase index` table (REQ-IDs and Stack per phase).
+7. Write to `runs/<program-id>/phase-plan.md`.
+8. Self-check against the write-phase-plan Phase rules: (a) list every REQ-ID in req-spec.md and confirm each is assigned to exactly one phase; (b) confirm phases are ordered so each depends only on earlier phases; (c) confirm each phase has an "independently shippable" justification; (d) confirm the `## Phase index` table matches the `## Phases` sections exactly, including `Stack`; (e) confirm no phase mixes REQ-IDs across archetypes.
+9. If revising: increment the Version number.
 
 ## Definition of done
 - Every REQ-ID in `req-spec.md` is assigned to exactly one phase.

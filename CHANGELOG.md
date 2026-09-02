@@ -2,6 +2,46 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.2.0] - 2026-09-02
+
+**Phase-level `app_type` — a brownfield program can now span more than one
+application archetype.** Previously `app_type` was a single value fixed at
+program creation and copied unchanged into every phase, so a workspace
+containing both an existing web app and a separate firmware tree (e.g. an
+ESP32 device the web app talks to) could only be worked through the SDLC one
+archetype at a time — the other had to be a standalone `change-*` run outside
+the program, with no shared planning.
+
+### Added
+- **`Detected stacks` in `codebase-context.md`.** The Code Surveyor now checks
+  every archetype (`web`/`electron`/`embedded`) independently instead of
+  stopping at the first match, records each one it actually confirms with its
+  own `src_paths`, and sets an explicit `Proposed app_type` for the current
+  request. The Code Surveyor Validator checks each listed stack is grounded in
+  real marker files.
+- **`Stack` column in the phase plan.** The Phase Planner assigns an archetype
+  to every phase (`## Phase index` table + each `### Phase N` section). For
+  the ordinary single-archetype program every phase just gets that one
+  archetype; for a multi-stack brownfield program, REQ-IDs are grouped so
+  **no phase mixes archetypes** — this takes priority over normal phase-sizing
+  rules. The Phase Planner Validator gates it (`stack_mismatch`).
+- **`phases[].app_type` / `phases[].src_paths` in `program.json`.** Phase
+  creation (`start-run` Step 10/BP4) and `next-phase` now read a phase's own
+  archetype from its `phases[]` entry — sourced from the phase plan's `Stack`
+  column — instead of blindly copying `program.json`'s top-level `app_type`.
+  Falls back to the program-level default for programs created before this
+  change, so existing single-archetype programs are unaffected.
+
+### Notes
+- This is a documentation/prompt-only change (agent and skill instructions) —
+  no changes to `scripts/sdlc.mjs` or the state-machine schema's mechanics.
+- Greenfield programs are unaffected: an archetype is still chosen once at
+  `/start-run` and applies to every phase, since a from-scratch build is
+  inherently single-archetype.
+- A REQ that genuinely cannot be satisfied within one archetype is not
+  supported as a single mixed phase — the Phase Planner flags it as an open
+  question instead of forcing it into one phase.
+
 ## [1.1.0] - 2026-09-02
 
 **Repo-unique story ids + an eval corpus that can be trusted** — the eval layer

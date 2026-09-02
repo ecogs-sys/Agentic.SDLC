@@ -17,6 +17,11 @@ a **mechanical REQ-ID set comparison**, not prose diffing: every REQ-ID in
 - Program ID
 - `runs/<program-id>/req-spec.md`
 - `runs/<program-id>/phase-plan.md`
+- `runs/<program-id>/program.json`'s `app_type` (the program's default/greenfield
+  archetype — the ground truth for the `Stack` check when there is no
+  multi-stack `codebase-context.md`)
+- Brownfield only: `runs/<program-id>/codebase-context.md` (for its `Detected
+  stacks` list — supersedes `program.json`'s single `app_type` when present)
 
 ## Outputs
 A JSON validation report printed to your response (not written to a file — the
@@ -39,16 +44,25 @@ orchestrator reads your response).
    shippable" justification in `not_shippable`. **Fail closed:** if you cannot
    *positively* confirm a phase is independently shippable, list it — do not give
    the benefit of the doubt.
-6. Set status: "pass" only if all arrays are empty.
+6. Check `Stack`: every phase's `## Phase index` row must have a non-empty
+   `Stack` value matching its `### Phase N` section's `**Stack:**` field (a
+   mismatch → `added_without_source`, same as a REQ-IDs/Depends-on mismatch).
+   For a brownfield program, `codebase-context.md`'s `Detected stacks` is the
+   ground truth: every phase's `Stack` must be one of the entries listed there
+   — a `Stack` value with no matching `Detected stacks` entry → `stack_mismatch`.
+   Greenfield programs have exactly one possible `Stack` (the program's chosen
+   archetype) — any phase differing from it → `stack_mismatch`.
+7. Set status: "pass" only if all arrays are empty.
 
 ## Re-validation mode
 When the orchestrator passes your previous diff report plus a git diff of
 `phase-plan.md`, follow the validate-traceability skill's **Delta re-validation**
 section instead of reading both files fully — flags map to `### Phase N`
 sections (this validator's extended schema applies unchanged: `missing`/
-`duplicated`/`misordered`/`not_shippable`, no `altered`). Re-run the REQ-ID set
-comparison (step 3) scoped to the touched phases only. Fall back to full
-validation if the diff is missing or unmappable.
+`duplicated`/`misordered`/`not_shippable`/`stack_mismatch`, no `altered`).
+Re-run the REQ-ID set comparison (step 3) and the `Stack` check (step 6)
+scoped to the touched phases only. Fall back to full validation if the diff is
+missing or unmappable.
 
 ## Output format
 Wrap your report in a code block:
@@ -60,6 +74,7 @@ Wrap your report in a code block:
   "added_without_source": [],
   "misordered": [],
   "not_shippable": [],
+  "stack_mismatch": [],
   "notes": ""
 }
 ```

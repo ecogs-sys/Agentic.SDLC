@@ -179,7 +179,8 @@ flowchart TD
 
 ## Application archetypes
 
-A run targets one **application archetype**, recorded as `app_type` in `state.json`:
+Every **phase** targets one **application archetype**, recorded as `app_type` in
+that phase's `state.json`:
 
 | `app_type` | Stack | Development tracks | Definition of done |
 |---|---|---|---|
@@ -187,11 +188,20 @@ A run targets one **application archetype**, recorded as `app_type` in `state.js
 | `electron` | Electron + TypeScript pnpm monorepo (electron-vite, node-pty, xterm) | `electron` (main/preload/renderer) | electron-builder packages the app and it smoke-launches (Packager stage) |
 | `embedded` | ESP-IDF (C/C++) firmware for ESP32 | `embedded` (driver/app-logic/rtos-task/build-config) | `idf.py build` produces a `.bin`/`.elf` within its partition budget (Packager stage) — nothing is flashed to hardware automatically |
 
-Greenfield runs pick the archetype at `/start-run`; brownfield runs auto-detect it
-(the Code Surveyor flags `electron` when it sees `electron` in `package.json`, a
-`pnpm-workspace.yaml`, or an `electron.vite.config.*`; it flags `embedded` when it
-sees an `idf_component.yml`, `idf_component_register` in a `CMakeLists.txt`, or a
-root `sdkconfig`). Electron and embedded runs replace the DevOps/containerization
+Greenfield runs pick the archetype at `/start-run`, and it applies to every phase
+of that program (a from-scratch build is always single-archetype). Brownfield runs
+auto-detect it — the Code Surveyor flags `electron` when it sees `electron` in
+`package.json`, a `pnpm-workspace.yaml`, or an `electron.vite.config.*`; it flags
+`embedded` when it sees an `idf_component.yml`, `idf_component_register` in a
+`CMakeLists.txt`, or a root `sdkconfig`; it flags `web` for a `.csproj`/React
+`package.json`. **A workspace can contain more than one of these at once** (e.g.
+a web app plus a separate firmware tree) — the surveyor records every archetype it
+finds under `Detected stacks`, and a brownfield program that splits into phases
+(see Phases below) can route each phase to a different one via the phase
+plan's `Stack` column: Phase 1 might be `web`, Phase 2 `embedded`, each ending in
+its own archetype's done-gate. A flat (non-split) brownfield change-run stays
+single-archetype regardless — it picks the one `Detected stacks` entry the request
+actually touches. Electron and embedded phases replace the DevOps/containerization
 stage with a **Packager** stage — `electron-packager` → `electron-packager-reviewer`
 (following `agentic-sdlc:electron-conventions`' secure-by-default rules:
 contextIsolation + sandbox on, nodeIntegration off, zod-validated IPC) or
@@ -305,7 +315,9 @@ ships on its own branch `agentic-sdlc/<program-id>/phase-0N`, and opens its own 
 Phases are strictly sequential: after a phase's PR is merged, run
 `/agentic-sdlc:next-phase` to start the next one (which branches from the updated
 default branch and builds on the shipped code). A small requirement yields a
-single-phase plan and behaves like one ordinary run.
+single-phase plan and behaves like one ordinary run. Each phase carries its own
+`app_type` — see Application archetypes above for the (rare, brownfield-only)
+case where a program's phases don't all share the same one.
 
 ## Where artifacts live
 
@@ -315,7 +327,7 @@ Each run operates on its own git branch (`agentic-sdlc/<run-id>`). SDLC artifact
 <your-workspace>/                       ← workspace root (git repo)
 ├── runs/
 │   └── program-YYYY-MM-DD-001/         ← one big requirement
-│       ├── program.json                ← program state machine (req_spec, phase_plan, phases[].req_ids, current_phase)
+│       ├── program.json                ← program state machine (req_spec, phase_plan, phases[].req_ids/app_type, current_phase)
 │       ├── original-input.md           ← full requirement, verbatim
 │       ├── req-spec.md                 ← BA output — the master spec, REQ-ID by REQ-ID (runs once, not per phase)
 │       ├── phase-plan.md               ← Phase Planner output (frozen) — splits req-spec.md by REQ-ID

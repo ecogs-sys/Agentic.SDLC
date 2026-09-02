@@ -20,18 +20,39 @@ write-codebase-context skill for the exact format.
 - `runs/<run-id>/codebase-context.md`
 
 ## Process
-1. **Detect the stack and app_type.** Glob `**/*.csproj` and read the nearest
-   `Program.cs` for .NET version + registration style; Glob `**/package.json` for
-   React/Electron; find `**/*DbContext.cs` / `**/Migrations/*.cs` for the database;
-   check for `docker-compose.yml` and CI config. Also Glob for `idf_component.yml`,
-   a `CMakeLists.txt` containing `idf_component_register`, or a root `sdkconfig`
-   (ESP-IDF firmware). **Determine `app_type`:** if you find `electron` in a
-   `package.json`'s dependencies/devDependencies, a `pnpm-workspace.yaml`, or an
-   `electron.vite.config.*`, the app_type is `electron` (a desktop app — no
-   .NET/db); if you find `idf_component.yml`, `idf_component_register`, or a root
-   `sdkconfig`, the app_type is `embedded` (ESP-IDF C/C++ firmware — no .NET/db,
-   no Electron shell); otherwise `web`. Record the proposed `app_type` in
-   codebase-context.md's Stack section.
+1. **Detect the stack(s) and app_type(s).** Glob `**/*.csproj` and read the
+   nearest `Program.cs` for .NET version + registration style; Glob
+   `**/package.json` for React/Electron; find `**/*DbContext.cs` /
+   `**/Migrations/*.cs` for the database; check for `docker-compose.yml` and CI
+   config. Also Glob for `idf_component.yml`, a `CMakeLists.txt` containing
+   `idf_component_register`, or a root `sdkconfig` (ESP-IDF firmware).
+
+   **Check each archetype independently — a workspace can legitimately contain
+   more than one** (e.g. a web app plus a separate firmware tree, or a desktop
+   shell plus embedded firmware it talks to). Do NOT stop at the first match:
+   - `web` is present if you find `*.csproj` (backend) or a non-Electron
+     `package.json` with React (frontend), or both.
+   - `electron` is present if you find `electron` in a `package.json`'s
+     dependencies/devDependencies, a `pnpm-workspace.yaml`, or an
+     `electron.vite.config.*`.
+   - `embedded` is present if you find `idf_component.yml`,
+     `idf_component_register`, or a root `sdkconfig`.
+
+   List every archetype you actually confirmed under `Detected stacks`, each
+   with its own `src_paths` (web: `{backend, backend_test, frontend}`;
+   electron/embedded: a single root — default `.` unless a subdirectory clearly
+   scopes it, e.g. `src/firmware`). Never list an archetype you didn't
+   independently confirm, and never let one archetype's markers (e.g. a root
+   `package.json`) imply another (a nested `src/firmware/CMakeLists.txt` does
+   not make the repo root "embedded").
+
+   Then set `Proposed app_type` to whichever detected stack the **current
+   request's** Impact map actually touches (Step 3, below) — this is the
+   default archetype for a flat, non-split run. If the request's impact spans
+   more than one detected stack, still pick the primary one here (the flat
+   pipeline is single-archetype); flag the multi-archetype nature of the
+   request in the Impact map itself so the triage gate (Step B4) or a program
+   split (Phase Planner) can route each part to its own phase.
 2. **Capture conventions.** Note Clean-Architecture layout (which projects exist,
    where `DbContext` lives), naming, and the test framework on each side. For an
    `embedded` app_type, note the ESP-IDF component layout, target chip

@@ -91,9 +91,12 @@ Say:
      ```
   3. Invoke `phase-planner-validator`; loop up to 5 iterations exactly as in
      start-run Step 9. On pass, state the path **`runs/<program-id>/phase-plan.md`**
-     and display the revised remaining phases, then ask the user to **approve**. On **approve**, update `phase_count`
-     (`phase_plan.phase_count`) and the not-yet-started `phases[]` entries, then
-     continue to Step 6. On **any other response**, treat it as revision notes and
+     and display the revised remaining phases, then ask the user to **approve**. On
+     **approve**, update `phase_count` (`phase_plan.phase_count`) and the
+     not-yet-started `phases[]` entries — `req_ids` and `app_type` (with its
+     matching `src_paths`) reparsed from the revised `## Phase index` table's
+     `REQ-IDs`/`Stack` columns, same as start-run Step 10 — then continue to
+     Step 6. On **any other response**, treat it as revision notes and
      re-invoke `phase-planner` (repeat the replan loop).
 - **"keep"**: proceed with the existing plan.
 - **anything else**: treat as `keep` — proceed with the existing plan.
@@ -104,15 +107,21 @@ Say:
    Phase 1 state.json in start-run, with `run_id = "<program-id>/phase-0N"`,
    `phase_number = N`, `branch = "agentic-sdlc/<program-id>/phase-0N"`,
    `current_stage = "architect"`, `spec_frozen = false`,
-   `master_req_spec_path = "runs/<program-id>/req-spec.md"`, `req_ids` copied
-   from the Phase N `phases[]` entry (populated when the phase plan was
-   approved/replanned — see start-run Step 10), and the program's `app_type` and
-   `src_paths`. There is no `raw-input.md` and no `ba` / `ba_validation` /
+   `master_req_spec_path = "runs/<program-id>/req-spec.md"`, and `req_ids`,
+   `app_type`, `src_paths` all copied from the Phase N `phases[]` entry
+   (populated when the phase plan was approved/replanned — see start-run Step
+   10). There is no `raw-input.md` and no `ba` / `ba_validation` /
    `user_review_req` entry in `stages` — the BA already ran once at the program
-   level. (Copy `app_type` from `program.json` — default `"web"` if absent for
-   older programs — so an electron or embedded program's later phases keep routing
-   to their single track and the packaging done-gate instead of defaulting to
-   web/devops.)
+   level. **Use the Phase N entry's own `app_type`/`src_paths`, not
+   `program.json`'s top-level ones** — for the ordinary single-archetype
+   program they're identical, but a brownfield program spanning more than one
+   `Detected stacks` archetype routes different phases to different ones (see
+   write-phase-plan's Stack section). If a `phases[]` entry predates this
+   field (an older program, or a phase whose `Stack` was never differentiated),
+   fall back to `program.json.app_type` — default `"web"` if that's absent too
+   — so an electron or embedded program's later phases keep routing to their
+   single track and the packaging done-gate instead of defaulting to
+   web/devops.
    **If `program.json` `mode == "brownfield"`,** also copy `mode: "brownfield"`,
    `codebase_context_path`, `infra_change_required`, and `test_baseline` from
    `program.json` into the phase `state.json` so the phase runs brownfield-aware (its

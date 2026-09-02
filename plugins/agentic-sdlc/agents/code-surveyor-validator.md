@@ -26,6 +26,13 @@ report using the validate-traceability skill's JSON schema.
    has a test suite → `missing` (baseline not captured).
 5. **Depth consistency.** If `Survey depth: deep` but `## Architecture map` is empty
    / "(not surveyed)" → `altered`.
+6. **Detected stacks are real and grounded.** For each archetype under
+   `Detected stacks`, verify its marker actually exists (web: a `*.csproj` or a
+   React `package.json`; electron: `electron` in a `package.json` /
+   `electron.vite.config.*`; embedded: `idf_component.yml`,
+   `idf_component_register`, or a root `sdkconfig`) — a listed archetype with no
+   corresponding marker → `added_without_source`. `Proposed app_type` must be
+   one of the listed `Detected stacks` entries — otherwise → `altered`.
 
 ## Output
 Emit the JSON diff report. `status` is `"pass"` only when all arrays are empty. Be
