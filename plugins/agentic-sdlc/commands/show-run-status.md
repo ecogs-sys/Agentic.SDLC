@@ -21,7 +21,11 @@ Read state.json and display a clear status summary.
     layout below and stop.
 2. Read program.json: `req_spec`, `phase_plan`, `current_phase`, `phase_count`
    (`phase_plan.phase_count`), `phases`, `app_type` (default `web` if absent),
-   `src_paths`.
+   `src_paths`. These are the program-level defaults — once a phase exists
+   (step 3), prefer **that phase's own** `app_type`/`src_paths` from its
+   `state.json` for display (step 5), since a brownfield program spanning more
+   than one `Detected stacks` archetype can have a phase whose archetype
+   differs from `program.json`'s.
 3. If `phases` is empty OR `current_phase == 0`, the program is still in the BA
    or Phase Planner stage — no phase has been finalized. Skip the per-phase detail
    (steps 4–5 and the PLANNING/DEVELOPMENT/DEVOPS/ARTIFACTS blocks); show the
@@ -40,7 +44,9 @@ Read state.json and display a clear status summary.
    node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" tail-log <run-dir> 10
    ```
    (Older runs may have no progress.log — show "(no activity log)".)
-5. Check existence of the archetype's code paths (by `app_type`, default `web`):
+5. Check existence of the archetype's code paths (by the active phase's own
+   `app_type`/`src_paths` when a phase exists, else `program.json`'s; default
+   `web`):
    - **web:** `<backend_src>/` (src_paths.backend), `<backend_test>/` (src_paths.backend_test; default `tests/backend` if absent), `<frontend_src>/` (src_paths.frontend), and `docker-compose.yml` at workspace root.
    - **electron:** the monorepo root `<electron_root>/` (src_paths.electron), `<electron_root>/apps/desktop/`, and `<electron_root>/electron-builder.yml`.
    - **embedded:** the project root `<embedded_root>/` (src_paths.embedded), `<embedded_root>/main/`, and `<embedded_root>/sdkconfig.defaults`.
