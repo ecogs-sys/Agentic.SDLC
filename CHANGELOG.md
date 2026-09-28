@@ -2,6 +2,31 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.3.0] - 2026-09-29
+
+**Engineer-draft reviewers no longer fail stories for missing tests.** All
+four code-review agents (dotnet, react, electron, embedded) shared a "Review
+stance" that offered "test name" as sanctioned acceptance-criterion evidence,
+with no statement that test existence/coverage is out of scope at the
+engineer-draft review stage — which runs *before* the separate
+test-engineer/test-reviewer loop even starts. Reported from a 28-story phase
+run: the dotnet-reviewer alone invented a "zero tests = CRITICAL fail" rule at
+least 6 times (STORY-029, 030, 031, 032, 033, 041, 043), each requiring a
+manual "reconsideration" agent invocation citing git-log precedent to reverse
+the verdict.
+
+### Fixed
+- **Review stance now states test coverage is out of scope at this stage**,
+  added to all four code-review agents (`dotnet-reviewer`, `react-reviewer`,
+  `electron-reviewer`, `embedded-reviewer`). Acceptance criteria must be
+  verified by reading code and tracing logic (or running the build) — never by
+  looking for a test that proves them; the test-reviewer verifies coverage
+  later in the same story's pipeline.
+- **Dropped "test name" from the evidence schema hint**
+  (`"evidence": "file:line or test name"` → `"file:line or command output"`)
+  in each reviewer's output-format example, which had implicitly signaled
+  tests as expected evidence pre-test-loop.
+
 ## [1.2.0] - 2026-09-02
 
 **Phase-level `app_type` — a brownfield program can now span more than one
