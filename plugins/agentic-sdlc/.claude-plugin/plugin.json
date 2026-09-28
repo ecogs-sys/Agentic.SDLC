@@ -1,6 +1,6 @@
 {
   "name": "agentic-sdlc",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Agentic SDLC for .NET + React, Electron, and ESP-IDF embedded (ESP32) applications.",
   "author": {
     "name": "ecogs"
