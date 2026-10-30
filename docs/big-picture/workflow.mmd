@@ -1,0 +1,103 @@
+flowchart TD
+    INPUT([Human request]) --> DETECT{Existing application code?}
+    IDEA([Optional brainstorm: generate, critique, select and detail ideas]) -. Selected brief .-> INPUT
+    DETECT -->|No: new application| BA
+    DETECT -->|Yes: existing system| SURVEY
+    SURVEY((Code Surveyor)) --> SV((Survey Validator))
+    SV -. Revise .-> SURVEY
+    SV --> TRIAGE([Human triage: confirm scope and tier])
+    TRIAGE -. Survey changes .-> SURVEY
+    TRIAGE -->|Bug fix / small change| FIX
+    TRIAGE -->|New feature: deep survey, single change| FBA
+    TRIAGE -->|New feature: deep survey, split into phases| BA
+
+    subgraph PROGRAM[Program planning: once per program]
+      BA((Business Analyst)) --> BAV((BA Validator))
+      BAV -. Revise .-> BA
+      BAV --> BAH([Human requirements approval])
+      BAH -. Changes .-> BA
+      BAH -->|Approved| PP((Phase Planner))
+      PP --> PPV((Planner Validator))
+      PPV -. Revise .-> PP
+      PPV --> PPH([Human phase-plan approval])
+      PPH -. Changes .-> PP
+    end
+    PPH -->|Approved: create phase| ARCH
+    FBA((Change-run Business Analyst)) --> FBAV((BA Validator))
+    FBAV -. Revise .-> FBA
+    FBAV --> FBAH([Human requirements approval])
+    FBAH -. Changes .-> FBA
+    FBAH -->|Approved| ARCH
+
+    ARCH((Architect)) --> ARV((Architect Validator))
+    ARV -. Revise .-> ARCH
+    ARV --> ARH([Human technical-spec approval])
+    ARH -. Technical change .-> ARCH
+    ARH -. Requirements: scoped BA reopen and reapproval .-> REQ([Requirements owner: program BA or change-run BA])
+    REQ --> ARCH
+    ARH -->|Approved| TL((Technical Lead))
+    TL --> TLV((Tech Lead Validator))
+    TLV -. Revise .-> TL
+    TLV --> TLH([Human stories approval])
+    TLH -. Changes .-> TL
+    TLH -->|Approved| AUTHOR
+    FIX((Fix Planner)) --> FIXV((Fix-plan Validator))
+    FIXV -. Revise .-> FIX
+    FIXV --> FIXH([Human fix-plan approval])
+    FIXH -. Changes .-> FIX
+    FIXH -->|Approved: synthesize stories| AUTHOR
+    AUTHOR([Helper: generate eval manifest from story criteria]) --> EH([Human eval review])
+    EH -. Local check-kind change: redisplay .-> EH
+    EH -. Criterion change: feature/program .-> TL
+    EH -. Criterion change: fix/small change .-> FIX
+    EH -. Technical change: if this route has an Architect .-> ARCH
+    EH -. Requirements change: if this route has a BA .-> REQ
+    EH -->|Approved: freeze specification| ENG
+
+    subgraph DEV[One story at a time: dependency wave, then story ID]
+      ENG((Track Engineer)) --> CR((Code Reviewer))
+      CR -. Code issues .-> ENG
+      CR -->|Pass| TE((Test Engineer))
+      TE --> TR((Test Reviewer))
+      TR -. Test issues .-> TE
+      TR -. Production defect .-> ENG
+      TR -->|Tests pass| CHECK([Helper: scan tags and check criterion coverage])
+      CHECK -. Missing test binding .-> TE
+      CHECK -->|Story passes, more remain| ENG
+    end
+    CHECK -->|All stories complete| CORPUS([Promote evals and replay permanent test-link corpus])
+    CORPUS -. Regression: repair affected story .-> ENG
+    CORPUS -. Intentional change .-> RETIRE([Reviewed retire / supersede, then replay])
+    RETIRE --> CORPUS
+    CORPUS -->|Pass| INFRA{New build or infrastructure change required?}
+    INFRA -->|No: permitted brownfield skip| DONE
+    INFRA -->|Yes| TYPE{Application type}
+    TYPE -->|Web| DO((DevOps Engineer))
+    DO --> DOR((DevOps Reviewer))
+    DOR -. Config issue .-> DO
+    DOR -. Owning story bug: code and full tests, then retry final stage .-> ENG
+    TYPE -->|Electron / embedded| PK((Track Packager))
+    PK --> PKR((Packager Reviewer))
+    PKR -. Packaging issue .-> PK
+    PKR -. Owning story bug: code and full tests, then retry final stage .-> ENG
+    DOR -->|Verified| DONE([Run complete: branch ready for review])
+    PKR -->|Verified| DONE
+    DOR -. Ambiguity .-> HUMAN([Human guidance])
+    PKR -. Ambiguity .-> HUMAN
+    LIMIT([Any bounded review loop reaches five iterations]) --> HUMAN
+    HUMAN -. Resume affected loop with guidance .-> RESUME([Affected creator / reviewer loop])
+    DONE --> PR([Human opens, reviews and merges PR])
+    PR --> NEXT{Program has remaining phases?}
+    NEXT -->|No / flat change run| SHIPPED([Delivered])
+    NEXT -->|Yes: next-phase and merge confirmation| REPLAN{Replan remaining phases?}
+    REPLAN -->|Keep| ARCH
+    REPLAN -->|Replan| PP
+    FREEZE([After eval approval: upstream spec edits are blocked; cancel and start a new run])
+    LIMITS([Helper checks bindings; tests run separately. assert/judge execution is not implemented.])
+
+    classDef agent fill:#eff6ff,stroke:#0caee0,color:#334155
+    classDef reviewer fill:#f0fdfa,stroke:#087f9f,color:#334155
+    classDef human fill:#fff7ed,stroke:#ce731b,color:#334155
+    class BA,PP,FBA,ARCH,TL,FIX,SURVEY,ENG,TE,DO,PK agent
+    class BAV,PPV,FBAV,ARV,TLV,FIXV,SV,CR,TR,DOR,PKR reviewer
+    class TRIAGE,BAH,PPH,FBAH,ARH,TLH,FIXH,EH,HUMAN,PR human

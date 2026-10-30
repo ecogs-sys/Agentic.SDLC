@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">Planning ribbon — layout sample</title>
+  <desc id="desc">A large planning ribbon encloses four smaller review ribbons. Each small ribbon carries an agent, reviewer and human directly on its path. The outgoing ribbon carries human eval approval at the specification-freeze boundary.</desc>
+  <defs>
+    <marker id="large-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="2.2" markerHeight="2.2" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#0a829f"/></marker>
+    <marker id="small-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="1.7" markerHeight="1.7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#14add6"/></marker>
+    <g id="agent">
+      <circle r="33" fill="#fff" stroke="#14add6" stroke-width="4"/>
+      <g fill="none" stroke="#0799c5" stroke-width="2.5" stroke-linecap="round">
+        <rect x="-17" y="-13" width="34" height="26" rx="6"/>
+        <path d="M0-21V-13M-17-4H-22V5H-17M17-4H22V5H17M-9 7H9M-11 16V21H11V16"/>
+      </g>
+      <g fill="#0799c5"><circle cy="-23" r="2.5"/><circle cx="-8" cy="-4" r="2.5"/><circle cx="8" cy="-4" r="2.5"/></g>
+    </g>
+    <g id="reviewer">
+      <use href="#agent"/>
+      <circle cx="22" cy="20" r="13" fill="#087f90" stroke="#fff" stroke-width="2"/>
+      <path d="M15 20L20 25L29 15" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <g id="human">
+      <circle r="33" fill="#fffaf1" stroke="#d78623" stroke-width="4"/>
+      <g fill="none" stroke="#c57c21" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cy="-10" r="9"/>
+        <path d="M-19 21V14C-19 0 19 0 19 14V21M-9 15V22M9 15V22M-5 2L0 9L5 2"/>
+      </g>
+    </g>
+    <g id="review-loop">
+      <circle r="106" fill="#f6fcfe" stroke="none"/>
+      <path d="M0-106A106 106 0 0 1 99 38" fill="none" stroke="#14add6" stroke-width="15" marker-end="url(#small-arrow)"/>
+      <path d="M92 53A106 106 0 0 1-79 71" fill="none" stroke="#14add6" stroke-width="15" marker-end="url(#small-arrow)"/>
+      <path d="M-92 53A106 106 0 0 1-19-104" fill="none" stroke="#14add6" stroke-width="15" marker-end="url(#small-arrow)"/>
+      <use href="#agent" y="-106"/>
+      <use href="#reviewer" x="92" y="53"/>
+      <use href="#human" x="-92" y="53"/>
+      <g font-family="Arial,sans-serif" font-size="14" text-anchor="middle">
+        <text y="-149" fill="#087f90">Agent</text>
+        <text x="99" y="104" fill="#087f90">Reviewer</text>
+        <text x="-99" y="104" fill="#b16d17">Human</text>
+      </g>
+    </g>
+  </defs>
+  <rect width="1600" height="1050" fill="#fff"/>
+  <g font-family="Arial,sans-serif">
+    <path d="M65 48H165" stroke="#14add6" stroke-width="6" stroke-linecap="round"/>
+    <text x="65" y="103" font-size="36" font-weight="700" fill="#334155">PLANNING, ON A CONTINUOUS RIBBON</text>
+    <text x="65" y="140" font-size="20" fill="#64748b">Layout sample · agents, reviewers and humans sit directly on each review loop.</text>
+
+    <!-- One broad outer ribbon, with an incoming and an outgoing flow. -->
+    <path d="M70 230H690C954 230 1155 356 1155 567C1155 778 954 917 690 917C426 917 225 778 225 567C225 356 426 230 690 230H1485"
+          fill="none" stroke="#dff2f6" stroke-width="33" stroke-linejoin="round"/>
+    <path d="M70 230H325" fill="none" stroke="#0a829f" stroke-width="25" marker-end="url(#large-arrow)"/>
+    <path d="M690 230C954 230 1155 356 1155 567C1155 778 954 917 690 917C426 917 225 778 225 567C225 356 426 230 660 230"
+          fill="none" stroke="#0a829f" stroke-width="25" marker-end="url(#large-arrow)"/>
+    <path d="M700 230H1485" fill="none" stroke="#0a829f" stroke-width="25" marker-end="url(#large-arrow)"/>
+    <text x="90" y="194" font-size="19" font-weight="700" fill="#334155">REQUIREMENTS</text>
+    <text x="693" y="581" text-anchor="middle" font-size="21" font-weight="700" fill="#087f90">PLAN · REVIEW · APPROVE</text>
+    <text x="693" y="609" text-anchor="middle" font-size="16" fill="#64748b">Revisit earlier planning when needed</text>
+
+    <!-- Four clustered planning loops, with all three participants on the ribbon. -->
+    <use href="#review-loop" x="475" y="440"/>
+    <use href="#review-loop" x="910" y="440"/>
+    <use href="#review-loop" x="475" y="740"/>
+    <use href="#review-loop" x="910" y="740"/>
+    <g text-anchor="middle" fill="#334155" font-size="21" font-weight="700">
+      <text x="475" y="421"><tspan x="475">01 · Business</tspan><tspan x="475" dy="27">Analyst</tspan></text>
+      <text x="910" y="421"><tspan x="910">02 · Phase</tspan><tspan x="910" dy="27">Planner</tspan></text>
+      <text x="475" y="733">03 · Architect</text>
+      <text x="910" y="721"><tspan x="910">04 · Technical</tspan><tspan x="910" dy="27">Lead</tspan></text>
+    </g>
+
+    <!-- The exit gate is also on the ribbon, not beneath or outside the flow. -->
+    <path d="M1285 294V879" stroke="#d78623" stroke-width="2" stroke-dasharray="6 9"/>
+    <use href="#human" x="1285" y="230"/>
+    <text x="1285" y="180" text-anchor="middle" font-size="19" font-weight="700" fill="#b16d17">Human eval approval</text>
+    <text x="1285" y="288" text-anchor="middle" font-size="16" font-weight="700" fill="#b16d17">SPEC FREEZE</text>
+    <text x="1460" y="304" text-anchor="middle" font-size="18" fill="#087f90"><tspan x="1460">To engineering</tspan><tspan x="1460" dy="26">and testing</tspan></text>
+    <text x="690" y="970" text-anchor="middle" font-size="17" fill="#64748b">Small ribbon = local review cycle. Outer ribbon = planning feedback before specification freeze.</text>
+    <text x="65" y="1016" font-size="15" fill="#64748b">Visual sample only: exact stage connections and program-versus-phase scope remain defined by the repository workflow.</text>
+  </g>
+</svg>
