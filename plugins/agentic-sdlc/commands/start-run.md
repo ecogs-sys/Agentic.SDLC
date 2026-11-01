@@ -661,3 +661,115 @@ program scan and drives each phase's brownfield-aware greenfield sequence (start
 at `architect`, since the BA already ran once at the program level in Step BP2).
 Subsequent phases are started with `/agentic-sdlc:next-phase` after each phase's
 PR merges.
+
+---
+
+## Entry from /agentic-sdlc:reverse-spec
+
+Entered from `/agentic-sdlc:reverse-spec` Step 10, when the user chose to rebuild a
+legacy system from reverse-engineered specs. **The BA does not run on this path.**
+
+The reverse-spec output is already in `agentic-sdlc:write-req-spec` format — same
+`REQ-NNN` rules, same acceptance-criteria structure — so re-deriving it through the
+BA would be a lossy, expensive round trip that also renumbers every REQ-ID and
+breaks the `**Evidence:**` links back to the legacy code. Instead the master
+req-spec is written **directly** and the program starts at the Phase Planner.
+
+### Step R1 — Normal program setup
+Run **Steps 0, 1, 3, 3c, 4, 5** as written: the active-program check, the program ID,
+target source-path detection, archetype choice, the branch, and `.gitignore`.
+
+Skip **Step 2** (the requirement is already captured in the reverse-spec run).
+
+**Step 3b is skipped, not evaluated.** The legacy code lives at external paths and
+the target is a fresh workspace, so brownfield detection must not fire. The calling
+command has already verified that the target paths are empty and do not overlap any
+surveyed path — if they are not, it stops there rather than reaching this step.
+
+### Step R2 — Create the program directory
+Create `runs/<program-id>/` and write `runs/<program-id>/original-input.md` as a
+**provenance pointer**, not a paraphrase — the audit record of where this spec came
+from:
+
+```markdown
+# Original Input
+Program ID: <program-id>
+Captured: <YYYY-MM-DD HH:MM>
+Source: reverse-engineered from existing source code
+
+This program's requirement spec was recovered from an existing system by
+`/agentic-sdlc:reverse-spec`, not authored from a written requirement.
+
+- Reverse-spec run: `reverse-spec/<rev-id>/`
+- Surveyed source roots (paths are where the code sat when surveyed — they differ
+  per engineer; resolve them per the `agentic-sdlc:write-system-inventory` skill's
+  Root resolution protocol, which asks for confirmation when a path is absent):
+  - SRC1 — <repo name> — <absolute path at survey time>
+- Module decomposition: `reverse-spec/<rev-id>/module-map.md`
+- Rules needing human confirmation: `reverse-spec/<rev-id>/summary.md`
+
+The master `req-spec.md` was written directly from that run's module specs with
+REQ-IDs preserved. The BA stage did not run.
+```
+
+### Step R3 — Write the master req-spec directly
+Merge `reverse-spec/<rev-id>/system-req-spec.md` plus every module `req-spec.md`
+into `runs/<program-id>/req-spec.md`, following the **Merged master spec** format in
+the `agentic-sdlc:write-reverse-spec` skill:
+
+- **Preserve every REQ-ID** — they are globally unique across the reverse-spec run by
+  construction. Never renumber. Gaps in the sequence are expected and harmless.
+- Add the `## REQ index` table after `## Overview` (from `req-index.md`).
+- Add the `## Evidence index` table, with every evidence-file path
+  **workspace-relative** so it survives the workspace being moved or cloned, and copy
+  in the `### Source roots` sub-table from `system-inventory.md`. Legacy source
+  citations inside `evidence.md` are `SRC<n>:<relative path>:<line>`, so a reader who
+  has only the master spec still needs that table to follow one — and whoever follows
+  it is asked to confirm the location if their checkout differs.
+- Header is `Program ID: <program-id>`, `Status: approved`, `Version: 1`.
+
+The `## REQ index` repeats every REQ-ID as text. The authoritative requirement list
+is the `### REQ-NNN` **headings** — never count REQs by regex over the whole file, or
+the index will double every total.
+
+### Step R4 — Write program.json with the spec already frozen
+Write `runs/<program-id>/program.json` as in Step 6, with the requirement spec
+pre-frozen (it was approved at the reverse-spec module gates):
+
+```json
+{
+  "program_id": "<program-id>",
+  "origin": { "kind": "reverse-spec", "rev_id": "<rev-id>" },
+  "parent_branch": "<PARENT_BRANCH>",
+  "app_type": "<web | electron | embedded>",
+  "src_paths": { "...": "per app_type, as in Step 6" },
+  "req_spec": { "status": "frozen", "iterations": 0 },
+  "phase_plan": { "status": "pending", "phase_count": 0, "iterations": 0 },
+  "current_phase": 0,
+  "phases": []
+}
+```
+
+**Commit — program initialized from a reverse-spec run:**
+```bash
+SDLC commit-step "chore(<program-id>): initialize program from reverse-spec <rev-id>" .gitignore runs/<program-id>/
+```
+
+### Step R5 — Continue at the Phase Planner
+Go to **Step 9 (Phase Planner loop)** and continue through Step 11 exactly as
+written. Skip Steps 7 and 8 — the BA loop and the requirement-spec gate have no
+work to do, because `req_spec.status` is already `frozen`.
+
+Pass the Phase Planner `runs/<program-id>/req-spec.md` as usual. Because module
+boundaries were already chosen and confirmed by a human, the `Module` column of the
+`## REQ index` is a strong proposed split — phases will usually track modules closely.
+
+### Note for later stages
+`spec_frozen` is still set at the eval review gate, exactly as on every other path —
+`req_spec.status = "frozen"` here only records that the requirement spec was approved
+upstream, and does not freeze the tech-spec or skip any later gate.
+
+A mid-phase BA reopen (per the `agentic-sdlc:stage-architect` skill's BA-reopen
+routing) still works on this master spec. The BA must preserve the
+reverse-engineered sections it will find there — see the note at the end of the
+`agentic-sdlc:write-req-spec` skill.

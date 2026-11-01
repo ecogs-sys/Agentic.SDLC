@@ -2,6 +2,96 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.4.0] - 2026-11-01
+
+**Requirement specs can now be reverse-engineered from existing source code.**
+Until now the plugin could only act on an existing codebase *reactively*:
+`/start-run` detected existing code and surveyed it, but that survey
+(`codebase-context.md`) is technical and scoped to a change request the human had
+already written. There was no way to point the plugin at a legacy system with
+nothing in hand and ask what it does, which blocked the rewrite/re-platform case —
+nobody hand-writes a requirement spec for a 60k-LOC monolith that has been in
+production for fifteen years. Stack detection was also hardcoded to `*.csproj`,
+`package.json` and `sdkconfig`, so most legacy systems registered as empty.
+
+### Added
+- **`/agentic-sdlc:reverse-spec`** — a standalone command (the
+  `/agentic-sdlc:brainstorm` precedent: no run state, no branch, no automatic
+  commit) that surveys one or more legacy repositories **read-only** and writes
+  non-technical, diagram-bearing `req-spec.md` files to `reverse-spec/<rev-id>/`.
+  Accepts arbitrary absolute paths across multiple repositories, resumes an
+  interrupted run from what is on disk, and can hand off to `/start-run` later via
+  `--handoff <rev-id>` without re-surveying.
+- **Six agents.** `legacy-surveyor` (sonnet) + `legacy-surveyor-validator` (haiku)
+  take a language-agnostic census; `integration-cartographer` (sonnet) maps external
+  entities and reconciles integrations spanning more than one repository;
+  `legacy-decomposer` (opus) proposes business module boundaries;
+  `requirement-archaeologist` (opus) + `requirement-archaeologist-validator` (haiku)
+  recover each module's requirements.
+- **Two skills.** `write-system-inventory` carries marker-file detection for ~13
+  ecosystems (COBOL, VB6, Delphi, Java EE, PHP, Perl and the rest), entry-point
+  heuristics including scheduled jobs and file drops, and the per-module size budget.
+  `write-reverse-spec` defines the paired `req-spec.md` + `evidence.md` format, the
+  business-level mermaid diagram set, and the merged master-spec format.
+- **A human decomposition gate.** The decomposer proposes modules with size metrics
+  and an explicit unassigned list; the user approves or redraws (`merge 01+02`,
+  `split 03 by partner`). Module size governs how much code one specification pass
+  can actually read, so this gate is both the correctness check and the cost control.
+- **Reverse traceability validation.** The new validator runs the opposite direction
+  from every other validator in the plugin: every entry point, background job and
+  external entity must map to a requirement or be listed in `## Not specified` with
+  a reason. That is what catches dropped behavior.
+- **`/agentic-sdlc:start-run` entry from a reverse-spec run.** Writes the master
+  `req-spec.md` directly with REQ-IDs preserved, freezes it, and starts the program
+  at the Phase Planner. The BA does not run — the output is already in req-spec
+  format, so re-deriving it would be a lossy round trip that renumbers every REQ-ID
+  and breaks the evidence links back to the legacy code.
+- **Portable citations with revision tracking, for teams.** A reverse-spec run is
+  normally worked by several engineers, and a legacy repo is never checked out at the
+  same path twice. So no artifact records an absolute path outside one root table:
+  roots get symbolic ids (`SRC1`, `SRC2`) with fingerprints, branch, HEAD and
+  clean/dirty state, and every citation is `SRC<n>:<relative path>:<line>`.
+  Relocating is one table edit, not thousands of citations.
+
+  On another machine the workflow resolves each root (per-machine
+  `source-roots.local.md`, gitignored, so nobody edits a shared artifact others would
+  conflict with), verifies the fingerprint markers, then verifies the *revision* —
+  same remote, recorded branch present and checked out, and how far HEAD has drifted,
+  narrowed to the files this run actually cites. **When a root or branch cannot be
+  found it asks the user to confirm the location rather than guessing**, and it never
+  switches branches, pulls, stashes or resets on their behalf, since that would mutate
+  their working tree and can discard uncommitted work.
+
+  Both validators distinguish "citation is wrong" from "root unavailable on this
+  machine" and "line numbers drifted". Without that, a second engineer's run would
+  fail a perfectly correct module and burn its whole iteration cap on the most
+  expensive model "fixing" citations that were right.
+
+### Changed
+- **`phase-planner` reads index-first.** When a master `req-spec.md` carries a
+  `## REQ index` table, the planner reads the overview and index and scoped-reads
+  individual REQ blocks on demand instead of the whole file, which does not survive
+  a several-hundred-REQ spec. Benefits ordinary BA-produced programs too.
+- **`phase-planner-validator`** avoids reading a very large spec in full, and now
+  states that REQ-ID gaps are legitimate (IDs are allocated per module) and that the
+  authoritative REQ list is the `### REQ-NNN` headings — a plain `REQ-\d+` match
+  would double every ID by also matching the index table.
+- **`write-req-spec`** documents the reverse-engineered sections so a mid-phase BA
+  reopen preserves them: decision tables and precise business figures are *not*
+  technology detail, REQ-ID gaps must not be closed by renumbering, and
+  `## Observed operating characteristics` is legitimate because a legacy system's
+  measured behavior is stated reality rather than an invented requirement.
+
+### Notes
+- Business rules live **in the acceptance criteria**, not in a side file — that is
+  the channel the Architect already reads, and it survives downstream restructuring.
+  `evidence.md` carries `SRC<n>:<path>:<line>` citations, confidence levels and open
+  questions for cross-checking.
+- Surveyed source is never modified, and the legacy system is never built or run
+  (unlike the brownfield `code-surveyor`, which runs the test suite for a baseline):
+  legacy toolchains are usually absent and such a build can have real side effects.
+  Secrets found in legacy code are flagged by kind and location, never transcribed.
+
 ## [1.3.0] - 2026-09-29
 
 **Engineer-draft reviewers no longer fail stories for missing tests.** All

@@ -54,3 +54,31 @@ Version: <n>
 - [ ] No technology or framework names appear anywhere
 - [ ] No REQ is a duplicate of another
 - [ ] Status is "draft"
+
+## Reverse-engineered specs (preserve what you find)
+
+A master `req-spec.md` produced by `/agentic-sdlc:reverse-spec` is written directly
+from recovered legacy behavior rather than by the BA, following the
+`agentic-sdlc:write-reverse-spec` skill. It is this same format **plus** these
+sections, all of them legitimate:
+
+- `## REQ index` and `## Evidence index` tables after `## Overview`
+- `**Evidence:** MOD-NN EV-NNN` on each REQ, in place of `**Source:**`
+- `## Information model` and `## Observed operating characteristics`
+- Markdown decision tables inside a REQ's acceptance criteria
+
+If you are **reopened mid-phase** on such a spec (per the
+`agentic-sdlc:stage-architect` skill's BA-reopen routing), leave all of it intact.
+Specifically:
+
+- **Do not strip decision tables or specific figures as "too technical."** The ban
+  above is on *technology* names — frameworks, databases, protocols, file paths,
+  table and procedure names. A business rule is not technical because it is precise:
+  "1.5% per month, compounded, minimum 5.00, government accounts exempt" contains no
+  technology and is exactly the kind of detail a rewrite cannot afford to lose.
+- **Do not renumber REQ-IDs to close gaps.** Gaps are expected — IDs were allocated
+  per module — and renumbering would break both the write-once rule and the
+  `**Evidence:**` links back to the legacy code.
+- **Do not remove the `## Observed operating characteristics` section** as an
+  unstated non-functional requirement. For a reverse-engineered spec the legacy
+  system's measured behavior *is* stated reality.

@@ -435,11 +435,105 @@ brainstorms/brainstorm-2026-08-21-001/
   summary.md                  ← comparison table + recommendation
 ```
 
+## Reverse-engineering specs from legacy code (independent of runs)
+
+```
+/agentic-sdlc:reverse-spec C:\legacy\OrderMonolith C:\legacy\NightlyBatch
+```
+
+Point this at an existing system — **any language, any era** — and it recovers what
+that system does *for the business*, written as requirement specs you can feed
+straight into a rebuild. This is the reverse of every other command here: there is no
+change request, and the input is code rather than a requirement. Use it to
+re-platform or re-document a legacy app, or just to find out what the thing actually
+does.
+
+It accepts several repositories at once (the monolith, its background services, the
+database scripts), surveys them **read-only**, and never builds or runs them — legacy
+toolchains are usually missing, and such a build can have real side effects.
+
+Five stages, each on a right-sized model:
+
+1. **Legacy Surveyor** (sonnet) + validator (haiku) take a census — stacks, entry
+   points, background jobs, data stores. Detection covers ~13 ecosystems by marker
+   file (COBOL, VB6, Delphi, Java EE, PHP, Perl, Go, Rust and the rest), not just the
+   three the brownfield surveyor knows. Scheduled jobs and file drops get extra
+   attention: they are business-visible behavior with no UI, so they are what a
+   rewrite forgets.
+2. **Integration Cartographer** (sonnet) maps every external entity and reconciles
+   integrations that span two repositories — the monolith's outbound export and the
+   gateway's inbound endpoint are recorded once, as one integration.
+3. **Legacy Decomposer** (opus) proposes business module boundaries, then **you
+   confirm or redraw them** at a gate (`merge 01+02`, `split 03 by partner`). This is
+   the most consequential step: module size decides how much code one specification
+   pass can actually read, so the gate is both the correctness check and the cost
+   control.
+4. **Requirement Archaeologist** (opus) + validator (haiku) work one module at a
+   time, producing a **pair** of files per module. Business rules — rates,
+   thresholds, exemptions, failure policy — go in the `req-spec.md` acceptance
+   criteria, with decision tables where behavior branches. `evidence.md` carries the
+   `file:line` citations, a confidence level, and open questions.
+5. **Reverse traceability.** The validator runs the opposite direction from every
+   other validator in this plugin: every entry point, job and external entity must
+   map to a requirement or be listed in `## Not specified` with a reason. That is
+   what catches dropped behavior.
+
+Every `req-spec.md` carries **business-level mermaid diagrams** — a context diagram
+of the module and the external entities it talks to, the primary business process,
+and an entity lifecycle where one applies — so a reviewer can see the shape at a
+glance. Diagrams are capped at ~12 nodes; past that, external entities are grouped by
+category, because a 40-entity hairball is not "at a glance".
+
+```
+reverse-spec/rev-2026-11-01-001/
+  survey-input.md       ← source paths + scope notes
+  system-inventory.md   ← stacks, entry points, jobs, data stores, size metrics
+  integration-map.md    ← external entities, reconciled across repos
+  module-map.md         ← proposed decomposition → you confirm or redraw
+  system-req-spec.md    ← system context + information model + integration/job REQs
+  modules/MOD-01-<slug>/req-spec.md   ← rule-complete, non-technical, diagrams
+  modules/MOD-01-<slug>/evidence.md   ← file:line, confidence, open questions
+  req-index.md          ← REQ-ID → module → evidence ledger
+  summary.md            ← coverage, rules needing human confirmation, conflicts
+```
+
+At the end you can seed a program from the result. The specs are already in req-spec
+format, so the **BA does not re-run**: the master `req-spec.md` is written directly
+with REQ-IDs preserved and the program starts at the Phase Planner (roughly one phase
+per module). Keeping the IDs is what keeps the `**Evidence:**` links back to the
+legacy code alive all the way to the Architect.
+
+A long run is resumable — progress is inferred from the files on disk, so an
+interruption does not cost you the modules already specified. If a program is
+already active when you want to hand off, the output is saved and
+`--handoff <rev-id>` picks it up later without re-surveying.
+
+**Built for more than one engineer.** One person surveys, a colleague revises a
+module, an architect reads the evidence months later — and nobody has the legacy code
+at the same path. So the artifacts never hardcode a location: each repo gets a
+symbolic root (`SRC1`, `SRC2`) recorded once with its fingerprint, branch, HEAD and
+clean/dirty state, and every citation reads `SRC1:Billing/Calc.vb:412`.
+
+When you open someone else's run, it resolves those roots against your machine,
+checks you are on the same branch and how far `HEAD` has moved (narrowed to the files
+the run actually cites — 400 commits ahead with the cited files untouched is fine),
+and **asks you to confirm the location when a path or branch is missing** rather than
+guessing. Your answers go in a gitignored `source-roots.local.md`, so you are asked
+once and the shared artifacts stay identical for everyone. It will not switch
+branches or pull for you — that is your working tree, possibly with uncommitted work
+in it.
+
+> Read `summary.md`'s **Needs human confirmation** section before rebuilding
+> anything. A validator can check that a citation exists; it cannot check that the
+> rule is true. Low-confidence rules are where an agent guessed, and the pipeline
+> downstream will implement whatever it is given.
+
 ## Other commands
 
 | Command | Purpose |
 |---|---|
 | `/agentic-sdlc:brainstorm` | Explore ideas independent of any run — see above |
+| `/agentic-sdlc:reverse-spec` | Generate requirement specs from existing legacy source code — see above |
 | `/agentic-sdlc:show-run-status` | Show current stage, artifact status, and recent activity |
 | `/agentic-sdlc:cancel-run` | Cancel and clean up the current run |
 | `/agentic-sdlc:next-phase` | Start the next phase once the current one is merged |

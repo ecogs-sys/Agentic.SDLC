@@ -2,6 +2,8 @@
 
 A Claude Code plugin marketplace containing the **agentic-sdlc** plugin — a multi-agent SDLC pipeline that takes a plain-language requirement and produces a runnable application. Three application archetypes are supported: **web** (.NET 8 + React 18 + PostgreSQL), **electron** (TypeScript Electron desktop app), and **embedded** (C/C++ ESP-IDF firmware for ESP32). The pipeline supports both **greenfield** builds (from scratch, driven by a multi-phase program plan) and **brownfield changes** (bug fixes, small changes, and new features on an existing codebase, auto-detected at `/start-run`).
 
+It can also work **backwards from existing code**: `/agentic-sdlc:reverse-spec` surveys one or more legacy repositories in any language or era — COBOL, VB6, Delphi, Java EE, PHP — and recovers what they do for the business as non-technical, diagram-bearing requirement specs, module by module, with a human gate on the module boundaries. Those specs can then seed a rebuild through the normal pipeline. See [the plugin README](plugins/agentic-sdlc/README.md#reverse-engineering-specs-from-legacy-code-independent-of-runs).
+
 ## Workflow big picture
 
 The repository workflow is the source of truth for these diagrams. The original sketch informed only the visual style: circular loops, agent icons, human icons and curved arrows. Workflow files were read, not modified.
@@ -93,9 +95,9 @@ plugins/
   agentic-sdlc/
     .claude-plugin/
       plugin.json            ← plugin manifest (name, version)
-    agents/                  ← 37 subagent definitions
-    skills/                  ← 33 reusable skill files
-    commands/                ← 6 slash commands
+    agents/                  ← 43 subagent definitions
+    skills/                  ← 36 reusable skill files
+    commands/                ← 7 slash commands
     README.md                ← plugin user documentation
 CHANGELOG.md
 LICENSE
