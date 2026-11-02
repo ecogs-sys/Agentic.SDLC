@@ -2,6 +2,315 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.6.1] - 2026-11-03
+
+**Review fixes across the legacy-modernization track.** A full review of the three new
+commands found defects that would only surface on a real run. Behavior-affecting
+corrections, no new features.
+
+### Fixed — would have broken a run
+
+- **The single-module path never wrote `module-map.md`.** `/agentic-sdlc:reverse-spec`
+  Step 5 skipped decomposition for a system inside one module's budget, but
+  `module-map.md` is a required input to `requirement-archaeologist`, the
+  reverse-coverage denominator for its validator, and what the handoff guard iterates.
+  Step 5 now writes a one-row map. This is the "small app, specify it in one pass"
+  case, so it failed on first use.
+- **`requirement-archaeologist` was forbidden from writing the system spec.** Its
+  guardrail allowed writes only under `modules/`, while Step 7.5 asked it for
+  `system-req-spec.md` at the run root. It now has an explicit **System-level mode**
+  with both output paths declared.
+- **System-level REQs had no evidence file.** `**Evidence:**` is mandatory and
+  prefix-qualified, but no system evidence artifact existed. Added
+  `system-evidence.md` with the `SYS` prefix, alongside `MOD-<NN>` for modules; every
+  evidence file numbers from `EV-001` independently, so two modules sharing an `EV-031`
+  is correct rather than a collision.
+- **The system spec was never validated.** Steps 3 and 8 validate; Step 7.5 did not —
+  leaving the system context diagram, module map, `erDiagram` and job schedule with no
+  label-safety or node-cap check. It now runs the same validator loop and review gate
+  as a module, and `requirement-archaeologist-validator` handles both pair shapes.
+- **`coverage-auditor` and `capability-gap-analyst` declared file outputs but have no
+  `Write` tool.** They now state that the orchestrator saves their response, matching
+  `legacy-analyst` and `redesign-impact-analyst`; `/agentic-sdlc:gap-analysis` says so
+  on its side too.
+
+### Fixed — produced wrong output rather than a visible failure
+
+- **`write-system-inventory` fence nesting was broken.** The format block's
+  ```` ```markdown ```` was closed by a nested ```` ```bash ````, so the whole root
+  resolution protocol rendered as a literal code block and the rest of the inventory
+  template read as part of `source-roots.local.md`. The protocol is now a top-level
+  section after the format block.
+- **The handoff merge dropped sections the design depended on.** It is now specified as
+  a **flatten, not a concatenation** — each `##` section appears exactly once, so the
+  master spec does not end up with six `## Overview` headings and break
+  `artifact-slicing` and the Architect's scoped read. `## Observed operating
+  characteristics` and `## Not specified` are merged in rather than lost; module
+  diagrams are explicitly not reproduced, with a pointer to where they live.
+- **Per-REQ dependencies were invisible to the Architect.** A REQ relying on a
+  `MOD-00-shared` rule recorded it only in a module-level `## Cross-references`
+  section, which the Architect never reads (it is scoped to its phase's REQ-IDs). The
+  dependency now goes inside the REQ block as `**Depends on:**`.
+- **`architect.md`** now reads `## Observed operating characteristics` and the
+  `## Evidence index` when present, and knows what `**Divergence:**`, `**Origin:**`,
+  `**Depends on:**` and `**Legacy behavior:**` mean. Without this the legacy system's
+  measured behavior never reached the agent that sizes the rebuild.
+
+### Fixed — traceability and routing
+
+- **`GAP` ids are now write-once**, with a `Last allocated` cursor and a validator
+  check. The capability pass is re-runnable and rewrote the whole file, so a second
+  sweep could renumber a `GAP` that an accepted `DEC` already cited — re-pointing a
+  requirement at a different need.
+- **`DEC` allocation re-reads `Last allocated` immediately before allocating**, because
+  `decisions.md` is shared across engineers; a revised proposal reuses its number and
+  replaces its impact report, which is now stated rather than silent.
+- **`spec_frozen` is per phase, not per program.** `/agentic-sdlc:redesign` 6c and
+  `/agentic-sdlc:gap-analysis` refused every amendment once any phase froze. They now
+  resolve per REQ-ID against the union of frozen phases' `req_ids`, and a decision that
+  straddles the line applies in part and defers the rest.
+- **Nothing verified the merge.** A REQ dropped during the handoff became silently out
+  of scope — `phase-planner-validator` only checks that what *is* in the spec gets
+  phased. Step R3 now cross-checks every non-withdrawn REQ-ID in `req-index.md` against
+  the `### REQ-NNN` headings in the master spec, and says to write the file
+  incrementally rather than reading every module spec into context first.
+- **Added `/agentic-sdlc:reverse-spec --module <rev-id> MOD-NN`.**
+  `/agentic-sdlc:gap-analysis`'s coverage gate told the user to re-specify a named
+  module, but no such entry point existed and plain resume only picks up modules
+  *without* a `req-spec.md`. The command also gained the `## Invocation` section it was
+  missing.
+- **Resume had a hole** between the last module and `summary.md` — every module
+  specified and no summary matched no row. Added the Step 9 row and made the table's
+  precedence explicit.
+- **`gap-analysis-validator`'s `duplicated` array** is now declared as a deliberate
+  schema extension and marked blocking, rather than silently sitting outside
+  `validate-traceability`'s three arrays.
+- **`EV` numbering was specified twice, differently** — the orchestrator passed a
+  starting number while the agent numbered from `EV-001` itself. The agent owns it.
+- **Upgrade note in the README:** commands and agents resolve from the installed copy,
+  so a new command will not appear until the plugin is reinstalled and a fresh session
+  started.
+
+## [1.6.0] - 2026-11-02
+
+**Gap analysis for a reverse-engineered system.** `/agentic-sdlc:reverse-spec`
+describes what a legacy system *does*, and `/agentic-sdlc:redesign` changes *how*
+existing behavior works. Neither could answer three other questions: what the survey
+failed to specify, what the system **should** do but does not, and what actually
+changes for the business at switchover. The first is how a rebuild silently drops
+behavior; the second was a blind spot by construction, since every other agent
+reasons about what is present; the third existed only scattered across individual
+decisions.
+
+### Added
+- **`/agentic-sdlc:gap-analysis`** — three passes over a reverse-spec run:
+  `--coverage` (completeness audit with a triage gate), `--capability` (missing
+  capabilities), and `--cutover` (the legacy-to-rebuild delta). Accepts a
+  `--backlog <path>` ticket export as evidence.
+- **Four agents.** `coverage-auditor` (sonnet) accounts for every inventory item and
+  gives a verdict on whether the spec is safe to rebuild from; `capability-gap-analyst`
+  (opus) finds what is missing; `gap-analysis-validator` (haiku) checks both;
+  `cutover-delta-writer` (sonnet) assembles the stakeholder document.
+- **`write-gap-analysis` skill** — the coverage audit, `GAP-NNN` capability gaps, and
+  the cutover delta, each with its own evidence standard.
+- **The signal rule.** Finding what is *absent* is inherently weaker inference than
+  recovering what code does, and absences are unbounded — an unconstrained search
+  yields forty plausible missing features and drowns the three that were real. So every
+  `GAP` must cite a signal from **this** system or its users: a hard rejection with no
+  path through, visible workaround evidence, an asymmetry, half-built code, something
+  the human said, or a supplied backlog item. "Systems like this usually have X" is
+  explicitly forbidden, and the validator rejects it. Gaps sourced from the human are
+  attributed to them rather than laundered into code findings.
+- **Accepted gaps reuse the decision machinery.** There is no second amendment path: a
+  promoted `GAP` becomes a `DEC` (with the usual impact analysis, since a new
+  capability ripples too) and `spec-amender` adds REQs marked `**Origin:** DEC-NNN`.
+  Declined gaps are still written up, so the same suggestion does not resurface and
+  cutover can explain why the rebuild lacks it.
+- **Coverage triage is now a gate, not a by-product.** `summary.md` already reported
+  coverage; the audit promotes it to a deliberate pass where unspecified items are
+  accepted, sent back to be specified, or recorded as deliberate exclusions with a
+  human behind them. Uncovered scheduled jobs and file drops are called out for
+  particular suspicion — business-visible with no UI, so an omission surfaces only when
+  something downstream starves.
+- **A cutover delta for non-engineers.** What reaches parity, what changes and who
+  notices, what is dropped and who relied on it, what is new, which external parties
+  need notice and how much lead time, and what happens to in-flight data. Derived
+  entirely from approved requirements and accepted decisions — it originates nothing.
+
+### Changed
+- **`write-design-decision`** documents gap-sourced decisions: the `DEC` names the
+  `GAP-NNN` in its question, and the legacy-baseline field records the manual
+  workaround the gap forces.
+- **`reverse-spec`'s handoff** offers `gaps` alongside `start` and `redesign`.
+
+### Notes
+- Internal quality gaps — contradictions, dead code, duplicated rules, accumulated
+  special cases — are deliberately **not** here; `redesign-scout` already covers them,
+  and splitting one finding across two artifacts would help nobody.
+- The capability pass needs code access and should not run without a resolved source
+  root: an analyst reasoning about absence from specs alone is guessing. Coverage and
+  cutover work from the artifacts alone.
+- Among the new agents only `cutover-delta-writer` can write anything, and only its own
+  file. Requirement specs are still amended solely by `spec-amender`, via an approved
+  decision.
+
+## [1.5.0] - 2026-11-02
+
+**You can now interrogate a reverse-engineered system and deliberately redesign it.**
+`/agentic-sdlc:reverse-spec` recovers the legacy system *as it is* — convolutions
+included, by design, since inventing rules is the one thing it must never do. But a
+rebuild is the moment to fix the features everyone already knows are wrong. In a
+long-lived system almost every convoluted feature is convoluted for a reason that no
+longer applies; nobody fixed it because the effort plus the blast radius never
+justified it while the system was running. A rebuild removes that constraint, but only
+if someone can see the opportunity and bound the risk.
+
+### Added
+- **`/agentic-sdlc:redesign`** — ask how the legacy system actually works, get answers
+  grounded in its real code, propose a change, see everything it would touch, and have
+  approved decisions applied across every affected `req-spec.md`. Operates on a
+  reverse-spec run; no branch, no automatic commit.
+- **Five agents.** `legacy-analyst` (sonnet) answers questions from code and evidence;
+  `redesign-scout` (opus) sweeps a module for candidates; `redesign-impact-analyst`
+  (opus) maps the blast radius and drafts the decision; `spec-amender` (sonnet)
+  applies an approved decision across modules; `spec-amendment-validator` (haiku)
+  checks it was applied completely *and* not beyond its approved scope.
+- **`write-design-decision` skill** — the `DEC-NNN` decision log, divergence markers,
+  withdrawn requirements, the impact/ripple report, and the Q&A log.
+- **Divergence is recorded, never silent.** This is the one place the workflow's
+  fidelity rule is deliberately broken, so an amended REQ carries
+  `**Divergence:** DEC-NNN` and its citation is **demoted** to
+  `**Legacy behavior:** … (superseded by DEC-NNN)` rather than deleted. Without that
+  demotion the spec would cite code implementing the behavior that was just replaced —
+  evidenced-looking and actively wrong. New REQs with no legacy equivalent carry
+  `**Origin:** DEC-NNN`; dropped behavior stays as `**Status:** withdrawn by DEC-NNN`
+  (write-once: never deleted, never renumbered). The legacy baseline is preserved
+  because it is what explains the difference at cutover.
+- **Candidate sweep** for the seven patterns that mark a redesign opportunity:
+  accumulated special cases (including unreachable ones), rules contradicting each
+  other, the same rule implemented in several modules with drifted thresholds,
+  workarounds for systems being retired, manual steps encoded as requirements, dead
+  behavior, and rules justified only by a limitation that no longer exists.
+- **A persisted Q&A log.** Several engineers work one reverse-spec run, so questions
+  and their grounded answers are written to `qa-log.md` instead of being left in chat.
+
+### Changed
+- **`write-reverse-spec`** documents the three divergence markers as the only
+  circumstances in which a REQ may lack an `**Evidence:**` line, and specifies that
+  **withdrawn REQs are excluded from the handed-off master spec** — the pipeline builds
+  what the master spec contains, and leaving one in would fail the Phase Planner
+  validator's exactly-one-phase coverage check.
+- **`requirement-archaeologist-validator`** exempts the three marker cases, so a
+  redesigned REQ is not reported as missing evidence, and treats an entry point whose
+  only REQ was withdrawn by a recorded decision as covered.
+- **`start-run`'s reverse-spec entry** skips withdrawn REQs when writing the master
+  spec, lists them in a `### Withdrawn` table for traceability, and carries
+  `decisions.md` across so the Architect knows which requirements diverge from the
+  system they were recovered from.
+
+### Notes
+- **The human decides.** Every agent here answers, analyses, or executes — none
+  chooses. The analyst separates what it *observed* from what it *inferred* and says
+  "no reason visible in the code" rather than inventing a history; the impact analyst
+  states the strongest argument against its own recommendation and puts unverified
+  ripples in `## Unknowns`; the validator confirms an amendment matches its approval
+  and explicitly does not endorse the redesign. A `DEC` with no `Decided by` is not a
+  decision.
+- **Timing.** Amendments are free before a program is seeded. Afterwards they route
+  through the pipeline's own gates (the Architect's BA-reopen, or
+  `/next-phase --replan`), and once `spec_frozen` is set at the eval gate the command
+  refuses and points at a post-delivery change run — the decision is still recorded.
+
+## [1.4.0] - 2026-11-01
+
+**Requirement specs can now be reverse-engineered from existing source code.**
+Until now the plugin could only act on an existing codebase *reactively*:
+`/start-run` detected existing code and surveyed it, but that survey
+(`codebase-context.md`) is technical and scoped to a change request the human had
+already written. There was no way to point the plugin at a legacy system with
+nothing in hand and ask what it does, which blocked the rewrite/re-platform case —
+nobody hand-writes a requirement spec for a 60k-LOC monolith that has been in
+production for fifteen years. Stack detection was also hardcoded to `*.csproj`,
+`package.json` and `sdkconfig`, so most legacy systems registered as empty.
+
+### Added
+- **`/agentic-sdlc:reverse-spec`** — a standalone command (the
+  `/agentic-sdlc:brainstorm` precedent: no run state, no branch, no automatic
+  commit) that surveys one or more legacy repositories **read-only** and writes
+  non-technical, diagram-bearing `req-spec.md` files to `reverse-spec/<rev-id>/`.
+  Accepts arbitrary absolute paths across multiple repositories, resumes an
+  interrupted run from what is on disk, and can hand off to `/start-run` later via
+  `--handoff <rev-id>` without re-surveying.
+- **Six agents.** `legacy-surveyor` (sonnet) + `legacy-surveyor-validator` (haiku)
+  take a language-agnostic census; `integration-cartographer` (sonnet) maps external
+  entities and reconciles integrations spanning more than one repository;
+  `legacy-decomposer` (opus) proposes business module boundaries;
+  `requirement-archaeologist` (opus) + `requirement-archaeologist-validator` (haiku)
+  recover each module's requirements.
+- **Two skills.** `write-system-inventory` carries marker-file detection for ~13
+  ecosystems (COBOL, VB6, Delphi, Java EE, PHP, Perl and the rest), entry-point
+  heuristics including scheduled jobs and file drops, and the per-module size budget.
+  `write-reverse-spec` defines the paired `req-spec.md` + `evidence.md` format, the
+  business-level mermaid diagram set, and the merged master-spec format.
+- **A human decomposition gate.** The decomposer proposes modules with size metrics
+  and an explicit unassigned list; the user approves or redraws (`merge 01+02`,
+  `split 03 by partner`). Module size governs how much code one specification pass
+  can actually read, so this gate is both the correctness check and the cost control.
+- **Reverse traceability validation.** The new validator runs the opposite direction
+  from every other validator in the plugin: every entry point, background job and
+  external entity must map to a requirement or be listed in `## Not specified` with
+  a reason. That is what catches dropped behavior.
+- **`/agentic-sdlc:start-run` entry from a reverse-spec run.** Writes the master
+  `req-spec.md` directly with REQ-IDs preserved, freezes it, and starts the program
+  at the Phase Planner. The BA does not run — the output is already in req-spec
+  format, so re-deriving it would be a lossy round trip that renumbers every REQ-ID
+  and breaks the evidence links back to the legacy code.
+- **Portable citations with revision tracking, for teams.** A reverse-spec run is
+  normally worked by several engineers, and a legacy repo is never checked out at the
+  same path twice. So no artifact records an absolute path outside one root table:
+  roots get symbolic ids (`SRC1`, `SRC2`) with fingerprints, branch, HEAD and
+  clean/dirty state, and every citation is `SRC<n>:<relative path>:<line>`.
+  Relocating is one table edit, not thousands of citations.
+
+  On another machine the workflow resolves each root (per-machine
+  `source-roots.local.md`, gitignored, so nobody edits a shared artifact others would
+  conflict with), verifies the fingerprint markers, then verifies the *revision* —
+  same remote, recorded branch present and checked out, and how far HEAD has drifted,
+  narrowed to the files this run actually cites. **When a root or branch cannot be
+  found it asks the user to confirm the location rather than guessing**, and it never
+  switches branches, pulls, stashes or resets on their behalf, since that would mutate
+  their working tree and can discard uncommitted work.
+
+  Both validators distinguish "citation is wrong" from "root unavailable on this
+  machine" and "line numbers drifted". Without that, a second engineer's run would
+  fail a perfectly correct module and burn its whole iteration cap on the most
+  expensive model "fixing" citations that were right.
+
+### Changed
+- **`phase-planner` reads index-first.** When a master `req-spec.md` carries a
+  `## REQ index` table, the planner reads the overview and index and scoped-reads
+  individual REQ blocks on demand instead of the whole file, which does not survive
+  a several-hundred-REQ spec. Benefits ordinary BA-produced programs too.
+- **`phase-planner-validator`** avoids reading a very large spec in full, and now
+  states that REQ-ID gaps are legitimate (IDs are allocated per module) and that the
+  authoritative REQ list is the `### REQ-NNN` headings — a plain `REQ-\d+` match
+  would double every ID by also matching the index table.
+- **`write-req-spec`** documents the reverse-engineered sections so a mid-phase BA
+  reopen preserves them: decision tables and precise business figures are *not*
+  technology detail, REQ-ID gaps must not be closed by renumbering, and
+  `## Observed operating characteristics` is legitimate because a legacy system's
+  measured behavior is stated reality rather than an invented requirement.
+
+### Notes
+- Business rules live **in the acceptance criteria**, not in a side file — that is
+  the channel the Architect already reads, and it survives downstream restructuring.
+  `evidence.md` carries `SRC<n>:<path>:<line>` citations, confidence levels and open
+  questions for cross-checking.
+- Surveyed source is never modified, and the legacy system is never built or run
+  (unlike the brownfield `code-surveyor`, which runs the test suite for a baseline):
+  legacy toolchains are usually absent and such a build can have real side effects.
+  Secrets found in legacy code are flagged by kind and location, never transcribed.
+
 ## [1.3.0] - 2026-09-29
 
 **Engineer-draft reviewers no longer fail stories for missing tests.** All

@@ -29,7 +29,17 @@ orchestrator reads your response).
 
 ## Process
 1. Read both files fully (**full validation only** — skip in re-validation mode).
+   **Exception:** if `req-spec.md` contains a `## REQ index` table it may be very
+   large (a reverse-engineered spec runs to hundreds of REQs). Build the REQ-ID set
+   from the heading Grep in step 2 and read `## Overview` plus individual
+   `### REQ-NNN` blocks only as needed — your checks are a set comparison, not prose
+   diffing, so the full text is not required.
 2. Grep `req-spec.md` for every `### REQ-NNN` heading to build the full REQ-ID set.
+   Headings are the authoritative list: a `## REQ index` table repeats every REQ-ID
+   as text, so never build the set from a plain `REQ-\d+` match over the file — it
+   would double every ID. **Gaps in the REQ-ID sequence are legitimate** (a
+   reverse-engineered spec allocates per module); your coverage check is set-based,
+   so do not report a gap as `missing`.
 3. Grep `phase-plan.md`'s `## Phase index` table and build the REQ-ID → phase
    mapping from its `REQ-IDs` column (cross-check against each phase's
    `**REQ-IDs:**` field; a mismatch between the table and a phase section is

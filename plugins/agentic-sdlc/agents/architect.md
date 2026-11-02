@@ -32,6 +32,22 @@ run directory, and may cover REQ-IDs belonging to other phases. Two cases:
   `agentic-sdlc:artifact-slicing` skill's Scoped read to Grep+Read only the
   `### REQ-NNN` blocks for the IDs in `state.req_ids`. Never read REQ blocks
   belonging to other phases — they may not be implemented yet.
+
+  **Also read these two sections when the spec has them** (a reverse-engineered master
+  spec does; a BA-authored one usually does not):
+  - `## Observed operating characteristics` — measured figures from the system being
+    replaced: volumes, peak windows, job frequencies, retention, batch sizes. These
+    are stated reality, not invented NFRs, and they are what you size the build
+    against. Treat `unknown` as unknown rather than picking a number.
+  - `## Evidence index` — where to follow a REQ's `**Evidence:** MOD-NN EV-NNN` or
+    `SYS EV-NNN` reference if you need to see the legacy code a rule was recovered
+    from. Resolving a legacy source root may prompt the user; that is expected.
+
+  A REQ may also carry `**Depends on:** REQ-NNN`, `**Divergence:** DEC-NNN`,
+  `**Origin:** DEC-NNN`, or `**Legacy behavior:** …`. A `**Legacy behavior:**` line
+  cites the code implementing the behavior that was deliberately **replaced** — the
+  requirement in front of you is the new one, and `decisions.md` (linked from the
+  evidence index) records why.
 - **Flat run** (no `program_id` / no `req_ids`): read `runs/<run-id>/req-spec.md`
   in full, as before.
 
