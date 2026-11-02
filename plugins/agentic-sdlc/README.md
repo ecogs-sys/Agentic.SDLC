@@ -528,12 +528,146 @@ in it.
 > rule is true. Low-confidence rules are where an agent guessed, and the pipeline
 > downstream will implement whatever it is given.
 
+## Redesigning as you rebuild (independent of runs)
+
+```
+/agentic-sdlc:redesign                      # ask questions about a module
+/agentic-sdlc:redesign MOD-02 --candidates  # sweep it for redesign opportunities
+```
+
+`/agentic-sdlc:reverse-spec` recovers the legacy system **as it is** — convolutions
+included, because inventing rules is the one thing it must never do. This command is
+where you fix that on purpose.
+
+The scenario it exists for: everyone knows a feature could be far simpler, but nobody
+ever changed it, because the effort plus "it affects a few other systems" never
+justified it while the system was running. In a long-lived system almost every
+convoluted feature is convoluted for a reason that no longer applies. A rebuild
+removes the constraint — but only if you can see the opportunity and bound the risk.
+
+Four things happen here:
+
+1. **Ask.** "How does the late-fee waiver actually work?" The **Legacy Analyst**
+   (sonnet) answers from `evidence.md` and the real code, citing every claim — and
+   keeps what it *observed* strictly apart from what it *inferred*. Asked why the code
+   is this way, it will say **"no reason visible in the code"** rather than invent a
+   history, because you are about to make a decision on the answer. Questions and
+   answers are written to `qa-log.md`, so the next engineer doesn't re-ask them.
+2. **Sweep.** The **Redesign Scout** (opus) reads a whole module at once and flags what
+   you can't see one requirement at a time: special cases piled up over years (and
+   which of them are now unreachable), two code paths computing the same value
+   differently, the same rule implemented in three modules with thresholds that have
+   drifted apart, workarounds for a system the rebuild retires, manual steps encoded as
+   requirements. Each candidate carries its **blast radius** — the thing that stopped
+   anyone fixing it before.
+3. **Bound the risk.** Propose a change and the **Redesign Impact Analyst** (opus)
+   traces every requirement, module, background job and external integration it would
+   touch — and states what it *ruled out*, because a report that lists only hits can't
+   be trusted to be complete. Unverified ripples go in `## Unknowns` as questions, never
+   dressed up as findings. It recommends, then argues the strongest case against its own
+   recommendation, and leads with the behavior change the business will notice.
+4. **Apply.** On your approval the **Spec Amender** (sonnet) executes the decision
+   across every affected module, and a **validator** (haiku) checks it was applied
+   completely *and* not one requirement beyond what you approved.
+
+**Divergence is never silent.** An amended requirement carries
+`**Divergence:** DEC-001`, and its citation is **demoted** to
+`**Legacy behavior:** MOD-02 EV-031 (superseded by DEC-001)` — not deleted. Delete it
+and you lose the cutover explanation; leave it as `**Evidence:**` and the spec cites
+code implementing the behavior you just replaced, which looks evidenced and is wrong.
+New requirements with no legacy equivalent say `**Origin:** DEC-001`; dropped behavior
+stays as `**Status:** withdrawn by DEC-001` (requirement IDs are write-once — nothing
+is ever deleted or renumbered) and is excluded from the rebuild.
+
+```
+reverse-spec/rev-2026-11-01-001/
+  qa-log.md               ← questions + grounded answers, cited
+  redesign-candidates.md  ← the scout's triage list, ranked
+  impact-DEC-001.md       ← blast radius of one proposed change
+  decisions.md            ← DEC-001.. the authoritative decision log
+```
+
+Every agent here answers, analyses, or executes — **none of them decides**. A `DEC`
+with no `Decided by` is not a decision, and the validator's "pass" means the amendment
+matches your approval, not that the redesign is wise.
+
+Amend freely before a program is seeded. Afterwards changes route through the
+pipeline's own gates (the Architect's BA-reopen, or `/next-phase --replan`), and once
+the spec freezes at the eval gate the command refuses and points you at a
+post-delivery change run — the decision is still recorded rather than lost.
+
+## Gap analysis (independent of runs)
+
+```
+/agentic-sdlc:gap-analysis              # all three passes
+/agentic-sdlc:gap-analysis --coverage   # what the survey failed to specify
+/agentic-sdlc:gap-analysis --capability # what the system should do but doesn't
+/agentic-sdlc:gap-analysis --cutover    # what changes for the business
+```
+
+Three questions nothing else in the workflow answers.
+
+**Coverage — what did the survey miss?** The **Coverage Auditor** (sonnet) accounts for
+every entry point, job and external entity as covered, deliberately dropped, out of
+scope, or *unspecified* — then gives a verdict on whether the spec is safe to rebuild
+from. "We never specified that part" is how a rebuild silently drops behavior, and the
+specs look complete right up until the gap ships. Uncovered scheduled jobs and file
+drops get particular suspicion: business-visible with no UI, so nobody notices until
+something downstream starves. At the gate you accept the gaps, send items back to be
+specified, or record them as deliberate exclusions with your name on them.
+
+**Capability — what should it do that it doesn't?** This was a blind spot by
+construction: every other agent reasons about what is *present*. The **Capability Gap
+Analyst** (opus) reasons about what is absent — and because absences are unbounded, it
+runs under a hard **signal rule**. Every gap must cite a signal from *this* system or
+its users:
+
+| Signal | Example |
+|---|---|
+| Hard rejection | payment refused unless it equals the balance, with no partial-payment path anywhere |
+| Workaround evidence | a report plainly re-keyed by hand; a comment naming a spreadsheet |
+| Asymmetry | you can create but not amend; supported for one account type, not its sibling |
+| Half-built | a screen behind a flag that has been off for years |
+| Told by a human | you said so — attributed to you, never laundered into a code finding |
+| Backlog item | a ticket from the export you pointed at |
+
+**"Systems like this usually have X" is forbidden**, and the validator rejects it. An
+unconstrained search produces forty plausible missing features and drowns the three
+that were real. It also asks *you* first — you have been living with the gaps for
+years, and your list beats anything inferred; the agent's job is then to go find the
+signal for each.
+
+Accepted gaps reuse the decision machinery from `/agentic-sdlc:redesign`: a promoted
+gap becomes a `DEC` with a full impact analysis (a new capability ripples too), and new
+requirements carry `**Origin:** DEC-NNN`. Declined gaps are still written up, so the
+same suggestion doesn't resurface in six months.
+
+**Cutover — what changes for the business?** The one artifact here written for
+non-engineers. The **Cutover Delta Writer** (sonnet) assembles what reaches parity,
+what changes and who notices, what is dropped and who relied on it, what is new, which
+external parties need notice and how much lead time, and what happens to in-flight
+data. It derives everything from approved requirements and accepted decisions and
+originates nothing.
+
+```
+reverse-spec/rev-2026-11-01-001/
+  coverage-audit.md    ← verdict first, then every item accounted for
+  capability-gaps.md   ← GAP-001.. each with its signal, plus what was rejected
+  cutover-delta.md     ← for support, operations and partners
+```
+
+Internal quality gaps — contradictions, dead code, duplicated rules, accumulated
+special cases — are deliberately **not** here. `/agentic-sdlc:redesign`'s scout already
+covers them, and splitting one finding across two artifacts helps nobody.
+
 ## Other commands
 
 | Command | Purpose |
 |---|---|
 | `/agentic-sdlc:brainstorm` | Explore ideas independent of any run — see above |
 | `/agentic-sdlc:reverse-spec` | Generate requirement specs from existing legacy source code — see above |
+| `/agentic-sdlc:redesign` | Interrogate the legacy system and deliberately improve it — see above |
+| `/agentic-sdlc:gap-analysis` | Audit spec coverage, find missing capabilities, build the cutover delta — see above |
 | `/agentic-sdlc:show-run-status` | Show current stage, artifact status, and recent activity |
 | `/agentic-sdlc:cancel-run` | Cancel and clean up the current run |
 | `/agentic-sdlc:next-phase` | Start the next phase once the current one is merged |

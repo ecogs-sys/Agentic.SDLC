@@ -2,6 +2,136 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.6.0] - 2026-11-02
+
+**Gap analysis for a reverse-engineered system.** `/agentic-sdlc:reverse-spec`
+describes what a legacy system *does*, and `/agentic-sdlc:redesign` changes *how*
+existing behavior works. Neither could answer three other questions: what the survey
+failed to specify, what the system **should** do but does not, and what actually
+changes for the business at switchover. The first is how a rebuild silently drops
+behavior; the second was a blind spot by construction, since every other agent
+reasons about what is present; the third existed only scattered across individual
+decisions.
+
+### Added
+- **`/agentic-sdlc:gap-analysis`** — three passes over a reverse-spec run:
+  `--coverage` (completeness audit with a triage gate), `--capability` (missing
+  capabilities), and `--cutover` (the legacy-to-rebuild delta). Accepts a
+  `--backlog <path>` ticket export as evidence.
+- **Four agents.** `coverage-auditor` (sonnet) accounts for every inventory item and
+  gives a verdict on whether the spec is safe to rebuild from; `capability-gap-analyst`
+  (opus) finds what is missing; `gap-analysis-validator` (haiku) checks both;
+  `cutover-delta-writer` (sonnet) assembles the stakeholder document.
+- **`write-gap-analysis` skill** — the coverage audit, `GAP-NNN` capability gaps, and
+  the cutover delta, each with its own evidence standard.
+- **The signal rule.** Finding what is *absent* is inherently weaker inference than
+  recovering what code does, and absences are unbounded — an unconstrained search
+  yields forty plausible missing features and drowns the three that were real. So every
+  `GAP` must cite a signal from **this** system or its users: a hard rejection with no
+  path through, visible workaround evidence, an asymmetry, half-built code, something
+  the human said, or a supplied backlog item. "Systems like this usually have X" is
+  explicitly forbidden, and the validator rejects it. Gaps sourced from the human are
+  attributed to them rather than laundered into code findings.
+- **Accepted gaps reuse the decision machinery.** There is no second amendment path: a
+  promoted `GAP` becomes a `DEC` (with the usual impact analysis, since a new
+  capability ripples too) and `spec-amender` adds REQs marked `**Origin:** DEC-NNN`.
+  Declined gaps are still written up, so the same suggestion does not resurface and
+  cutover can explain why the rebuild lacks it.
+- **Coverage triage is now a gate, not a by-product.** `summary.md` already reported
+  coverage; the audit promotes it to a deliberate pass where unspecified items are
+  accepted, sent back to be specified, or recorded as deliberate exclusions with a
+  human behind them. Uncovered scheduled jobs and file drops are called out for
+  particular suspicion — business-visible with no UI, so an omission surfaces only when
+  something downstream starves.
+- **A cutover delta for non-engineers.** What reaches parity, what changes and who
+  notices, what is dropped and who relied on it, what is new, which external parties
+  need notice and how much lead time, and what happens to in-flight data. Derived
+  entirely from approved requirements and accepted decisions — it originates nothing.
+
+### Changed
+- **`write-design-decision`** documents gap-sourced decisions: the `DEC` names the
+  `GAP-NNN` in its question, and the legacy-baseline field records the manual
+  workaround the gap forces.
+- **`reverse-spec`'s handoff** offers `gaps` alongside `start` and `redesign`.
+
+### Notes
+- Internal quality gaps — contradictions, dead code, duplicated rules, accumulated
+  special cases — are deliberately **not** here; `redesign-scout` already covers them,
+  and splitting one finding across two artifacts would help nobody.
+- The capability pass needs code access and should not run without a resolved source
+  root: an analyst reasoning about absence from specs alone is guessing. Coverage and
+  cutover work from the artifacts alone.
+- Among the new agents only `cutover-delta-writer` can write anything, and only its own
+  file. Requirement specs are still amended solely by `spec-amender`, via an approved
+  decision.
+
+## [1.5.0] - 2026-11-02
+
+**You can now interrogate a reverse-engineered system and deliberately redesign it.**
+`/agentic-sdlc:reverse-spec` recovers the legacy system *as it is* — convolutions
+included, by design, since inventing rules is the one thing it must never do. But a
+rebuild is the moment to fix the features everyone already knows are wrong. In a
+long-lived system almost every convoluted feature is convoluted for a reason that no
+longer applies; nobody fixed it because the effort plus the blast radius never
+justified it while the system was running. A rebuild removes that constraint, but only
+if someone can see the opportunity and bound the risk.
+
+### Added
+- **`/agentic-sdlc:redesign`** — ask how the legacy system actually works, get answers
+  grounded in its real code, propose a change, see everything it would touch, and have
+  approved decisions applied across every affected `req-spec.md`. Operates on a
+  reverse-spec run; no branch, no automatic commit.
+- **Five agents.** `legacy-analyst` (sonnet) answers questions from code and evidence;
+  `redesign-scout` (opus) sweeps a module for candidates; `redesign-impact-analyst`
+  (opus) maps the blast radius and drafts the decision; `spec-amender` (sonnet)
+  applies an approved decision across modules; `spec-amendment-validator` (haiku)
+  checks it was applied completely *and* not beyond its approved scope.
+- **`write-design-decision` skill** — the `DEC-NNN` decision log, divergence markers,
+  withdrawn requirements, the impact/ripple report, and the Q&A log.
+- **Divergence is recorded, never silent.** This is the one place the workflow's
+  fidelity rule is deliberately broken, so an amended REQ carries
+  `**Divergence:** DEC-NNN` and its citation is **demoted** to
+  `**Legacy behavior:** … (superseded by DEC-NNN)` rather than deleted. Without that
+  demotion the spec would cite code implementing the behavior that was just replaced —
+  evidenced-looking and actively wrong. New REQs with no legacy equivalent carry
+  `**Origin:** DEC-NNN`; dropped behavior stays as `**Status:** withdrawn by DEC-NNN`
+  (write-once: never deleted, never renumbered). The legacy baseline is preserved
+  because it is what explains the difference at cutover.
+- **Candidate sweep** for the seven patterns that mark a redesign opportunity:
+  accumulated special cases (including unreachable ones), rules contradicting each
+  other, the same rule implemented in several modules with drifted thresholds,
+  workarounds for systems being retired, manual steps encoded as requirements, dead
+  behavior, and rules justified only by a limitation that no longer exists.
+- **A persisted Q&A log.** Several engineers work one reverse-spec run, so questions
+  and their grounded answers are written to `qa-log.md` instead of being left in chat.
+
+### Changed
+- **`write-reverse-spec`** documents the three divergence markers as the only
+  circumstances in which a REQ may lack an `**Evidence:**` line, and specifies that
+  **withdrawn REQs are excluded from the handed-off master spec** — the pipeline builds
+  what the master spec contains, and leaving one in would fail the Phase Planner
+  validator's exactly-one-phase coverage check.
+- **`requirement-archaeologist-validator`** exempts the three marker cases, so a
+  redesigned REQ is not reported as missing evidence, and treats an entry point whose
+  only REQ was withdrawn by a recorded decision as covered.
+- **`start-run`'s reverse-spec entry** skips withdrawn REQs when writing the master
+  spec, lists them in a `### Withdrawn` table for traceability, and carries
+  `decisions.md` across so the Architect knows which requirements diverge from the
+  system they were recovered from.
+
+### Notes
+- **The human decides.** Every agent here answers, analyses, or executes — none
+  chooses. The analyst separates what it *observed* from what it *inferred* and says
+  "no reason visible in the code" rather than inventing a history; the impact analyst
+  states the strongest argument against its own recommendation and puts unverified
+  ripples in `## Unknowns`; the validator confirms an amendment matches its approval
+  and explicitly does not endorse the redesign. A `DEC` with no `Decided by` is not a
+  decision.
+- **Timing.** Amendments are free before a program is seeded. Afterwards they route
+  through the pipeline's own gates (the Architect's BA-reopen, or
+  `/next-phase --replan`), and once `spec_frozen` is set at the eval gate the command
+  refuses and points at a post-delivery change run — the decision is still recorded.
+
 ## [1.4.0] - 2026-11-01
 
 **Requirement specs can now be reverse-engineered from existing source code.**

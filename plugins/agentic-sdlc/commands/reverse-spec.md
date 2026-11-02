@@ -359,7 +359,25 @@ Say:
 > "Reverse-spec complete: `reverse-spec/<rev-id>/` — <n> modules, <m> requirements.
 >
 > Reply **'start'** to seed a new Agentic SDLC program from these specs and begin a
-> rebuild, or **'done'** to stop here with the documentation."
+> rebuild, **'gaps'** to check what this survey failed to specify and what the system
+> should do but doesn't, **'redesign'** to interrogate the system and deliberately
+> improve parts of it before rebuilding, or **'done'** to stop here with the
+> documentation.
+>
+> These specs currently describe the legacy system **as it is**, convolutions
+> included. If there are features everyone knows should work differently, now is the
+> cheapest moment to decide that — `/agentic-sdlc:redesign` answers questions from the
+> real code, maps the blast radius of a change, and amends the specs with the legacy
+> behavior kept as a superseded baseline."
+
+On **'gaps'**: hand off to `/agentic-sdlc:gap-analysis` for this `rev-id`. Running its
+coverage pass before rebuilding is worth the few minutes — "we never specified that
+part" is how a rebuild silently drops behavior, and the specs look complete right up
+until the gap ships.
+
+On **'redesign'**: hand off to `/agentic-sdlc:redesign` for this `rev-id`. It amends
+these artifacts in place; return here (or run `--handoff <rev-id>`) when the decisions
+are settled.
 
 On **'done'** or anything else: stop. Do not create a run, branch, or commit.
 

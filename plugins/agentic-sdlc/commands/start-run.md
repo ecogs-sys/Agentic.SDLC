@@ -719,6 +719,17 @@ the `agentic-sdlc:write-reverse-spec` skill:
 
 - **Preserve every REQ-ID** — they are globally unique across the reverse-spec run by
   construction. Never renumber. Gaps in the sequence are expected and harmless.
+- **Exclude REQs marked `**Status:** withdrawn by DEC-NNN`.** These are behaviors a
+  human deliberately dropped via `/agentic-sdlc:redesign`; the pipeline builds what
+  the master spec contains, so a withdrawn requirement must not be in it. Leaving one
+  in would also fail the Phase Planner validator, which requires every REQ-ID in the
+  spec to be assigned to exactly one phase. List them under the REQ index in a
+  `### Withdrawn (not built — see decisions.md)` table for traceability.
+- **Copy `decisions.md` in** (or reference it next to the evidence index) if the run
+  has one. A REQ carrying `**Divergence:** DEC-NNN` or `**Origin:** DEC-NNN` diverges
+  from the system it was recovered from, and the Architect needs to know that its
+  `**Legacy behavior:**` citation describes superseded code rather than the
+  requirement in front of it.
 - Add the `## REQ index` table after `## Overview` (from `req-index.md`).
 - Add the `## Evidence index` table, with every evidence-file path
   **workspace-relative** so it survives the workspace being moved or cloned, and copy

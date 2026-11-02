@@ -128,6 +128,21 @@ allocate sequentially from it and record every ID in `req-index.md`.
   **global tail** (which may sort after a later module's IDs — that is allowed, and
   `req-index.md` records the real mapping).
 
+## Deliberate divergence from the legacy system
+
+Everything above enforces fidelity. A human may instead decide the rebuild should
+behave **differently** — via `/agentic-sdlc:redesign`. When that happens a REQ gains
+one of three markers, defined in the `agentic-sdlc:write-design-decision` skill:
+
+- `**Divergence:** DEC-NNN` — behavior changed. Its `**Evidence:**` line is demoted to
+  `**Legacy behavior:** … (superseded by DEC-NNN)`, so no reader mistakes a citation
+  of the old code for support of the new text.
+- `**Origin:** DEC-NNN` — a new REQ with no legacy equivalent, so no citation exists.
+- `**Status:** withdrawn by DEC-NNN` — behavior deliberately dropped. The REQ stays
+  (write-once); it is never deleted or renumbered.
+
+These are the only circumstances in which a REQ may lack an `**Evidence:**` line.
+
 ## A module may legitimately have zero REQs
 
 Pure-plumbing modules exist. If a module genuinely carries no business behavior, say
@@ -358,6 +373,25 @@ recorded one is absent on this machine.
 ## Requirements
 ### REQ-001: ...
 ```
+
+**Withdrawn REQs are excluded from the merge.** A REQ marked
+`**Status:** withdrawn by DEC-NNN` is not copied into the master spec: the pipeline
+builds what the master spec contains, and deliberately dropped behavior is not built.
+Leaving it in would also break the Phase Planner, whose validator requires every
+REQ-ID in the spec to be assigned to exactly one phase.
+
+List them instead under the REQ index, for traceability:
+
+```markdown
+### Withdrawn (not built — see decisions.md)
+| REQ-ID | Module | Withdrawn by |
+|---|---|---|
+| REQ-019 | MOD-02-billing | DEC-001 |
+```
+
+The full record stays in the reverse-spec artifacts. Carry `decisions.md` alongside the
+evidence index so the Architect can see *why* a requirement diverges from the system
+it was recovered from.
 
 Three rules that keep this compatible with the existing pipeline:
 

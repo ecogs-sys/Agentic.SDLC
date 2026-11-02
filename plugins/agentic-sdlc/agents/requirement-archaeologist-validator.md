@@ -28,9 +28,24 @@ system does went unspecified. That is what catches dropped behavior.
 1. **Reverse coverage.** Every entry point (`EP-NNN`), background job, and external
    entity (`EXT-NNN`) assigned to this module in `module-map.md` maps to ≥1 REQ, **or**
    appears in `## Not specified` with a reason. Unaccounted-for → `missing`.
+
+   An entry point whose only REQ was **withdrawn by a `DEC`** counts as covered if
+   that decision is recorded in `decisions.md` — the behavior was dropped on purpose,
+   which is an answer, not a gap.
 2. **Every REQ cites evidence.** Each `### REQ-NNN` has an
    `**Evidence:** MOD-NN EV-NNN` line, and each cited `EV-NNN` exists in
    `evidence.md`. Missing or dangling → `missing`.
+
+   **Three exemptions, for REQs changed by an approved design decision** (see the
+   `agentic-sdlc:write-design-decision` skill). These are deliberate divergences from
+   the legacy system, not missing evidence — do not report them:
+   - `**Divergence:** DEC-NNN` — cites `**Legacy behavior:** … (superseded by
+     DEC-NNN)` instead of `**Evidence:**`. Correct; it is the preserved baseline.
+   - `**Origin:** DEC-NNN` — a new REQ with no legacy equivalent, so no citation can
+     exist.
+   - `**Status:** withdrawn by DEC-NNN` — behavior deliberately dropped. Also exempt
+     from checks 5 and 6 (criteria count, failure paths): a withdrawn REQ has no
+     criteria to check. It must keep its heading and carry a `**Reason:**`.
 3. **Citations are well-formed and real.** Every citation in `evidence.md` is written
    `SRC<n>:<relative path>:<line>`, and every `SRC<n>` used is declared in
    `system-inventory.md`'s `## Source roots`. An absolute path, or an undeclared root
