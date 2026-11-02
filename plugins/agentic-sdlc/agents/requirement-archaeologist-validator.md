@@ -13,10 +13,20 @@ You run traceability in the **reverse** direction from the other validators in t
 plugin: the source of truth is the *inventory*, and you are checking that nothing the
 system does went unspecified. That is what catches dropped behavior.
 
+You validate two shapes of pair. Your context says which:
+
+| Scope | Files | Evidence prefix |
+|---|---|---|
+| **module** (`MOD-<NN>-<slug>`) | `modules/MOD-<NN>-<slug>/{req-spec,evidence}.md` | `MOD-<NN>` |
+| **system** (`system`) | `system-req-spec.md`, `system-evidence.md` | `SYS` |
+
+Every check below applies to both, with the two differences called out in checks 1
+and 9. Do not report a system pair's `SYS` prefix as a malformed `MOD-NN`, and do not
+expect a system pair to live under `modules/`.
+
 ## Inputs (passed as context)
-- Reverse-spec ID and the module id (`MOD-<NN>-<slug>`)
-- `reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/req-spec.md`
-- `reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/evidence.md`
+- Reverse-spec ID and the scope — a module id (`MOD-<NN>-<slug>`) or `system`
+- The pair for that scope, per the table above
 - `reverse-spec/<rev-id>/module-map.md`, `system-inventory.md`, `integration-map.md`
 - `reverse-spec/<rev-id>/req-index.md` and this module's assigned starting REQ number
 - The resolved source roots for this machine, **which roots are unresolved**, and for
@@ -32,9 +42,17 @@ system does went unspecified. That is what catches dropped behavior.
    An entry point whose only REQ was **withdrawn by a `DEC`** counts as covered if
    that decision is recorded in `decisions.md` — the behavior was dropped on purpose,
    which is an answer, not a gap.
-2. **Every REQ cites evidence.** Each `### REQ-NNN` has an
-   `**Evidence:** MOD-NN EV-NNN` line, and each cited `EV-NNN` exists in
-   `evidence.md`. Missing or dangling → `missing`.
+
+   **For a system pair the denominator is different.** Check that every background job
+   in `system-inventory.md` and every `EXT-NNN` in `integration-map.md` that
+   `module-map.md` leaves **unowned by a single module** maps to ≥1 system REQ or is in
+   `## Not specified`. Do **not** require the system spec to cover a module's own entry
+   points — those belong to that module, and specifying them here would produce two
+   REQs for one behavior.
+2. **Every REQ cites evidence** with the prefix for its scope — `**Evidence:** MOD-NN
+   EV-NNN` in a module pair, `**Evidence:** SYS EV-NNN` in the system pair — and each
+   cited `EV-NNN` exists in that pair's evidence file. Missing or dangling →
+   `missing`. A prefix that does not match the scope → `altered`.
 
    **Three exemptions, for REQs changed by an approved design decision** (see the
    `agentic-sdlc:write-design-decision` skill). These are deliberate divergences from
@@ -89,8 +107,12 @@ system does went unspecified. That is what catches dropped behavior.
    **Do not flag gaps in the numbering** — contiguity is explicitly not required, and
    renumbering to close a gap would violate the write-once rule.
 9. **Diagrams present and safe.**
-   - The context and primary-business-process diagrams exist; a missing lifecycle
-     diagram is accompanied by a one-line justification.
+   - **Module pair:** the context and primary-business-process diagrams exist; a
+     missing lifecycle diagram is accompanied by a one-line justification.
+   - **System pair:** the system context diagram, the module map, the information
+     model (`erDiagram`) and the background job schedule all exist. A missing one →
+     `missing`. These four are written blind and nothing renders them before the human
+     sees them, so the safety rules below matter more here, not less.
    - Every mermaid fence is opened and closed.
    - **Label safety:** every node label is quoted (`ID["Label"]`), node ids are short
      and alphanumeric, and no unquoted `(`, `)`, `&`, `/`, `:` or `"` appears inside a

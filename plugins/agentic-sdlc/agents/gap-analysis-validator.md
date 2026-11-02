@@ -19,6 +19,9 @@ which a team may then go and build. Check accordingly.
 - `system-inventory.md`, `integration-map.md`, `module-map.md`
 - Every module's `req-spec.md` and `evidence.md`
 - `decisions.md` and `req-index.md`, if they exist
+- For a capability re-run: the **previous** `capability-gaps.md` (or the git diff of
+  it), so check 16 can confirm no `GAP` id moved. Without it, say so in `notes` and
+  check only that ids are unique and `Last allocated` is consistent.
 
 ## Checks — coverage audit
 
@@ -74,10 +77,36 @@ which a team may then go and build. Check accordingly.
 
 15. **Confidence is set** on every `GAP` → otherwise `missing`.
 
+16. **No `GAP` id was renumbered or reused.** `GAP` ids are write-once. If a previous
+    `capability-gaps.md` is available to you, every id it used must still label the
+    same capability, and every one of its gaps — including rejected and withdrawn
+    ones — must still be present. A reused or shifted id → `altered`; a dropped gap →
+    `missing`. `Last allocated` must be ≥ the highest id in the file → otherwise
+    `altered`. **Gaps in the numbering are legitimate** — do not flag them.
+
+    This is the check that protects promotion: an accepted `DEC` cites a `GAP` by id,
+    so a renumbered gap silently re-points a requirement at a different need.
+
 ## Output
 Emit the JSON diff report. `status` is `"pass"` only when all arrays are empty. Be
 specific: cite `GAP`, `EP-NNN`, `EXT-NNN`, `REQ-NNN` and `DEC-NNN` ids and section
 names.
+
+**You use one extra array beyond the base schema.** `agentic-sdlc:validate-traceability`
+defines `missing`, `added_without_source` and `altered`; you add:
+
+```json
+"duplicated": [
+  { "id": "GAP-004", "description": "Capability already specified by REQ-022 (MOD-02)" }
+]
+```
+
+It exists because both of your artifacts fail by *double-counting* in a way the base
+three do not name: an inventory item landing in two coverage buckets, and a `GAP`
+proposing something a live REQ already does. Declare it explicitly, state in `notes`
+that you extended the schema, and treat it as blocking — `status` is `"fail"` while it
+is non-empty, exactly like the other three. (`phase-planner-validator` extends the
+schema the same way.)
 
 ## What you cannot check — state it, do not fake it
 

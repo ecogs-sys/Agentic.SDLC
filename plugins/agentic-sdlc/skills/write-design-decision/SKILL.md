@@ -35,6 +35,14 @@ differently. So every divergence gets a `DEC-NNN` record, and the legacy baselin
 - `DEC-001`, `DEC-002`, … allocated in decision order, **write-once**, never reused.
 - A decision is never deleted. A reversed decision gets a new `DEC` that supersedes it.
 - Decisions live in `reverse-spec/<rev-id>/decisions.md`.
+- `Last allocated` in the header is the cursor. **Re-read it immediately before
+  allocating** — `decisions.md` is shared, several engineers work one run, and a
+  colleague may have added a decision since you last looked. Reusing a taken number
+  overwrites their record and their impact report.
+- A **rejected** decision consumes its number; the record exists with
+  `Status: rejected`. A proposal still being revised has not been written yet, so it
+  keeps the same number across revisions and its `impact-DEC-NNN.md` is replaced.
+- Gaps in the `DEC` sequence are harmless. Never renumber to close one.
 
 ## decisions.md format
 

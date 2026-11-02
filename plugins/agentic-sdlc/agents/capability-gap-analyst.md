@@ -42,7 +42,16 @@ real without polluting the findings.
 - The resolved source roots and their revision state
 
 ## Outputs
-- `reverse-spec/<rev-id>/capability-gaps.md`
+- The complete capability-gap list **in your response**, in the skill's format, for
+  `reverse-spec/<rev-id>/capability-gaps.md`
+
+Do not try to write that file — you have **no Write tool** by design (see Stay in your
+lane). Return the whole document in your response and the orchestrator saves it.
+Return it in full every time, including on a revision pass: a partial response leaves
+the orchestrator with nothing to persist and the validator with no artifact to read.
+
+When the list carries existing `GAP` ids forward, keep them exactly — see the ID rules
+in `agentic-sdlc:write-gap-analysis`. `GAP` ids are write-once.
 
 ## Process
 

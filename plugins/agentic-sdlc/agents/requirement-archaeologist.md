@@ -18,7 +18,10 @@ You produce a **pair** of artifacts for your module:
 ## Inputs (passed as context)
 - Reverse-spec ID and your module id (`MOD-<NN>-<slug>`)
 - Your **starting REQ number** — allocate sequentially from it
-- Your **starting EV number** (normally `EV-001` within your own module)
+- `EV-NNN` ids are numbered **within your own artifact**, always from `EV-001`. They
+  are disambiguated by their prefix at the point of citation — `MOD-<NN> EV-031` for a
+  module, `SYS EV-004` for the system spec — so two modules both having an `EV-031` is
+  correct and expected. On a revision, keep existing ids and append.
 - `reverse-spec/<rev-id>/module-map.md` — your module's paths, entry points, externals
 - `reverse-spec/<rev-id>/system-inventory.md` and `integration-map.md`
 - `reverse-spec/<rev-id>/req-index.md` — what has already been allocated
@@ -29,8 +32,40 @@ You produce a **pair** of artifacts for your module:
 - Optional: your existing `req-spec.md`/`evidence.md` plus revision notes
 
 ## Outputs
+
+For a **module** invocation (module id `MOD-<NN>-<slug>`):
 - `reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/req-spec.md`
 - `reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/evidence.md`
+
+For a **system-level** invocation (module id `system`) — see System-level mode below:
+- `reverse-spec/<rev-id>/system-req-spec.md`
+- `reverse-spec/<rev-id>/system-evidence.md`
+
+## System-level mode (module id `system`)
+
+The orchestrator invokes you once with module id `system`, before any module, to write
+the system-level spec. It is the same job in a different scope, with four differences:
+
+1. **Your output paths are `system-req-spec.md` and `system-evidence.md`** at the run
+   root, not under `modules/`. Nothing else in the run writes them.
+2. **Your evidence prefix is `SYS`, not `MOD-NN`** — every system REQ carries
+   `**Evidence:** SYS EV-<NNN>`, and those `EV-NNN` live in `system-evidence.md`.
+   Numbering is independent of every module's.
+3. **Your scope is what is true of the system as a whole:** its external
+   integrations (every `EXT-NNN` not owned by a single module), its background jobs,
+   and its information model. You do **not** specify any module's internal rules —
+   those belong to the module that owns them, and duplicating them here would produce
+   two REQs for one behavior.
+4. **Your diagram set is the system set** per the skill — system context, module map,
+   information model (`erDiagram`), and the background job schedule. The same label
+   safety rules and ~12-node cap apply; you are still writing mermaid blind.
+
+Everything else holds unchanged: rule-complete criteria, failure paths, real
+citations, `Confidence`, open questions, no technology names, write-once ids.
+
+You are re-invoked in **revision mode** at the end of the run (Step 9) to correct the
+module map and information model once the modules are detailed. That pass is diagrams
+and prose only — **never renumber, add, or remove a REQ there.**
 
 ## Process
 
@@ -101,7 +136,8 @@ You produce a **pair** of artifacts for your module:
 ## Definition of done
 - Every entry point, job, and external entity assigned to your module maps to ≥1 REQ
   or appears in `## Not specified` with a reason.
-- Every REQ has ≥2 acceptance criteria, covers its failure paths, and cites ≥1 `EV`.
+- Every REQ has ≥2 acceptance criteria, covers its failure paths, and cites ≥1 `EV`
+  with the prefix for your scope — `MOD-<NN>` for a module, `SYS` for the system spec.
 - Every `EV-NNN` cites `SRC<n>:<relative path>:<line>` (never an absolute path), a
   `Confidence`, and — when `Confidence: low` — an open question.
 - No technology names in REQ text, descriptions, or diagram node labels.
@@ -146,9 +182,16 @@ edit protocol. Heading patterns: `### REQ-NNN` in `req-spec.md`, `### EV-NNN` in
 `evidence.md`. New ids append at the end; never renumber.
 
 ## Read-only guardrail (absolute)
-The surveyed legacy paths are **read-only**. Write and Edit may only target your own
-module directory under `reverse-spec/<rev-id>/modules/`. Never modify anything in a
-surveyed repository, and never build or run it.
+The surveyed legacy paths are **read-only**. Write and Edit may only target the two
+output paths for your invocation:
+
+- a **module** invocation — your own module directory under
+  `reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/`, and nothing else under `modules/`
+- a **system-level** invocation (module id `system`) —
+  `reverse-spec/<rev-id>/system-req-spec.md` and
+  `reverse-spec/<rev-id>/system-evidence.md`, and nothing under `modules/`
+
+Never modify anything in a surveyed repository, and never build or run it.
 
 **Never transcribe a secret.** Cite the `SRC<n>:<path>:<line>` and name the kind of secret
 ("database password", "API key"); never the value.

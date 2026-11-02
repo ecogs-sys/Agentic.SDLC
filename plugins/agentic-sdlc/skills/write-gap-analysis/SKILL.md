@@ -110,12 +110,42 @@ A `GAP` is a **proposal for new behavior**, never a recovered rule. It has no le
 evidence because the behavior does not exist. It becomes a requirement only when a
 human accepts it, which happens through a design decision — see **Promotion** below.
 
+### `GAP` ID rules — write-once, like every other id here
+
+`GAP-001`, `GAP-002`, … allocated in discovery order, and **write-once**: never
+renumbered, never reused. `capability-gaps.md` carries the cursor in its header:
+
+```markdown
+# Capability gaps
+Reverse-spec ID: <rev-id>
+Last allocated: GAP-<NNN>
+```
+
+This matters more than it looks. The capability pass is **re-runnable** — scoped to one
+module, re-run after a backlog arrives, re-run by a second engineer — and each run
+rewrites the whole file. If a later run renumbers, a `DEC` that was accepted against
+`GAP-007` now cites a different gap, and the requirement the pipeline builds traces
+back to the wrong need. REQ, EV and DEC ids are all write-once for the same reason.
+
+So on any re-run:
+
+- **Read the existing `capability-gaps.md` first.** Carry every existing `GAP` forward
+  with its id unchanged, including the ones under `## Considered and rejected`.
+- A gap that is no longer believed to be real is marked
+  `**Status:** withdrawn — <reason>` and kept. Never deleted.
+- New gaps allocate from `Last allocated + 1`, even when a scoped re-run only looked at
+  one module. **Gaps in the numbering are harmless; renumbering is not.**
+- A gap already promoted to a `DEC` keeps its id and records
+  `**Promoted:** DEC-NNN` so a reader can see it is settled and a later sweep does not
+  re-propose it.
+
 ### Format
 
 ````markdown
 # Capability gaps
 Reverse-spec ID: <rev-id>
 Analysed: <YYYY-MM-DD>
+Last allocated: GAP-<NNN>
 Sources: <code signals | user interview | backlog export at <path>>
 
 ## GAP-001 — <short name>  ·  module MOD-NN
@@ -128,6 +158,7 @@ Sources: <code signals | user interview | backlog export at <path>>
 "Unknown" is the correct answer otherwise.>
 **Confidence this is a real gap:** high | medium | low
 **Related requirements:** REQ-014 (the rule that blocks it), REQ-022
+**Promoted:** DEC-NNN   <omit until a human accepts it>
 **Would be new behavior, not recovered** — no legacy evidence exists by definition.
 
 ## GAP-002 — ...
@@ -227,6 +258,8 @@ reader needs to know the surface area that is *not* changing.>
 - [ ] Coverage audit leads with a verdict, and every inventory item is accounted for
       as covered, unspecified, or explicitly out of scope
 - [ ] Every `GAP` names its signal kind and cites it concretely
+- [ ] No `GAP` id was renumbered or reused; `Last allocated` is accurate, and every
+      pre-existing gap (including rejected and withdrawn ones) is carried forward
 - [ ] No `GAP` rests on "systems like this usually…"
 - [ ] Every `GAP` is marked as candidate new behavior with no legacy evidence
 - [ ] `## Considered and rejected` is filled

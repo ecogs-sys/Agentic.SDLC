@@ -50,9 +50,14 @@ reasoning about what is absent, from specs alone, is guessing. The **coverage** 
 noting it.
 
 Then check where any accepted gap could land, exactly as `/agentic-sdlc:redesign`
-Step 0 does — no program yet (free), program with `spec_frozen` false (routed through
-the pipeline's gates), or frozen (refused, decision still recorded). Scan
-`runs/*/program.json` for `origin.kind == "reverse-spec"` with this `rev_id`.
+Step 0 does. Scan `runs/*/program.json` for `origin.kind == "reverse-spec"` with this
+`rev_id`, then every phase `state.json` for `spec_frozen`.
+
+`spec_frozen` is **per phase**, so resolve this per REQ-ID: collect the union of
+`req_ids` across the phases that are frozen, and treat only those as closed. A gap
+promoted into a later phase is the common case and must not be refused because an
+earlier phase has shipped. A promoted gap adds **new** REQs, which never collide with
+a frozen phase's ids — so in practice it is almost always a `--replan`, not a refusal.
 
 ## Step 1 — Coverage pass
 
@@ -61,10 +66,18 @@ the inventory/integration/module maps, every module's `req-spec.md` and `evidenc
 `summary.md`, `req-index.md`, `decisions.md` if present, and each root's resolution
 state.
 
-Then run `gap-analysis-validator` on the result (coverage checks 1-7); loop per the
-`agentic-sdlc:validation-loop` shape, max 5, without the `SDLC` state commands.
+`coverage-auditor` has **no Write tool** — it returns the whole document in its
+response and **you** save it to `reverse-spec/<rev-id>/coverage-audit.md` before
+validating. Same for `capability-gap-analyst` in Step 2. If an agent returns a partial
+document, re-invoke it rather than stitching one together yourself.
 
-Write `reverse-spec/<rev-id>/coverage-audit.md` and present it **verdict first**:
+Then run `gap-analysis-validator` on the saved file (coverage checks 1-7); loop per
+the `agentic-sdlc:validation-loop` shape, max 5, without the `SDLC` state commands.
+The validator extends the diff schema with a `duplicated` array — treat it as blocking
+like the other three.
+
+Once it passes, present the saved `reverse-spec/<rev-id>/coverage-audit.md`
+**verdict first**:
 
 > "Coverage verdict: **<safe to rebuild from / not yet>**.
 >
@@ -82,8 +95,10 @@ Surface dissent before asking, per the gate convention: say which unspecified it
 particular suspicion — they are business-visible with no UI, so nobody notices the
 omission until a downstream process starves.
 
-- **items to specify** → re-run those modules through `/agentic-sdlc:reverse-spec`
-  (resume at Step 8 for the named modules), then re-audit.
+- **items to specify** → re-run those modules with
+  `/agentic-sdlc:reverse-spec --module <rev-id> MOD-NN ...`, then re-audit. Use that
+  flag, not the bare command: plain resume picks up the first module *without* a
+  `req-spec.md`, so a module that already has one would never be revisited.
 - **out of scope** → record in the audit; these are now deliberate exclusions with a
   human behind them, not oversights.
 - **accept** → continue.
@@ -104,11 +119,11 @@ Banner `▶ [gap-analysis] capability-gap-analyst <MOD-NN|all>`. Invoke
 evidence, the maps, `qa-log.md` and `decisions.md` if present, **what the human just
 told you**, any backlog path, and the resolved roots.
 
-Then `gap-analysis-validator` (capability checks 8-15), looping as above. Check 10
+Then `gap-analysis-validator` (capability checks 8-16), looping as above. Check 10
 matters most: it rejects any gap resting on general practice rather than a signal from
 this system.
 
-Write `reverse-spec/<rev-id>/capability-gaps.md` and present it:
+Once it passes, present the saved `reverse-spec/<rev-id>/capability-gaps.md`:
 
 > "<n> capability gaps, ranked by the cost of the workaround people use today.
 > <m> candidates considered and rejected for lack of any signal in this system.
@@ -178,11 +193,14 @@ later decision.
 Identical to `/agentic-sdlc:redesign` Step 6 — do not reimplement the logic, follow it:
 
 - **No program yet:** amendments are free; the handoff picks them up.
-- **Program exists, spec not frozen:** route through the Architect's BA-reopen for
-  changed REQ-IDs, or `/agentic-sdlc:next-phase --replan` when new REQs appear. A BA
-  reopen cannot add REQs, so a promoted gap is always a replan.
-- **Spec frozen at the eval gate:** refuse, record the decision as deferred, and point
-  at a post-delivery change run against the new system.
+- **Program exists, the affected REQ-IDs are in no frozen phase:** route through the
+  Architect's BA-reopen for changed REQ-IDs, or `/agentic-sdlc:next-phase --replan`
+  when new REQs appear. A BA reopen cannot add REQs, so a promoted gap is always a
+  replan.
+- **An affected REQ-ID is inside a frozen phase's `req_ids`:** refuse **that id only**,
+  record it in the decision as deferred, and point at a post-delivery change run
+  against the new system. Apply the rest. Never refuse a whole decision because one id
+  is frozen — see `/agentic-sdlc:redesign` Step 6c.
 
 ## Git
 No branch and no automatic commit. If the user wants these committed, use a plain

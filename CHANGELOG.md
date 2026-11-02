@@ -2,6 +2,95 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.6.1] - 2026-11-03
+
+**Review fixes across the legacy-modernization track.** A full review of the three new
+commands found defects that would only surface on a real run. Behavior-affecting
+corrections, no new features.
+
+### Fixed — would have broken a run
+
+- **The single-module path never wrote `module-map.md`.** `/agentic-sdlc:reverse-spec`
+  Step 5 skipped decomposition for a system inside one module's budget, but
+  `module-map.md` is a required input to `requirement-archaeologist`, the
+  reverse-coverage denominator for its validator, and what the handoff guard iterates.
+  Step 5 now writes a one-row map. This is the "small app, specify it in one pass"
+  case, so it failed on first use.
+- **`requirement-archaeologist` was forbidden from writing the system spec.** Its
+  guardrail allowed writes only under `modules/`, while Step 7.5 asked it for
+  `system-req-spec.md` at the run root. It now has an explicit **System-level mode**
+  with both output paths declared.
+- **System-level REQs had no evidence file.** `**Evidence:**` is mandatory and
+  prefix-qualified, but no system evidence artifact existed. Added
+  `system-evidence.md` with the `SYS` prefix, alongside `MOD-<NN>` for modules; every
+  evidence file numbers from `EV-001` independently, so two modules sharing an `EV-031`
+  is correct rather than a collision.
+- **The system spec was never validated.** Steps 3 and 8 validate; Step 7.5 did not —
+  leaving the system context diagram, module map, `erDiagram` and job schedule with no
+  label-safety or node-cap check. It now runs the same validator loop and review gate
+  as a module, and `requirement-archaeologist-validator` handles both pair shapes.
+- **`coverage-auditor` and `capability-gap-analyst` declared file outputs but have no
+  `Write` tool.** They now state that the orchestrator saves their response, matching
+  `legacy-analyst` and `redesign-impact-analyst`; `/agentic-sdlc:gap-analysis` says so
+  on its side too.
+
+### Fixed — produced wrong output rather than a visible failure
+
+- **`write-system-inventory` fence nesting was broken.** The format block's
+  ```` ```markdown ```` was closed by a nested ```` ```bash ````, so the whole root
+  resolution protocol rendered as a literal code block and the rest of the inventory
+  template read as part of `source-roots.local.md`. The protocol is now a top-level
+  section after the format block.
+- **The handoff merge dropped sections the design depended on.** It is now specified as
+  a **flatten, not a concatenation** — each `##` section appears exactly once, so the
+  master spec does not end up with six `## Overview` headings and break
+  `artifact-slicing` and the Architect's scoped read. `## Observed operating
+  characteristics` and `## Not specified` are merged in rather than lost; module
+  diagrams are explicitly not reproduced, with a pointer to where they live.
+- **Per-REQ dependencies were invisible to the Architect.** A REQ relying on a
+  `MOD-00-shared` rule recorded it only in a module-level `## Cross-references`
+  section, which the Architect never reads (it is scoped to its phase's REQ-IDs). The
+  dependency now goes inside the REQ block as `**Depends on:**`.
+- **`architect.md`** now reads `## Observed operating characteristics` and the
+  `## Evidence index` when present, and knows what `**Divergence:**`, `**Origin:**`,
+  `**Depends on:**` and `**Legacy behavior:**` mean. Without this the legacy system's
+  measured behavior never reached the agent that sizes the rebuild.
+
+### Fixed — traceability and routing
+
+- **`GAP` ids are now write-once**, with a `Last allocated` cursor and a validator
+  check. The capability pass is re-runnable and rewrote the whole file, so a second
+  sweep could renumber a `GAP` that an accepted `DEC` already cited — re-pointing a
+  requirement at a different need.
+- **`DEC` allocation re-reads `Last allocated` immediately before allocating**, because
+  `decisions.md` is shared across engineers; a revised proposal reuses its number and
+  replaces its impact report, which is now stated rather than silent.
+- **`spec_frozen` is per phase, not per program.** `/agentic-sdlc:redesign` 6c and
+  `/agentic-sdlc:gap-analysis` refused every amendment once any phase froze. They now
+  resolve per REQ-ID against the union of frozen phases' `req_ids`, and a decision that
+  straddles the line applies in part and defers the rest.
+- **Nothing verified the merge.** A REQ dropped during the handoff became silently out
+  of scope — `phase-planner-validator` only checks that what *is* in the spec gets
+  phased. Step R3 now cross-checks every non-withdrawn REQ-ID in `req-index.md` against
+  the `### REQ-NNN` headings in the master spec, and says to write the file
+  incrementally rather than reading every module spec into context first.
+- **Added `/agentic-sdlc:reverse-spec --module <rev-id> MOD-NN`.**
+  `/agentic-sdlc:gap-analysis`'s coverage gate told the user to re-specify a named
+  module, but no such entry point existed and plain resume only picks up modules
+  *without* a `req-spec.md`. The command also gained the `## Invocation` section it was
+  missing.
+- **Resume had a hole** between the last module and `summary.md` — every module
+  specified and no summary matched no row. Added the Step 9 row and made the table's
+  precedence explicit.
+- **`gap-analysis-validator`'s `duplicated` array** is now declared as a deliberate
+  schema extension and marked blocking, rather than silently sitting outside
+  `validate-traceability`'s three arrays.
+- **`EV` numbering was specified twice, differently** — the orchestrator passed a
+  starting number while the agent numbered from `EV-001` itself. The agent owns it.
+- **Upgrade note in the README:** commands and agents resolve from the installed copy,
+  so a new command will not appear until the plugin is reinstalled and a fresh session
+  started.
+
 ## [1.6.0] - 2026-11-02
 
 **Gap analysis for a reverse-engineered system.** `/agentic-sdlc:reverse-spec`

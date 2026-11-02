@@ -19,9 +19,40 @@ time and does not conflict with an active run.
 
 The surveyed source is **read-only throughout**.
 
+## Invocation
+
+```
+/agentic-sdlc:reverse-spec                        # new run, or offer to resume one
+/agentic-sdlc:reverse-spec <path> [<path>...]     # new run over these source paths
+/agentic-sdlc:reverse-spec --handoff <rev-id>     # jump to Step 10 for a finished run
+/agentic-sdlc:reverse-spec --module <rev-id> MOD-03 [MOD-05...]
+                                                  # re-specify named modules of an
+                                                  # existing run, in place
+```
+
+`--module` exists because a module can need re-specifying **after** it already has a
+`req-spec.md`, which the Step 0 resume logic will never pick up (it resumes at the
+first module *without* one). Two things ask for it:
+
+- `/agentic-sdlc:gap-analysis`'s coverage gate, when the human names items to go back
+  and specify properly
+- a human who simply wants a module redone
+
+It runs **Step 0b, then Step 8 for exactly the named modules**, and nothing else:
+
+- The decomposition gate is **not** re-run — boundaries are unchanged.
+- Each named module keeps its **existing REQ-IDs**. Genuinely new REQs append at the
+  **global tail** (`Last allocated + 1` from `req-index.md`), which may sort after a
+  later module's ids. That is allowed; `req-index.md` records the real mapping. Never
+  renumber to make a module's ids contiguous again.
+- The archaeologist runs in **revision mode** if the existing spec is being corrected,
+  and in full mode if the human asked for it to be redone from the code.
+- Afterwards, re-run **Step 9** (reconcile + `summary.md`) so the system spec and the
+  coverage table reflect the change, and tell the caller the run is re-summarized.
+
 ## Loop protocol, adapted
 
-Steps 3 and 8 use the `agentic-sdlc:validation-loop` skill's **shape** — creator →
+Steps 3, 7.5 and 8 use the `agentic-sdlc:validation-loop` skill's **shape** — creator →
 validator, max 5 iterations, the escalation block, and the user-review gate
 convention (name the artifact path, show contents on first review and a diff on
 re-review, **surface dissent before asking**, then ask).
@@ -41,8 +72,12 @@ loop at iteration 1. That is acceptable — completed artifacts are not redone.
 **If invoked with `--handoff <rev-id>`:** resolve its source roots (Step 0b), then
 skip to Step 10 using that run's artifacts.
 
+**If invoked with `--module <rev-id> MOD-NN...`:** resolve its source roots (Step 0b),
+then run Step 8 for those modules only and Step 9 afterwards, per Invocation above.
+
 Otherwise scan `reverse-spec/` for an existing run whose artifacts are incomplete.
-There is no state file, so **infer progress from what is on disk**:
+There is no state file, so **infer progress from what is on disk**. Evaluate the rows
+**top to bottom and take the last one that matches** — each assumes the ones above it:
 
 | Present | Means |
 |---|---|
@@ -50,9 +85,16 @@ There is no state file, so **infer progress from what is on disk**:
 | + `system-inventory.md` | resume at Step 4 |
 | + `integration-map.md` | resume at Step 5/6 |
 | + `module-map.md` | resume at Step 7 (re-confirm the gate) |
-| + `system-req-spec.md` | resume at Step 8 |
-| + some `modules/*/req-spec.md` | resume at the first module in `module-map.md` without one |
+| + `system-req-spec.md` **and** `system-evidence.md` | resume at Step 8 |
+| + `system-req-spec.md` but no `system-evidence.md` | Step 7.5 was interrupted — re-run it |
+| + **some** `modules/*/req-spec.md` | resume at the first module in `module-map.md` without one |
+| + **every** leaf module has one, no `summary.md` | resume at **Step 9** (reconcile + summarize) |
 | + `summary.md` | complete — offer Step 10 handoff |
+
+That second-to-last row matters: an interruption between the final module and
+`summary.md` leaves every module specified and no summary, and without it nothing
+matches — "the first module without a `req-spec.md`" finds none, and the run looks
+neither resumable nor complete.
 
 If an incomplete run exists, say:
 > "Found an in-progress reverse-spec run: `<rev-id>` — <n> of <m> modules specified.
@@ -192,8 +234,45 @@ each module's validator, which must account for every `EXT-NNN` assigned to it.
 Read the module candidates and totals from `system-inventory.md`.
 
 - **Within one module's budget** (the `write-system-inventory` budget: ≤25 REQs,
-  ≤8k LOC, ≤15 entry points): treat the whole system as a single module. Say so,
-  skip Steps 6-7, and go to Step 7.5 with one module named for the system.
+  ≤8k LOC, ≤15 entry points): treat the whole system as a single module. Say so and
+  skip Steps 6-7 — but **still write `module-map.md` yourself** before going to
+  Step 7.5, as a one-row map:
+
+  ```markdown
+  # Module Map
+  Reverse-spec ID: <rev-id>
+  Captured: <YYYY-MM-DD HH:MM>
+  Version: 1
+
+  ## Proposed modules
+  | ID | Name (business) | LOC | Files | Entry points | External | Depends on |
+  |---|---|---|---|---|---|---|
+  | MOD-01-<system-slug> | <system business name> | <n> | <n> | <n> | <n> | — |
+
+  ## Rationale
+  ### MOD-01-<system-slug>
+  - **Business responsibility:** <one line, from the inventory>
+  - **Owns:** every surveyed path
+  - **Entry points:** <every EP-NNN>
+  - **External entities:** <every EXT-NNN>
+  - **Why this boundary:** the whole system is within one module's size budget, so it
+    is specified in a single pass. No decomposition was proposed and no gate was run.
+
+  ## Unassigned
+  <nothing — a single module owns everything>
+
+  ## Shared code
+  <nothing separated — there is only one module>
+  ```
+
+  **This file is not optional.** `requirement-archaeologist` takes its paths, entry
+  points and externals from it; `requirement-archaeologist-validator` check 1 uses it
+  as the reverse-coverage denominator; the Step 10 handoff guard iterates it; and the
+  Step 0 resume table keys on it. Skipping it leaves the validator with nothing to
+  compare against, so the single-module path would fail on its first run.
+
+  Carry every `EP-NNN` and `EXT-NNN` from the inventory and integration map into the
+  Rationale — that list *is* what the validator checks coverage against.
 - **Over budget:** continue to Step 6.
 
 ### Step 6 — Decompose
@@ -231,14 +310,37 @@ worries you, and any module whose size the budget and cohesion disagree about.
 Write the system-level spec **before** the modules, so it claims the leading REQ
 block. Banner `▶ [system-spec] requirement-archaeologist`.
 
-Invoke `requirement-archaeologist` with module id `system`, starting REQ number
-`001`, and the paths to `system-inventory.md`, `integration-map.md` and
-`module-map.md`. It writes `reverse-spec/<rev-id>/system-req-spec.md` per the
-`agentic-sdlc:write-reverse-spec` skill's system format — system context diagram,
-module map, information model, background job schedule, plus REQs for the
-system-wide integrations and jobs.
+Invoke `requirement-archaeologist` in its **System-level mode** — module id `system`,
+starting REQ number `001`, and the resolved source roots
+with their revision state, plus the paths to `system-inventory.md`,
+`integration-map.md` and `module-map.md`.
 
-Then create `reverse-spec/<rev-id>/req-index.md`:
+It writes **two** files, per the `agentic-sdlc:write-reverse-spec` skill's system
+format:
+
+- `reverse-spec/<rev-id>/system-req-spec.md` — system context diagram, module map,
+  information model, background job schedule, plus REQs for the system-wide
+  integrations and jobs
+- `reverse-spec/<rev-id>/system-evidence.md` — the citations behind those REQs
+
+System REQs cite `**Evidence:** SYS EV-<NNN>`. The `SYS` prefix keeps them
+unambiguous after the merge, exactly as `MOD-<NN>` does for module REQs, and
+`system-evidence.md` numbers independently of every module.
+
+**Then validate it, in the same loop shape as a module** — banner
+`▶ [system-spec] requirement-archaeologist-validator`, max 5, routing per the loop
+protocol. Pass the validator both system files, the inventory/integration/module
+maps, and a note that this is a **system-level** pair so it applies the system
+diagram set (checks 1 and 9).
+
+Do not skip this. The system spec carries four of the run's diagrams — the context
+diagram, the module map, the `erDiagram` and the job schedule — all written blind with
+no renderer in the loop, and a broken mermaid label makes the artifact useless to the
+human reviewer at exactly the moment it is meant to help.
+
+Then show the system spec at a review gate on the same terms as a module (surface
+dissent, then `approve` / `accept as-is` / revision notes), and create
+`reverse-spec/<rev-id>/req-index.md`:
 
 ```markdown
 # REQ Index
@@ -247,11 +349,12 @@ Last allocated: REQ-<NNN>
 
 | REQ-ID | Name | Module | Depends on | Evidence |
 |---|---|---|---|---|
-| REQ-001 | <name> | system | — | EV-001 |
+| REQ-001 | <name> | system | — | SYS EV-001 |
 ```
 
 `Last allocated` is the allocation cursor — it is how a resumed run knows where to
-continue, so keep it accurate.
+continue, so keep it accurate. Write evidence refs with their prefix (`SYS EV-001`,
+`MOD-02 EV-031`) so a reader of the index alone knows which evidence file to open.
 
 ### Step 8 — Per-module specification
 
@@ -262,8 +365,9 @@ For each module:
 
 a. Banner `▶ [module <k>/<n>] requirement-archaeologist MOD-<NN> (iter <i>/5)`.
    Invoke `requirement-archaeologist`. Pass: rev-id, the module id, its
-   **starting REQ number** (`Last allocated` + 1 from `req-index.md`), its starting
-   EV number, the paths to `module-map.md` / `system-inventory.md` /
+   **starting REQ number** (`Last allocated` + 1 from `req-index.md` — `EV` ids it
+   numbers itself, from `EV-001` within its own file), the paths to
+   `module-map.md` / `system-inventory.md` /
    `integration-map.md` / `req-index.md`, **the resolved source roots, the list of
    unresolved ones, and each root's revision state (`match` / `drifted` with the
    changed cited files / `unverified`)**, and — for every module after `MOD-00-shared` — the path to
@@ -304,10 +408,14 @@ at the global tail. **Gaps are harmless — never renumber to close one.**
 
 Some system-level content is only knowable once the modules are detailed — which
 module owns which entity, and the real cross-module dependencies. Re-invoke
-`requirement-archaeologist` in revision mode on `system-req-spec.md` to correct its
-module map and information model.
+`requirement-archaeologist` in its **System-level mode, revision pass**, to correct
+`system-req-spec.md`'s module map and information model.
 
-**Diagrams and prose only — no REQ may be renumbered, added, or removed here.**
+**Diagrams and prose only — no REQ may be renumbered, added, or removed here**, and
+`system-evidence.md` is not touched. Re-run
+`requirement-archaeologist-validator` on the system pair afterwards: this pass edits
+mermaid, which is the one thing most likely to break and the one thing nobody renders
+before the human sees it.
 
 Then write `reverse-spec/<rev-id>/summary.md`:
 
@@ -317,13 +425,16 @@ Reverse-spec ID: <rev-id>
 Completed: <YYYY-MM-DD HH:MM>
 
 ## Coverage
-| Module | REQs | Entry points | Externals | Not specified |
+| Scope | REQs | Entry points | Externals | Not specified |
 |---|---|---|---|---|
+| system | <n> | — | <n> | <n> |
+| MOD-01-<slug> | <n> | <n> | <n> | <n> |
 
 ## Needs human confirmation
-<every EV-NNN with Confidence: low, and every open question, grouped by module.
-This is the most important section — these are the rules the pipeline would
-otherwise implement on an agent's guess.>
+<every EV-NNN with Confidence: low, and every open question, grouped by scope —
+`SYS EV-NNN` from system-evidence.md and `MOD-NN EV-NNN` from each module's. This is
+the most important section — these are the rules the pipeline would otherwise
+implement on an agent's guess.>
 
 ## Not specified
 <the consolidated list across all modules, with reasons>

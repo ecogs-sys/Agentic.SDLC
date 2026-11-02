@@ -26,7 +26,13 @@ specification looks complete right up until the gap ships.
   `unverified` / `skipped`)
 
 ## Outputs
-- `reverse-spec/<rev-id>/coverage-audit.md`
+- The complete coverage audit **in your response**, in the skill's format, for
+  `reverse-spec/<rev-id>/coverage-audit.md`
+
+Do not try to write that file — you have **no Write tool** by design. Return the whole
+document in your response and the orchestrator saves it. Return it in full every time,
+including on a revision pass: a partial response leaves the orchestrator with nothing
+to persist and the validator with no artifact to read.
 
 ## Process
 

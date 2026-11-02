@@ -730,18 +730,59 @@ the `agentic-sdlc:write-reverse-spec` skill:
   from the system it was recovered from, and the Architect needs to know that its
   `**Legacy behavior:**` citation describes superseded code rather than the
   requirement in front of it.
-- Add the `## REQ index` table after `## Overview` (from `req-index.md`).
-- Add the `## Evidence index` table, with every evidence-file path
-  **workspace-relative** so it survives the workspace being moved or cloned, and copy
-  in the `### Source roots` sub-table from `system-inventory.md`. Legacy source
-  citations inside `evidence.md` are `SRC<n>:<relative path>:<line>`, so a reader who
-  has only the master spec still needs that table to follow one — and whoever follows
-  it is asked to confirm the location if their checkout differs.
+- Add the `## Modules` table (one row per module, from each module spec's
+  `## Overview`) and the `## REQ index` table after `## Overview` (from
+  `req-index.md`).
+- Add the `## Evidence index` table — with a row for `system-evidence.md` (cited as
+  `SYS EV-NNN`) as well as each module's — every path **workspace-relative** so it
+  survives the workspace being moved or cloned, and copy in the `### Source roots`
+  sub-table from `system-inventory.md`. Legacy source citations inside an evidence
+  file are `SRC<n>:<relative path>:<line>`, so a reader who has only the master spec
+  still needs that table to follow one — and whoever follows it is asked to confirm
+  the location if their checkout differs.
+- **Merge `## Observed operating characteristics` into one section**, keeping each
+  figure's module attribution and evidence ref. Do not drop it: it is the only route
+  by which the legacy system's measured behavior reaches the Architect, and sizing the
+  replacement without it is guesswork.
+- **Merge `## Not specified` into one section**, keeping each entry's module and
+  reason. The pipeline treats anything absent as out of scope, so this list is what
+  distinguishes a deliberate exclusion from an oversight.
+- **Do not reproduce the module diagrams.** They are per-module by design and belong
+  to the human reviewer; the `## Evidence index` points at them where they live. Say
+  so in the file rather than leaving a reader to wonder.
+- **Each `##` section appears exactly once.** This is a flatten, not a concatenation —
+  six source files each carry their own `## Overview`, so a verbatim concatenation
+  would give the master spec six of them and break both
+  `agentic-sdlc:artifact-slicing` and the Architect's "read `## Overview` in full".
 - Header is `Program ID: <program-id>`, `Status: approved`, `Version: 1`.
+
+**Write it incrementally, module by module.** Read one source spec, append its REQ
+blocks and fold its sections in, then move to the next — do not read every module spec
+into context and then emit one file. A reverse-engineered spec can run to hundreds of
+REQs with decision tables, and this is the largest single artifact operation in the
+whole workflow; reading it all at once is how the handoff runs out of room on exactly
+the big monolith it exists for.
+
+**Then verify the merge before writing `program.json`.** Nothing downstream will catch
+a REQ that got dropped here — `phase-planner-validator` only checks that what *is* in
+the spec gets phased, so a lost requirement becomes silently out of scope. The check
+is cheap because `req-index.md` is already the complete ledger:
+
+```bash
+# every non-withdrawn REQ-ID in the index must appear as a heading in the master spec
+grep -oE '^\| (REQ-[0-9]+)' reverse-spec/<rev-id>/req-index.md | grep -oE 'REQ-[0-9]+' | sort -u > /tmp/indexed
+grep -oE '^### (REQ-[0-9]+)' runs/<program-id>/req-spec.md | grep -oE 'REQ-[0-9]+' | sort -u > /tmp/merged
+comm -23 /tmp/indexed /tmp/merged   # expect: only the withdrawn ids
+comm -13 /tmp/indexed /tmp/merged   # expect: empty — nothing in the spec is unindexed
+```
+
+Any id in the first list that is **not** in the `### Withdrawn` table is a dropped
+requirement: stop, fix the merge, and re-check. Any id in the second list is a REQ the
+index never recorded, which means `req-index.md` is wrong.
 
 The `## REQ index` repeats every REQ-ID as text. The authoritative requirement list
 is the `### REQ-NNN` **headings** — never count REQs by regex over the whole file, or
-the index will double every total.
+the index will double every total. (That is why the check above anchors on `^### `.)
 
 ### Step R4 — Write program.json with the spec already frozen
 Write `runs/<program-id>/program.json` as in Step 6, with the requirement spec

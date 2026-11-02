@@ -179,6 +179,12 @@ Per-command detail, agent roster and model choices are in the
 
 See [`plugins/agentic-sdlc/README.md`](plugins/agentic-sdlc/README.md) for usage.
 
+**Upgrading.** Commands, agents and skills are resolved from the *installed* copy, so a
+session started before an upgrade still sees the old roster — a new command will not
+appear and a new agent cannot be invoked. After pulling a new version, re-run
+`/plugin install agentic-sdlc@agentic-sdlc-marketplace` and start a fresh session
+before testing. Worth checking first if a command you expect is missing.
+
 ## Repository structure
 
 ```

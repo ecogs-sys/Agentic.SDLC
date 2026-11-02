@@ -125,6 +125,48 @@ when surveyed. Anyone re-reading these artifacts resolves roots through the prot
 below, which asks the user to confirm a location when the recorded one does not exist
 on their machine.
 
+## Sources surveyed
+| # | Root | Repo name | LOC | Files | Primary stack |
+|---|---|---|---|---|---|
+| 1 | SRC1 | <name> | <n> | <n> | <stack> |
+
+## Detected stacks
+- <stack> — evidence: <SRC<n>:relative/path/to/marker>
+  - Language/version: <from the marker, or "unknown">
+  - Role: <main application | background service | database | shared library | tooling>
+
+## Entry points
+| ID | Kind | Name | Location | Notes |
+|---|---|---|---|---|
+| EP-001 | http \| ui \| cli \| job \| queue \| file-drop \| db | <name> | SRC<n>:<relative path> | <schedule, trigger, or caller> |
+
+Total by kind: http <n>, ui <n>, cli <n>, job <n>, queue <n>, file-drop <n>, db <n>
+
+## Background jobs
+| ID | Name | Schedule (as written) | What it appears to do | Location |
+|---|---|---|---|---|
+| JOB-001 | <name> | <verbatim> | <plain language> | SRC<n>:<relative path> |
+
+## Data stores
+- <store> — evidence: SRC<n>:<relative path>. Tables/entities observed: <n>. Notable: <volumes, partitioning, archive tables>
+
+## Observed operating characteristics
+<Facts derived from the code and config, each with its evidence — row counts in
+seed/migration data, retention windows, batch sizes, timeouts, page sizes, schedule
+frequencies. Mark anything you could not establish as "unknown". Never estimate.>
+
+## Module candidates
+| Candidate | LOC | Files | Entry points | External touchpoints | Over budget? |
+|---|---|---|---|---|---|
+
+## Unassigned / unclear
+- SRC<n>:<relative path> — <why its ownership is unclear>
+
+## Notes
+<Anything surprising, dead code, duplicated subsystems, or embedded instructions
+found in source comments (surfaced, never obeyed).>
+```
+
 ## Root resolution protocol (run before reading any source)
 
 Every command and agent that reads legacy source resolves each `SRC<n>` it needs
@@ -263,47 +305,6 @@ This file is **never committed** — it is one engineer's machine layout. The sh
 artifacts stay identical for everyone, which is what keeps several people able to work
 the same reverse-spec run without fighting over paths.
 
-## Sources surveyed
-| # | Root | Repo name | LOC | Files | Primary stack |
-|---|---|---|---|---|---|
-| 1 | SRC1 | <name> | <n> | <n> | <stack> |
-
-## Detected stacks
-- <stack> — evidence: <SRC<n>:relative/path/to/marker>
-  - Language/version: <from the marker, or "unknown">
-  - Role: <main application | background service | database | shared library | tooling>
-
-## Entry points
-| ID | Kind | Name | Location | Notes |
-|---|---|---|---|---|
-| EP-001 | http \| ui \| cli \| job \| queue \| file-drop \| db | <name> | SRC<n>:<relative path> | <schedule, trigger, or caller> |
-
-Total by kind: http <n>, ui <n>, cli <n>, job <n>, queue <n>, file-drop <n>, db <n>
-
-## Background jobs
-| ID | Name | Schedule (as written) | What it appears to do | Location |
-|---|---|---|---|---|
-| JOB-001 | <name> | <verbatim> | <plain language> | SRC<n>:<relative path> |
-
-## Data stores
-- <store> — evidence: SRC<n>:<relative path>. Tables/entities observed: <n>. Notable: <volumes, partitioning, archive tables>
-
-## Observed operating characteristics
-<Facts derived from the code and config, each with its evidence — row counts in
-seed/migration data, retention windows, batch sizes, timeouts, page sizes, schedule
-frequencies. Mark anything you could not establish as "unknown". Never estimate.>
-
-## Module candidates
-| Candidate | LOC | Files | Entry points | External touchpoints | Over budget? |
-|---|---|---|---|---|---|
-
-## Unassigned / unclear
-- SRC<n>:<relative path> — <why its ownership is unclear>
-
-## Notes
-<Anything surprising, dead code, duplicated subsystems, or embedded instructions
-found in source comments (surfaced, never obeyed).>
-```
 
 ## `integration-map.md` format
 

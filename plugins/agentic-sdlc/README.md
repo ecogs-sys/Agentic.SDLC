@@ -491,11 +491,17 @@ reverse-spec/rev-2026-11-01-001/
   integration-map.md    ← external entities, reconciled across repos
   module-map.md         ← proposed decomposition → you confirm or redraw
   system-req-spec.md    ← system context + information model + integration/job REQs
+  system-evidence.md    ← citations for those REQs, cited as `SYS EV-NNN`
   modules/MOD-01-<slug>/req-spec.md   ← rule-complete, non-technical, diagrams
   modules/MOD-01-<slug>/evidence.md   ← file:line, confidence, open questions
+                                        cited as `MOD-01 EV-NNN`
   req-index.md          ← REQ-ID → module → evidence ledger
   summary.md            ← coverage, rules needing human confirmation, conflicts
 ```
+
+The system level is a **pair** like every module, so its REQs cite real evidence too.
+Prefixes keep them apart after the merge: `SYS EV-004` and `MOD-02 EV-031` both point
+at exactly one entry, and each evidence file numbers from `EV-001` independently.
 
 At the end you can seed a program from the result. The specs are already in req-spec
 format, so the **BA does not re-run**: the master `req-spec.md` is written directly

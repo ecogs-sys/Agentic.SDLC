@@ -69,8 +69,25 @@ Replace `write-req-spec`'s `**Source:** raw-input.md, paragraph <n>` with:
 **Evidence:** MOD-<NN> EV-<NNN>[, EV-<NNN>...]
 ```
 
-The `MOD-NN` prefix is mandatory — after the merge into the master spec, a bare
-`EV-031` would be ambiguous across modules.
+The prefix is mandatory — after the merge into the master spec a bare `EV-031` would
+be ambiguous, because every evidence file numbers from `EV-001` independently. Two
+prefixes exist:
+
+| Scope | Prefix | Evidence file |
+|---|---|---|
+| a module | `MOD-<NN>` | `modules/MOD-<NN>-<slug>/evidence.md` |
+| the system spec | `SYS` | `system-evidence.md` |
+
+So `**Evidence:** MOD-02 EV-031` and `**Evidence:** SYS EV-004` are both well-formed,
+and two modules each having an `EV-031` is correct rather than a collision.
+
+### `**Depends on:**` goes inside the REQ block
+
+When a REQ relies on another — typically a `MOD-00-shared` rule — record it as a
+`**Depends on:** REQ-<NNN> (<module>)` line **in that REQ's own block**, not only in
+the module's `## Cross-references` section. The Architect reads the master spec scoped
+to its phase's REQ-IDs and never sees a module-level section, so a dependency recorded
+only there is invisible to the agent that needs it.
 
 ## Delta 3 — Diagrams are mandatory
 
@@ -237,6 +254,7 @@ Version: <n>
 - <observable outcome, "user can..." / "system does...">
 - <every branch, threshold, rate and exemption>
 - <failure path: what happens on rejection/timeout/bad data, and what the user sees>
+**Depends on:** REQ-<NNN> (MOD-00-shared)   <omit when there is no dependency>
 **Evidence:** MOD-<NN> EV-<NNN>
 
 <decision table, when behavior is conditional>
@@ -246,6 +264,9 @@ Version: <n>
 - <figure not establishable> — unknown
 
 ## Cross-references
+<a summary of the `**Depends on:**` lines above, for the human reviewer. The
+authoritative record is the per-REQ line — this section is not merged into the
+master spec.>
 - REQ-<NNN> relies on the shared rule REQ-<NNN> (MOD-00-shared)
 
 ## Not specified
@@ -300,11 +321,16 @@ to look decisive, and never leave a `low` entry without an open question.
 **Redact secrets.** Cite the `SRC<n>:<path>:<line>` and name the *kind* of secret ("database
 password", "API key"). Never transcribe the value.
 
-## `system-req-spec.md` format
+## `system-req-spec.md` + `system-evidence.md` format
 
-Written **before** the module specs, so it claims the leading REQ block. Covers what
-is true of the system as a whole: its external integrations, its background jobs, its
-information model.
+Written **before** the module specs, so it claims the leading REQ block. Like a
+module, the system level is a **pair** — `system-req-spec.md` at the run root with
+`system-evidence.md` beside it. Its evidence prefix is `SYS`.
+
+Scope: what is true of the system **as a whole** — its external integrations (every
+`EXT-NNN` that `module-map.md` does not give to one module), its background jobs, and
+its information model. A module's own internal rules belong to that module; writing
+them here too produces two REQs for one behavior.
 
 ```markdown
 # Requirement spec — system overview
@@ -312,6 +338,7 @@ Reverse-spec ID: <rev-id>
 Scope: system-level
 Status: draft
 Version: <n>
+Evidence: system-evidence.md (cited as `SYS EV-NNN`)
 
 ## Overview
 <what the system does for the business, in one or two paragraphs>
@@ -324,7 +351,11 @@ Version: <n>
 
 ## Requirements
 ### REQ-001: <integration / job / system-wide rule>
-...
+**Description:** ...
+**Acceptance criteria:**
+- ...
+- <failure path>
+**Evidence:** SYS EV-<NNN>
 
 ## Information model
 <erDiagram plus, per entity: the business facts it holds, allowed values, and its
@@ -335,10 +366,22 @@ relationships>
 ## Not specified
 ```
 
+`system-evidence.md` uses the **same format as a module's `evidence.md`** — the same
+`### EV-<NNN>` blocks with `Rule as implemented`, `Cited`, `Confidence`,
+`Open questions`, `Shared candidate` and `Supports`. Only the file location and the
+citation prefix differ.
+
 ## Merged master spec (written by the handoff)
 
-The handoff concatenates `system-req-spec.md` + every module `req-spec.md` into
-`runs/<program-id>/req-spec.md`, **preserving REQ-IDs**, and adds two index sections:
+The handoff merges `system-req-spec.md` + every module `req-spec.md` into
+`runs/<program-id>/req-spec.md`, **preserving REQ-IDs**.
+
+It is a **flatten, not a concatenation.** Each source file has its own `## Overview`,
+`## Diagrams`, `## Observed operating characteristics`, `## Cross-references` and
+`## Not specified`; copying them verbatim would give the master spec six
+`## Overview` headings, and `agentic-sdlc:artifact-slicing` plus the Architect's
+"read `## Overview` in full" (`architect.md`'s REQ-ID scoping) both assume one. So
+each `##` section appears **exactly once**, with the module content folded into it:
 
 ```markdown
 # Requirement spec
@@ -347,18 +390,28 @@ Status: approved
 Version: 1
 
 ## Overview
-<system overview, from system-req-spec.md>
+<system overview, from system-req-spec.md — the only `## Overview` in the file>
+
+## Modules
+| Module | What it does for the business |
+|---|---|
+| MOD-01-orders | <that module's one-line `## Overview`, condensed> |
 
 ## REQ index
 | REQ-ID | Name | Module | Depends on |
 |---|---|---|---|
 | REQ-001 | ... | system | — |
-| REQ-009 | ... | MOD-01-orders | — |
+| REQ-009 | ... | MOD-01-orders | REQ-004 |
 
 ## Evidence index
-| Module | Evidence file |
+| Scope | Evidence file |
 |---|---|
-| MOD-01-orders | reverse-spec/<rev-id>/modules/MOD-01-orders/evidence.md |
+| system (`SYS EV-NNN`) | reverse-spec/<rev-id>/system-evidence.md |
+| MOD-01-orders (`MOD-01 EV-NNN`) | reverse-spec/<rev-id>/modules/MOD-01-orders/evidence.md |
+
+Design decisions: reverse-spec/<rev-id>/decisions.md
+Module diagrams: reverse-spec/<rev-id>/modules/MOD-<NN>-<slug>/req-spec.md
+  (`## Diagrams`) — not reproduced here; see the diagram note below.
 
 ### Source roots
 Evidence citations are written `SRC<n>:<relative path>:<line>`. Resolve a root
@@ -370,9 +423,52 @@ recorded one is absent on this machine.
 |---|---|---|---|
 | SRC1 | <name> | <absolute path as surveyed — provenance only> | `<marker>`, `<marker>` |
 
+## Observed operating characteristics
+<every module's section plus the system's, merged into one, each figure keeping its
+module attribution and its evidence ref. Derived from the legacy system; `unknown`
+where nothing was established.>
+
+| Figure | Value | Scope | Evidence |
+|---|---|---|---|
+| Nightly settlement window | 02:00–04:30 | system | SYS EV-004 |
+| Invoices per month | ~180,000 | MOD-02-billing | MOD-02 EV-012 |
+
 ## Requirements
 ### REQ-001: ...
+<every live REQ block from every source file, in REQ-ID order, verbatim>
+
+## Not specified
+<every module's section plus the system's, merged, each entry keeping its module
+attribution and its reason>
 ```
+
+### What is dropped, and why that is safe
+
+- **Module diagrams are not merged.** They are the human reviewer's artifact, they
+  are per-module by design, and seven-plus mermaid blocks would dominate a file the
+  Architect reads by scoped section. The `## Evidence index` points at them, and they
+  stay unchanged in `reverse-spec/`. Say so there rather than leaving a reader to
+  wonder whether they were lost.
+- **Module `## Overview` paragraphs collapse into the `## Modules` table** — one row
+  each. The system `## Overview` is the file's overview.
+
+### What must NOT be dropped
+
+- **`## Observed operating characteristics`.** This is the only route by which the
+  legacy system's measured behavior reaches the Architect, which is the entire reason
+  Delta 5 permits the section. Losing it means the replacement is sized from nothing.
+  `agentic-sdlc:write-req-spec` also protects it against a later BA reopen — so it has
+  to actually be there for that protection to mean anything.
+- **Per-REQ `**Depends on:**` lines.** A REQ that relies on a `MOD-00-shared` rule
+  carries that dependency **inside its own block** (see Cross-references below), so it
+  survives a scoped read. The module-level `## Cross-references` section is a summary
+  and is *not* merged; the `**Depends on:**` lines and the REQ index's `Depends on`
+  column carry the information. The Architect is scoped to its own phase's REQ-IDs and
+  will never see a module-level section, so a dependency recorded only there is a
+  dependency the Architect does not know about.
+- **`## Not specified`.** The pipeline treats anything absent as out of scope; the
+  consolidated list is what lets a reader tell "deliberately excluded" from
+  "overlooked".
 
 **Withdrawn REQs are excluded from the merge.** A REQ marked
 `**Status:** withdrawn by DEC-NNN` is not copied into the master spec: the pipeline
@@ -409,7 +505,10 @@ Three rules that keep this compatible with the existing pipeline:
 
 ## Quality checklist
 
-- [ ] Every REQ has ≥2 acceptance criteria and an `**Evidence:** MOD-NN EV-NNN` line
+- [ ] Every REQ has ≥2 acceptance criteria and an `**Evidence:**` line prefixed for its
+      scope — `MOD-NN EV-NNN` in a module, `SYS EV-NNN` in the system spec
+- [ ] Every REQ that relies on another carries a `**Depends on:**` line inside its own
+      block, not only in `## Cross-references`
 - [ ] Acceptance criteria capture every branch, not a summary — decision tables where
       behavior is conditional
 - [ ] Failure paths are covered per REQ

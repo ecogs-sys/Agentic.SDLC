@@ -61,11 +61,27 @@ has progressed:
 | State | What happens |
 |---|---|
 | No program created from this run yet | **Normal case.** Amend `reverse-spec/` artifacts freely. |
-| A program exists, `spec_frozen` is false | Amend `reverse-spec/`, then route the change into the program through its own gates — see Step 6b. |
-| A program exists and `spec_frozen` is true | **Refuse** — see Step 6c. |
+| A program exists; the change touches no frozen REQ | Amend `reverse-spec/`, then route the change into the program through its own gates — see Step 6b. |
+| A program exists and the change touches a **frozen phase's** REQs | **Refuse those REQs** — see Step 6c. |
 
 Check by scanning `runs/*/program.json` for `origin.kind == "reverse-spec"` with a
-matching `rev_id`, then that program's phase `state.json` for `spec_frozen`.
+matching `rev_id`, then that program's phase `state.json` files for `spec_frozen`.
+
+**`spec_frozen` is per phase, not per program.** Each phase's `state.json` carries it,
+`/agentic-sdlc:next-phase` sets it `false` for every new phase, and it is set `true`
+only at that phase's eval review gate. So "the program has a frozen phase" does **not**
+mean the program is closed to change:
+
+- A phase with `spec_frozen = true` has its REQ-IDs locked — those are in
+  `state.req_ids`, and evals plus shipped code are authored against them.
+- Every REQ-ID **outside** every frozen phase's `req_ids` is still amendable through
+  the normal routes in Step 6b.
+
+So resolve this per REQ-ID, not per program: collect the union of `req_ids` across all
+phases whose `state.json` has `spec_frozen = true`, and compare the decision's
+requirement-changes table against it. A decision affecting only later phases is the
+common case and must not be refused. If a decision straddles the line, apply what you
+can and defer the rest — see Step 6c.
 
 ## Step 0b — Resolve the source roots
 
@@ -132,6 +148,30 @@ crosses modules), the maps, `req-index.md`, `decisions.md`, the next free `DEC` 
 and the resolved roots.
 
 Write the impact report to `reverse-spec/<rev-id>/impact-DEC-<NNN>.md`.
+
+#### Allocating the `DEC` number
+
+Read `decisions.md`'s `Last allocated` — not the highest `DEC` heading you happen to
+see, and not a count of the rows. If `decisions.md` does not exist yet, this is
+`DEC-001` and `spec-amender` creates the file at Step 5.
+
+**Re-check `Last allocated` immediately before each allocation.** A reverse-spec run is
+worked by more than one engineer and `decisions.md` is a shared artifact, so a
+colleague may have added `DEC-003` since you last read it. Allocating a number that is
+already taken would overwrite their decision and their impact report. If `Last
+allocated` has moved since you read it, take the next free number and say so.
+
+**A revised proposal reuses its number.** When Step 4 returns revision notes rather
+than approve/reject, the `DEC` number is not yet consumed — no record was written — so
+Step 3 runs again with the **same** `DEC-<NNN>` and overwrites
+`impact-DEC-<NNN>.md`. That is correct (one decision, one report), but say so when you
+do it, because the previous analysis is replaced rather than kept:
+
+> "Re-running the impact analysis as DEC-<NNN>; this replaces the previous
+> `impact-DEC-<NNN>.md` rather than adding a second report."
+
+A **rejected** decision does consume its number — the record is written with
+`Status: rejected`, so the next proposal gets `DEC-<NNN+1>`.
 
 ## Step 4 — Decision gate (human)
 
@@ -217,20 +257,30 @@ human which route applies:
 Pass the affected REQ-IDs and the `DEC` id into whichever route the human picks. New
 REQs cannot be added by a BA reopen — that is a replan.
 
-### 6c — The spec is frozen
-Refuse, and say why plainly:
+### 6c — The change touches a frozen phase's REQs
+Refuse **only the REQs inside a frozen phase's `req_ids`** — never the whole decision
+on the strength of one id. Name them:
 
-> "This program froze its specification at the eval gate, so requirements are no
-> longer amendable here — changing them now would invalidate the authored evals and
-> the work already built against them.
+> "REQ-<NNN>, REQ-<NNN> belong to phase <k>, which froze its specification at its eval
+> gate. Changing them now would invalidate the evals authored against them and the work
+> already built. The rest of DEC-<NNN> is unaffected.
 >
-> DEC-<NNN> is recorded in `reverse-spec/<rev-id>/decisions.md` and is not lost. Ship
-> the current phase, then raise the change as a normal brownfield change run against
-> the new system with `/agentic-sdlc:start-run`. That is the right shape for it: by
-> then the system you are changing is the rebuild, not the legacy app."
+> Ship phase <k>, then raise those two as a normal brownfield change run against the
+> new system with `/agentic-sdlc:start-run`. That is the right shape for them: by then
+> the system you are changing is the rebuild, not the legacy app."
 
-Still write the `DEC` with `Status: accepted` and a note that it is deferred to a
-post-delivery change run. The analysis keeps its value.
+Three cases, and they are genuinely different:
+
+- **Every affected REQ is frozen** → nothing applies now. Write the `DEC` with
+  `Status: accepted` and a note that it is deferred to a post-delivery change run.
+- **Some are frozen, some are not** → apply the unfrozen rows through Step 5 and
+  Step 6b, and record the frozen ones in the `DEC` as deferred, listed by id. Say
+  plainly in the response that the decision landed **partially**, because a reader who
+  assumes it landed whole is the failure mode here.
+- **No affected REQ is frozen** → this section does not apply; go to 6b.
+
+In all three the `DEC` is written and the analysis keeps its value. A deferred decision
+is recorded, not lost.
 
 ## Step 7 — `--decisions`
 
