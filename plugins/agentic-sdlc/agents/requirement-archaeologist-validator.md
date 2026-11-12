@@ -43,12 +43,21 @@ expect a system pair to live under `modules/`.
    that decision is recorded in `decisions.md` — the behavior was dropped on purpose,
    which is an answer, not a gap.
 
-   **For a system pair the denominator is different.** Check that every background job
-   in `system-inventory.md` and every `EXT-NNN` in `integration-map.md` that
-   `module-map.md` leaves **unowned by a single module** maps to ≥1 system REQ or is in
-   `## Not specified`. Do **not** require the system spec to cover a module's own entry
-   points — those belong to that module, and specifying them here would produce two
-   REQs for one behavior.
+   **For a system pair the denominator is different, and much smaller.** It is
+   exactly the **leftovers**: every background job, entry point and `EXT-NNN` that
+   `module-map.md` assigns to **no single module** (its `## Unassigned` section, or an
+   `integration-map.md` entity whose `Owning module candidate` is `unassigned`). The
+   "unowned" qualifier governs **jobs, entry points and external entities alike** —
+   there is no category the system spec must cover unconditionally.
+
+   Anything a module owns belongs to that module. Requiring the system spec to cover
+   it too would produce two REQs for one behavior, which is the error this check
+   exists to prevent rather than cause.
+
+   A consequence worth stating: when `module-map.md` assigns everything — which is
+   normal, and is **always** true of a single-module run — the system pair's
+   denominator is **empty** and this check passes with nothing to verify. That is the
+   expected outcome, not a sign the map or the spec is wrong.
 2. **Every REQ cites evidence** with the prefix for its scope — `**Evidence:** MOD-NN
    EV-NNN` in a module pair, `**Evidence:** SYS EV-NNN` in the system pair — and each
    cited `EV-NNN` exists in that pair's evidence file. Missing or dangling →
@@ -121,9 +130,17 @@ expect a system pair to live under `modules/`.
    - No diagram exceeds ~12 nodes. Over → `altered`.
 10. **No secret values.** A literal password, key, token or connection-string
     credential anywhere in either file → `altered`.
-11. **Zero-REQ modules are valid.** If the module declares no business behavior and
-    says so in `## Not specified`, that is a **pass** for checks 2, 5 and 6. Do not
-    report missing requirements, and do not push for REQs to be added.
+11. **Zero-REQ pairs are valid — module or system.** If the scope declares no business
+    behavior and says so in `## Not specified`, that is a **pass** for checks 2, 5
+    and 6. Do not report missing requirements, and do not push for REQs to be added.
+
+    - A **module** with no business logic is pure plumbing. Legitimate.
+    - The **system spec** has no REQs whenever `module-map.md` assigns every job and
+      external entity to a module — the normal case, and unavoidable in a
+      single-module run. It still has to carry its four diagrams and its
+      `## Information model` (checks 9 and 2 apply to what is there), and those are
+      the reason it exists at all. A zero-REQ system spec with a complete information
+      model is a correct artifact; do not report it as empty.
 
 ## Output
 Emit the JSON diff report. `status` is `"pass"` only when all arrays are empty. Be

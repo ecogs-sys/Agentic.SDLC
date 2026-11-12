@@ -375,6 +375,25 @@ Version: <n>
 ## Unassigned
 - SRC<n>:<relative path> — <why, and which module it most plausibly belongs to>
 
+<Entry points, jobs and external entities listed here are what the **system spec**
+specifies. Anything assigned to a module is that module's job. When this section is
+empty the system spec legitimately has no REQs of its own — it still carries the
+diagrams and the information model.>
+
+## Deferred
+<Modules the human deliberately put off at the decomposition gate. Written only by
+the orchestrator, never by the decomposer — this is a human's cost decision, not a
+boundary judgement.>
+
+| ID | Name (business) | LOC | Deferred on | Reason |
+|---|---|---|---|---|
+| MOD-04-<slug> | <name> | <n> | <YYYY-MM-DD> | deferred at the decomposition gate |
+
+Deferred modules **keep their `MOD-NN` ids** — the inventory, the integration map and
+other modules' `Depends on` columns all reference them, and renumbering would break
+every one. They are picked up later with
+`/agentic-sdlc:reverse-spec --module <rev-id> MOD-04`.
+
 ## Shared code
 <Paths used by three or more modules (`util`, `common`, `helpers`). These become
 MOD-00-shared, which is specified FIRST so later modules can cross-reference it

@@ -464,10 +464,20 @@ Five stages, each on a right-sized model:
    integrations that span two repositories — the monolith's outbound export and the
    gateway's inbound endpoint are recorded once, as one integration.
 3. **Legacy Decomposer** (opus) proposes business module boundaries, then **you
-   confirm or redraw them** at a gate (`merge 01+02`, `split 03 by partner`). This is
-   the most consequential step: module size decides how much code one specification
-   pass can actually read, so the gate is both the correctness check and the cost
-   control.
+   confirm or redraw them** at a gate. This is the most consequential step: module
+   size decides how much code one specification pass can actually read, so the gate
+   is both the correctness check and the cost control. Three levers:
+
+   | Reply | Effect |
+   |---|---|
+   | `defer 04,05` | **specify a subset now.** Removes those passes entirely; pick them up later with `--module`. Costs nothing in quality. |
+   | `merge 01+02` | one pass instead of two — cheaper, but a bigger module means less of it gets read properly |
+   | `split 03 by partner` | one more pass, and each resulting spec is more thorough |
+
+   **Prefer deferring to merging.** A 40-module monolith does not have to be specified
+   in one sitting — do billing this quarter and orders next. Deferred modules keep
+   their ids, are listed as a deliberate exclusion rather than a gap, and the handoff
+   names them so nobody mistakes "not specified yet" for "nothing there".
 4. **Requirement Archaeologist** (opus) + validator (haiku) work one module at a
    time, producing a **pair** of files per module. Business rules — rates,
    thresholds, exemptions, failure policy — go in the `req-spec.md` acceptance
@@ -495,9 +505,20 @@ reverse-spec/rev-2026-11-01-001/
   modules/MOD-01-<slug>/req-spec.md   ← rule-complete, non-technical, diagrams
   modules/MOD-01-<slug>/evidence.md   ← file:line, confidence, open questions
                                         cited as `MOD-01 EV-NNN`
-  req-index.md          ← REQ-ID → module → evidence ledger
+  req-index.md          ← REQ-ID → module → evidence ledger, plus `## Module status`
   summary.md            ← coverage, rules needing human confirmation, conflicts
 ```
+
+`req-index.md`'s **`## Module status`** is the run's only durable record of what
+actually passed — `validated`, `accepted as-is`, `escalated`, `deferred` or `pending`
+per module, written at each gate. The command has no `state.json`, so without it a
+handoff days later could not tell an approved module from one accepted with four
+unanswered questions. The handoff guard reads it rather than the file listing.
+
+**Commit the output.** It is untracked and not gitignored, and
+`/agentic-sdlc:cancel-run` runs `git clean -fd`, which deletes untracked directories —
+it now stops and asks first, but a survey you have paid opus for per module should not
+be left sitting uncommitted. The command offers at the end of Step 9.
 
 The system level is a **pair** like every module, so its REQs cite real evidence too.
 Prefixes keep them apart after the merge: `SYS EV-004` and `MOD-02 EV-031` both point

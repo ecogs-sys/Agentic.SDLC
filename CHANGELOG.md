@@ -2,6 +2,90 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.6.2] - 2026-11-03
+
+**Second review pass on the legacy-modernization track.** Fixes a data-loss path, an
+unenforceable handoff guard, and the absence of phased adoption. Behavior-affecting
+corrections, plus one new gate option.
+
+### Fixed — data loss
+
+- **`/agentic-sdlc:cancel-run` destroyed the entire reverse-spec output.**
+  `cleanup-branch` runs `git clean -fd`, which deletes untracked directories.
+  `reverse-spec/` is untracked, deliberately not gitignored, and never auto-committed,
+  so cancelling a phase wiped every module spec, evidence file, decision record and
+  impact report — one opus specification pass per module, unrecoverable. `brainstorms/`
+  had the same exposure. Added **Step 2b**, which checks for untracked standalone
+  output *before* any git command and offers to commit it; the main confirmation at
+  Step 2 names only the phase, so it was never informed consent for this.
+- **`/agentic-sdlc:reverse-spec` now offers to commit** at the end of Step 9, and warns
+  when the current branch belongs to an active phase (a commit there dies with the
+  branch). `/agentic-sdlc:redesign` and `/agentic-sdlc:gap-analysis` do the same.
+- **Handoff guard 5 made a false promise** — "re-enter once it's merged **or
+  cancelled**" was exactly the sequence that destroyed the artifacts. Corrected, and it
+  now re-offers the commit if the output is still uncommitted.
+
+### Fixed — an unenforceable guard
+
+- **Handoff guard 1 could not do its job across sessions.** It required every module to
+  have a "validator-passed" `req-spec.md` and flagged anything left at `accept as-is` —
+  but both facts lived only in the orchestrator's in-session context, since this
+  command has no `state.json`. On `--handoff <rev-id>` in a later session (the
+  documented recovery path) the guard silently degraded to "does the file exist", so a
+  module accepted with four unanswered questions handed off looking clean.
+
+  Added **`## Module status`** to `req-index.md` — `pending` / `validated` /
+  `accepted as-is` / `escalated` / `deferred` per module, written at each gate
+  (Step 8f) rather than at the end of the run. Guard 1 reads it and now offers
+  `acknowledge` / `finish` / **`scope`** (hand off only what is validated), and an
+  acknowledged skip is recorded in `original-input.md` so it travels with the program.
+  `summary.md`'s coverage table mirrors the column.
+
+### Added — phased adoption
+
+- **`defer <ids>` at the decomposition gate.** The gate previously offered only
+  `merge`, `split` and reassignment, so the only cost lever on a 40-module monolith was
+  merging — which reduces cost precisely by making each spec read less of its module.
+  Deferring removes passes outright at no cost to quality.
+
+  Deferred modules keep their ids (the inventory, integration map and `Depends on`
+  columns all reference them), move to a `## Deferred` section in `module-map.md`, are
+  skipped by Step 8, are excluded from the resume logic's notion of "incomplete", and
+  are named at the handoff — the pipeline cannot tell a deferred module from one that
+  does not exist. Deferral is refused when a non-deferred module depends on it, and
+  `MOD-00-shared` can never be deferred while anything else is specified.
+  `--module <rev-id> MOD-04` picks one up later.
+- **The gate now states its cost shape**: module count, the fact that each module is
+  also a review gate, and a table ranking the three levers by their effect on quality.
+  It recommends deferring over merging, and surfaces which modules it would defer.
+
+### Fixed — correctness and friction
+
+- **Ambiguous ownership for the system spec.** Check 1's system-pair denominator read
+  as applying "unowned by a single module" only to external entities, leaving
+  background jobs unconditional — which in a single-module run forces both the system
+  spec and `MOD-01` to specify the same job. The qualifier now governs jobs, entry
+  points and entities alike.
+- **A zero-REQ system spec is now explicitly correct.** When the decomposition assigns
+  everything — always true of a single-module run — the system spec has no REQs of its
+  own. Check 11 covers the system pair, and the archaeologist is told not to
+  manufacture REQs: its diagrams and `## Information model` are why the artifact
+  exists, and no module spec carries them.
+- **`--handoff` no longer resolves source roots.** The handoff merges specs and copies
+  the recorded root table as data; it never reads legacy source. Resolving roots
+  prompted the engineer to locate repositories nothing was about to open — on the one
+  path most likely to be run weeks later by someone without the legacy code at all.
+- **Re-specifying `MOD-00-shared` now reports its dependents.** Ids are write-once so
+  the `**Depends on:**` references stay valid, but the rules behind them may have
+  changed, leaving other modules describing shared behavior second-hand. The command
+  Greps for dependents and asks; it does not cascade silently, since that is a cost
+  decision for the human.
+- **Step 1 accepts the path forms people actually type** — Windows backslashes,
+  quoted paths with spaces, `/mnt/c/...` and `/c/...`, UNC paths (with a warning that
+  a network share is slow to walk), relative paths and `~`. A Windows-form path that
+  fails is retried in POSIX form and vice versa, and the resolved absolute path is
+  shown back before the survey starts.
+
 ## [1.6.1] - 2026-11-03
 
 **Review fixes across the legacy-modernization track.** A full review of the three new

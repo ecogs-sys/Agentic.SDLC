@@ -76,10 +76,56 @@ Below, `<cancel-branch>` means `agentic-sdlc/<program-id>/phase-01` for the
 planning-stage path, or `agentic-sdlc/<program-id>/<phase-folder>` for the phase
 path.
 
+### Step 2b — Protect standalone-command output before touching git (MANDATORY)
+
+`cleanup-branch` runs `git checkout -- .` **and `git clean -fd`**. `git clean -fd`
+deletes **untracked files and directories**, and the standalone commands write
+untracked output that has nothing to do with the phase being cancelled:
+
+| Directory | Written by | What it costs to lose |
+|---|---|---|
+| `reverse-spec/` | `/agentic-sdlc:reverse-spec`, `/agentic-sdlc:redesign`, `/agentic-sdlc:gap-analysis` | one full specification pass by the most capable model **per module**, plus every evidence file, decision record and impact report |
+| `brainstorms/` | `/agentic-sdlc:brainstorm` | a full generation + critique + deep-dive session |
+
+Neither is gitignored, neither is auto-committed, and neither belongs to the phase.
+So **before running any git command**, check for them:
+
+```bash
+git status --porcelain --untracked-files=all -- reverse-spec/ brainstorms/
+```
+
+If that prints anything, stop and ask — do **not** proceed on the main confirmation:
+
+> ⚠ **Uncommitted standalone output would be destroyed.**
+>
+> Cancelling runs `git clean -fd`, which deletes untracked files. These are not part
+> of Phase <n> and are not recoverable:
+>
+> - `reverse-spec/<rev-id>/` — <n> module specs, <m> requirements, <k> evidence files
+> - `brainstorms/<id>/` — <n> concepts
+>
+> Reply **'commit'** to commit them first (recommended — then cancel safely),
+> **'keep'** to abort the cancellation and deal with them yourself, or
+> **'discard'** if you genuinely want them gone.
+
+- **commit** → `git add reverse-spec/ brainstorms/` and commit with
+  `docs: preserve reverse-spec/brainstorm output before cancelling <phase>`, then
+  continue to Step 3. A commit on the phase branch is **not** enough on its own —
+  the branch is about to be deleted — so commit, then **cherry-pick or re-commit onto
+  `<parent_branch>` after the branch switch in Step 3** and confirm it survived.
+- **keep** → say "Cancellation aborted — nothing was changed." and stop.
+- **discard** → continue, and name in your final message exactly what was deleted.
+
+Never skip this check because the user already typed "yes" at Step 2. That
+confirmation named the phase directory and the phase branch; it did not name
+`reverse-spec/`, and a user who surveyed a legacy system last week has no reason to
+expect cancelling a phase to delete it.
+
 ### Step 3 — Clean up git branch and generated code
 If the workspace is a git repository, run the helper — it discards uncommitted
-changes, switches to `<parent_branch>` (falling back to `main`, then `master`),
-then deletes the phase branch:
+changes **and removes untracked files (`git clean -fd`)**, switches to
+`<parent_branch>` (falling back to `main`, then `master`), then deletes the phase
+branch:
 
 ```bash
 SDLC() { node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" "$@"; }
@@ -118,6 +164,12 @@ committed), delete it.
 
 ## Note
 Cancellation is clean when code was committed to the phase branch — switching branches restores the original workspace state. If code was generated but not yet committed (mid-story), `git checkout -- .` discards those changes before the branch switch.
+
+**`cleanup-branch` is wider than the phase.** It also runs `git clean -fd`, which
+deletes every untracked file in the workspace — not only generated code. That is
+correct for the phase's own output and wrong for anything else, which is why Step 2b
+exists and is not optional. Anything written by a standalone command
+(`reverse-spec/`, `brainstorms/`) must be committed or consciously discarded first.
 
 **Eval artifacts need no special handling.** The run-specific manifest
 (`runs/<run-id>/evals/manifest.json`) lives in the deleted run directory. Any

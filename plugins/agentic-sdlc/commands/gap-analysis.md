@@ -207,6 +207,15 @@ No branch and no automatic commit. If the user wants these committed, use a plai
 `git add`/`git commit` on request; do not use the `SDLC` helper (it is scoped to
 `runs/` state).
 
+**Offer the commit once the passes finish**, as `/agentic-sdlc:reverse-spec` Step 9
+does. `reverse-spec/` is untracked and `/agentic-sdlc:cancel-run` runs `git clean -fd`,
+which deletes untracked directories. The cutover delta especially is worth keeping —
+it is the document support and partners are given, and it is derived from decisions
+that may themselves take weeks to re-establish.
+
+If a program is active you are on a phase branch; a commit there dies with the branch,
+so offer `<parent_branch>` instead.
+
 ## Read-only guardrail (absolute)
 Surveyed legacy source is read-only for every agent here, and none of them builds or
 runs the legacy system. `coverage-auditor`, `capability-gap-analyst` and

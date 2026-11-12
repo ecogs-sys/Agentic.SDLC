@@ -114,6 +114,14 @@ flowchart LR
    rule-complete requirement spec plus an `evidence.md` of `file:line` citations,
    confidence levels, and open questions.
 
+   **You do not have to specify it all at once.** A 40-module monolith is a year of
+   modernization, not an afternoon — `defer 04,05` at the gate drops those passes
+   entirely and you pick them up later with `--module`. Deferring beats merging
+   modules to save money: merging buys a spec that read less of the code, deferring
+   costs nothing in quality. Deferred modules are recorded as a deliberate exclusion,
+   and the handoff names them so nobody mistakes "not specified yet" for "there was
+   nothing there".
+
 2. **Check for holes.** `/gap-analysis` audits what the survey failed to specify —
    "we never specified that part" is how a rebuild silently drops behavior — and
    separately hunts capabilities the system *lacks*, which every other agent is blind

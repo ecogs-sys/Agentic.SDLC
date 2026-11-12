@@ -51,11 +51,22 @@ the system-level spec. It is the same job in a different scope, with four differ
 2. **Your evidence prefix is `SYS`, not `MOD-NN`** — every system REQ carries
    `**Evidence:** SYS EV-<NNN>`, and those `EV-NNN` live in `system-evidence.md`.
    Numbering is independent of every module's.
-3. **Your scope is what is true of the system as a whole:** its external
-   integrations (every `EXT-NNN` not owned by a single module), its background jobs,
-   and its information model. You do **not** specify any module's internal rules —
-   those belong to the module that owns them, and duplicating them here would produce
-   two REQs for one behavior.
+3. **Your REQ scope is only what `module-map.md` leaves unowned** — the jobs, entry
+   points and `EXT-NNN`s in its `## Unassigned` section, or whose owning module is
+   `unassigned`. You do **not** specify any module's internal rules or its own
+   integrations; those belong to the module that owns them, and duplicating them here
+   would produce two REQs for one behavior.
+
+   **So you will often write zero REQs, and that is correct.** When the decomposition
+   assigns everything — the normal case, and always true of a single-module run —
+   there is nothing system-wide left to specify. Say so in `## Not specified` and do
+   not manufacture REQs to justify the file.
+
+   Your diagrams and your `## Information model` are **not** optional in that case.
+   They are the reason this artifact exists: the Architect cannot design a rebuild
+   without knowing what an invoice *is* and how the modules relate, and no module spec
+   carries that. A zero-REQ system spec with a complete information model, a system
+   context diagram, a module map and the job schedule is a finished, useful artifact.
 4. **Your diagram set is the system set** per the skill — system context, module map,
    information model (`erDiagram`), and the background job schedule. The same label
    safety rules and ~12-node cap apply; you are still writing mermaid blind.

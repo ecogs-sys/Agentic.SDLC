@@ -292,6 +292,18 @@ No branch and no automatic commit, matching `/agentic-sdlc:reverse-spec`. If the
 wants the amendments committed, use a plain `git add`/`git commit` on request; do not
 use the `SDLC` helper (it is scoped to `runs/` state).
 
+**Offer the commit after each applied decision**, the same way
+`/agentic-sdlc:reverse-spec` Step 9 does. `reverse-spec/` is untracked, and
+`/agentic-sdlc:cancel-run` runs `git clean -fd`, which deletes untracked directories.
+A `DEC` plus its impact analysis is expensive to reproduce, and `decisions.md` is the
+only record of *why* the rebuild diverges:
+
+> "DEC-<NNN> is applied across <n> requirement(s). `reverse-spec/<rev-id>/` is
+> untracked — commit it now? (recommended)"
+
+If a program is active you are on a phase branch; a commit there dies with the branch,
+so offer `<parent_branch>` instead.
+
 ## Read-only guardrail (absolute)
 Every surveyed legacy path is **read-only** for every agent here. This command
 redesigns the *specification*, never the old system — nobody edits legacy code, and
