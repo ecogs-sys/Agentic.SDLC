@@ -108,7 +108,7 @@ or `assert` check instead, not `test`.
 
 | Command | When | Effect |
 |---|---|---|
-| `author <run-dir> [stories-dir]` | when stories/fix-plan are approved | one stub per `STORY-XXX/AC-n` parsed from the approved `stories/` (`check` unbound, `kind: test`). **Exits non-zero if another run already owns one of the ids** — the stories were numbered from the wrong start |
+| `author <run-dir> [stories-dir]` | when stories/fix-plan are approved | one stub per `STORY-XXX/AC-n` parsed from the approved `stories/` (`check` unbound, `kind: test`). **Exits non-zero if another run already owns one of the ids** — the stories were numbered from the wrong start — or if any criterion line failed to parse (see below) |
 | `set-kind <run-dir> <id> <kind>` | the eval review gate | reclassify one criterion's `check.kind` (`test`\|`assert`\|`judge`) — the ONLY sanctioned manifest edit; goes through the tool, never a hand-edit. Non-`test` marks `source: human` |
 | `scan <run-dir> <test-path…>` | after a story's tests pass review | derive `check.tests` by extracting criterion tags from the test files. Tags belonging to earlier runs are counted and ignored; only an id **no** run has ever owned is warned about (a typo) |
 | `run <run-dir> [--filter <id\|story,…>] [--suite-green]` | the story / end-of-run gate | verify every targeted criterion is bound (has a tagged test); exit non-zero on any unbound criterion. Pass `--suite-green` when the test-reviewer reported the suite green so covered evals stamp `pass` |
@@ -161,6 +161,22 @@ run's definition of correctness, which becomes permanent corpus and is replayed 
 ## Quality checklist
 - [ ] Story ids were allocated from `SDLC next-story-id` — repo-unique, not
       restarted at `STORY-001` for this run
+### `author` refuses a partial parse
+
+`author` reads each story's `## Acceptance criteria` block and accepts
+`- **AC-n:** <text>` or `- **AC-n (A61, A59):** <text>` — the assumption-citation form
+in `agentic-sdlc:write-stories`. Any other bullet mentioning an `AC-n` id is reported
+and **exits non-zero**.
+
+That strictness is deliberate. A dropped criterion is an eval that is never authored,
+so the behavior ships unproven and *nothing downstream notices* — the manifest is
+internally consistent, the eval gate shows a plausible list, and the gap only appears
+when someone counts. A parser that silently skipped an unrecognised annotation once
+cost 19 of 195 criteria in a real run. Failing the command is recoverable; a manifest
+quietly missing criteria is not.
+
+A story that yields zero criteria fails the same way, for the same reason.
+
 - [ ] Every acceptance criterion has a write-once `AC-n` id (`write-stories` /
       `write-fix-plan` format)
 - [ ] Every `test`-kind criterion has ≥1 test tagged with its id (xUnit Trait or Vitest

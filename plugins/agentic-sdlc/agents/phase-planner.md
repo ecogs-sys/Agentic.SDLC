@@ -30,7 +30,24 @@ to `phase-plan.md` using the write-phase-plan skill.
 - `runs/<program-id>/phase-plan.md`
 
 ## Process
-1. Read `runs/<program-id>/req-spec.md` fully (full drafts only — see Revision mode).
+1. Read `runs/<program-id>/req-spec.md` (full drafts only — see Revision mode).
+
+   **Index-first reading.** If the spec contains a `## REQ index` table, read
+   `## Overview` plus that table, then scoped-read individual `### REQ-NNN` blocks
+   (per the `agentic-sdlc:artifact-slicing` skill) only where you need a REQ's detail
+   to judge a dependency or an ordering call. The table carries REQ-ID, name, module
+   and dependencies — which is all most phase decisions require. A reverse-engineered
+   spec can run to hundreds of REQs with decision tables and diagrams, and reading it
+   whole wastes the context you need for the actual planning.
+
+   With no `## REQ index`, read the spec fully, as before.
+
+   Two cautions when an index is present:
+   - **Never count REQs by regex over the file.** The index repeats every REQ-ID as
+     text, so a `REQ-\d+` count doubles every total. The authoritative list is the
+     `### REQ-NNN` headings.
+   - **REQ-IDs may have gaps.** Reverse-engineered specs allocate per module, so a
+     non-contiguous sequence is expected and is not a defect to report or correct.
 2. If revision notes exist in your context, read them to understand what to change. If revising, read only the existing `phase-plan.md` header (numbering/Version) and the flagged phase sections, so you know the current phase numbering and which phases to keep frozen.
 3. If this is a replan, treat the already-shipped phases as frozen: keep their
    numbering, scope, and REQ-IDs exactly; only revise phases that have not yet started.

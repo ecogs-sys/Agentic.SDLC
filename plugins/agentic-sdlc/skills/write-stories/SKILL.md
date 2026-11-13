@@ -97,6 +97,32 @@ Run ID: <run-id>
 - These ids are what the test engineer tags each test with and what the eval layer
   keys on — see the `agentic-sdlc:write-evals` skill.
 
+### Annotating a criterion with the assumption it rests on
+
+`tech-lead.md` requires any assumption you made rather than took from the tech-spec to
+be marked in the story. When an assumption belongs to **one specific criterion**, cite
+it on that criterion's heading, inside parentheses, between the id and the colon:
+
+```markdown
+- **AC-4 (A61):** Device registration rejects a duplicate serial number
+- **AC-5 (A59, A53):** Firmware rollback restores the previous slot
+```
+
+**Only parentheses, and only there.** `scripts/evals.mjs` parses this block to author
+the eval manifest, and it accepts `**AC-n:**` or `**AC-n (…):**` — nothing else. A
+heading written `**AC-4 [A61]:**`, `**AC-4 — A61:**`, or with two separate
+parentheticals does not parse. The helper now **fails loudly** on a line it cannot
+read rather than skipping it, so a mis-annotated criterion blocks `EVALS author`
+instead of vanishing from the manifest — but the fix is to use this form, not to
+discover it at the gate.
+
+The annotation is **not** part of the criterion text: the manifest stores the text
+after the colon, so keep the criterion itself self-contained and readable without the
+citation. Record what `A61` actually *is* in the story's prose or wherever the
+assumption is listed — the parenthetical is a pointer, not the assumption.
+
+Assumptions that span the whole story belong in the story body, not on a criterion.
+
 ## Index format (`index.md`)
 
 The orchestrator parses the `## Story index` table, so its columns are fixed and
@@ -143,6 +169,8 @@ The `Complexity` column copies each story's `**Estimated complexity:**` value (S
 - [ ] Each story belongs to exactly one track (dotnet or react for web runs; electron for electron runs; embedded for embedded runs)
 - [ ] Acceptance criteria are specific enough to write a failing test for
 - [ ] Every acceptance criterion carries a write-once `AC-n` id (unique within its story, never renumbered)
+- [ ] Every criterion heading is `- **AC-n:**` or `- **AC-n (A<ids>):**` — no other
+      annotation form parses, and `EVALS author` fails on one that does not
 - [ ] `index.md` exists with the `## Execution plan` diagram and `## Story index` table
 - [ ] Every story in the index table has a matching `STORY-XXX.md` file, and vice-versa
 - [ ] Each story's `**Wave:**` field matches its `Wave` column in the index
