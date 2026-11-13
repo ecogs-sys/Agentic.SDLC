@@ -140,17 +140,41 @@ function parseStory(file) {
   // Slice the "## Acceptance criteria" section up to the next "## " heading.
   const start = text.search(/^##\s+Acceptance criteria\s*$/m);
   const criteria = [];
+  const unparsed = [];
   if (start !== -1) {
     const rest = text.slice(start);
     const end = rest.slice(1).search(/^##\s+/m); // skip our own heading
     const block = end === -1 ? rest : rest.slice(0, end + 1);
-    const re = /^\s*[-*]\s*\*\*(AC-\d+):\*\*\s*(.+?)\s*$/gm;
+    // write-stories specifies "- **AC-n:** <criterion>". Tech Leads also annotate
+    // the heading with the assumption a criterion rests on — "**AC-4 (A61):**",
+    // "**AC-5 (A59, A53):**" — which is not in the documented format but is useful
+    // and happens in practice, so accept a parenthetical between the id and the
+    // colon. The annotation is deliberately not captured: the manifest keys on the
+    // AC id and holds the criterion text.
+    const re = /^\s*[-*]\s*\*\*(AC-\d+)(?:\s*\([^)]*\))?:\*\*\s*(.+?)\s*$/gm;
     let m;
     while ((m = re.exec(block)) !== null) {
       criteria.push({ ac: m[1], text: m[2] });
     }
+
+    // Anything that looks like a criterion heading but did not parse is reported,
+    // never skipped. A dropped criterion is an eval that is never authored, so the
+    // story ships with that behavior unproven and nothing downstream notices — the
+    // manifest looks complete because it is internally consistent. This is the
+    // failure that let 19 of 195 criteria vanish in silence; the regex above only
+    // covers the annotation style seen so far, and the next one will differ.
+    // Flag only bullets that are *trying* to be a criterion heading — a bolded
+    // AC id at the start. That catches "**AC-2 [A61]:**", "**AC-4 — A61:**" and
+    // "**AC-4** (A61):" while leaving alone a sub-bullet or a line of prose that
+    // merely references AC-1, which would otherwise be a false alarm.
+    const looksLikeHeading = /^\s*[-*]\s*\*\*\s*AC-\d+/;
+    for (const line of block.split(/\r?\n/)) {
+      if (!looksLikeHeading.test(line)) continue;
+      re.lastIndex = 0;
+      if (!re.test(line)) unparsed.push(line.trim());
+    }
   }
-  return { story, tech, criteria };
+  return { story, tech, criteria, unparsed };
 }
 
 /**
@@ -216,9 +240,13 @@ switch (cmd) {
     if (storyFiles.length === 0) die(`no STORY-*.md files in ${storiesDir}`);
 
     const evals = [];
+    const unparsed = [];
+    const emptyStories = [];
     for (const f of storyFiles) {
       const parsed = parseStory(join(storiesDir, f));
       if (!parsed) continue;
+      for (const l of parsed.unparsed) unparsed.push([f, l]);
+      if (parsed.criteria.length === 0) emptyStories.push(f);
       for (const c of parsed.criteria) {
         evals.push({
           id: `${parsed.story}/${c.ac}`,
@@ -228,6 +256,22 @@ switch (cmd) {
           status: { result: 'pending' },
         });
       }
+    }
+    // Fail on a PARTIAL drop, not just a total one. A story whose criteria all
+    // parsed while its neighbour lost four is the dangerous case: the manifest is
+    // internally consistent, the eval gate shows a plausible list, and the missing
+    // behavior is simply never proven by anything. Silence here is what made the
+    // "**AC-4 (A61):**" parse bug cost 19 criteria before anyone noticed.
+    if (unparsed.length) {
+      console.error(`evals: ${unparsed.length} line(s) look like acceptance criteria but do not match the write-stories format:`);
+      for (const [f, l] of unparsed) console.error(`  - ${f}: ${l}`);
+      console.error('expected: "- **AC-n:** <criterion>" (an assumption citation such as "**AC-4 (A61):**" is also accepted)');
+      die('fix the stories, or widen parseStory if this is a legitimate new convention — do not author a manifest that is missing criteria');
+    }
+    if (emptyStories.length) {
+      console.error(`evals: ${emptyStories.length} story file(s) yielded no acceptance criteria:`);
+      for (const f of emptyStories) console.error(`  - ${f}`);
+      die('every story must declare at least one AC-n criterion — check its "## Acceptance criteria" heading');
     }
     if (evals.length === 0) die('no acceptance criteria with AC-ids found — check write-stories format');
 

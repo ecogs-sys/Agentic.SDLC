@@ -254,3 +254,73 @@ test('unknown command exits non-zero', () => {
   const r = evals('frobnicate');
   assert.equal(r.code, 1);
 });
+
+// --- acceptance-criteria parsing -------------------------------------------
+// write-stories specifies "- **AC-n:** <criterion>". Tech Leads additionally
+// annotate the heading with the assumption a criterion rests on, which the
+// original parser rejected — silently dropping 19 of 195 criteria in a real run.
+
+/** A run dir with one story whose acceptance-criteria block is `acBlock`. */
+function storyWith(acBlock) {
+  const run = join(dir, 'run');
+  mkdirSync(join(run, 'stories'), { recursive: true });
+  writeFileSync(join(run, 'state.json'), JSON.stringify({ run_id: 'phase-01' }));
+  writeFileSync(join(run, 'stories', 'STORY-001.md'),
+    `# STORY-001: Thing\n**Implements:** [TECH-001]\n\n## Acceptance criteria\n${acBlock}\n\n## Notes\nignore\n`);
+  return run;
+}
+
+test('author accepts an assumption citation on the AC heading', () => {
+  const run = storyWith(
+    '- **AC-1:** plain criterion\n' +
+    '- **AC-2 (A61):** single assumption\n' +
+    '- **AC-3 (A59, A53):** several assumptions\n' +
+    '- **AC-4(A12):** no space before the parenthetical\n' +
+    '* **AC-5 (A7):** star bullet');
+  const r = evals('author', run, '--corpus', join(dir, 'evals'));
+  assert.equal(r.code, 0, r.out);
+  const m = readJson(join(run, 'evals', 'manifest.json'));
+  assert.deepEqual(m.evals.map((e) => e.id), [
+    'STORY-001/AC-1', 'STORY-001/AC-2', 'STORY-001/AC-3',
+    'STORY-001/AC-4', 'STORY-001/AC-5',
+  ]);
+  // The annotation is not part of the criterion text.
+  assert.equal(m.evals[1].criterion, 'single assumption');
+  assert.equal(m.evals[2].criterion, 'several assumptions');
+});
+
+test('author fails loudly on a criterion line it cannot parse', () => {
+  // The whole point: a PARTIAL drop must not pass. AC-1 parses, AC-2 does not.
+  const run = storyWith('- **AC-1:** fine\n- **AC-2 [A61]:** bracketed annotation');
+  const r = evals('author', run, '--corpus', join(dir, 'evals'));
+  assert.notEqual(r.code, 0);
+  assert.match(r.out, /look like acceptance criteria but do not match/);
+  assert.match(r.out, /AC-2 \[A61\]/);
+  assert.ok(!existsSync(join(run, 'evals', 'manifest.json')),
+    'no manifest should be written when criteria were dropped');
+});
+
+test('author ignores sub-bullets and prose that merely mention an AC id', () => {
+  const run = storyWith(
+    '- **AC-1:** fine\n' +
+    '  - edge case: AC-1 also covers an empty payload\n' +
+    '- Regression note: see AC-1 and AC-2 in STORY-002\n' +
+    '\nAC-1 is covered by the integration test.');
+  const r = evals('author', run, '--corpus', join(dir, 'evals'));
+  assert.equal(r.code, 0, r.out);
+  assert.equal(readJson(join(run, 'evals', 'manifest.json')).evals.length, 1);
+});
+
+test('author flags a malformed heading even when the colon escapes the bold', () => {
+  const run = storyWith('- **AC-1:** fine\n- **AC-2** (A61): colon outside the bold');
+  const r = evals('author', run, '--corpus', join(dir, 'evals'));
+  assert.notEqual(r.code, 0);
+  assert.match(r.out, /do not match/);
+});
+
+test('author fails when a story declares no acceptance criteria', () => {
+  const run = storyWith('<!-- none yet -->');
+  const r = evals('author', run, '--corpus', join(dir, 'evals'));
+  assert.notEqual(r.code, 0);
+  assert.match(r.out, /yielded no acceptance criteria/);
+});

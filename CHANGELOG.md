@@ -2,6 +2,49 @@
 
 All notable changes to the agentic-sdlc plugin are documented here.
 
+## [1.6.3] - 2026-11-03
+
+**Acceptance criteria were being silently dropped from the eval manifest.** Found in a
+real run: 19 of 195 criteria never reached the manifest, with no error and no warning.
+
+### Fixed
+
+- **`EVALS author` rejected an annotated criterion heading.** `parseStory`'s regex
+  required the colon immediately after the id, so a Tech Lead citing the assumption a
+  criterion rests on — `**AC-4 (A61):**`, `**AC-5 (A59, A53):**` — produced a line that
+  did not match and was skipped. The pattern now accepts an optional parenthetical
+  between the id and the colon. The annotation is not captured: the manifest keys on
+  the `AC-n` id and stores the criterion text.
+
+- **A partial drop no longer passes silently — this is the real fix.** `author`
+  previously failed only when *zero* criteria were found across the whole run, so a
+  story that lost four criteria while its neighbours parsed cleanly went unnoticed: the
+  manifest is internally consistent, the eval gate shows a plausible list, and the
+  missing behavior is simply never proven by anything. `parseStory` now reports every
+  bullet that looks like a criterion heading but failed to parse, and `author` exits
+  non-zero naming each line and the expected form, writing no manifest. A story that
+  yields no criteria at all fails the same way.
+
+  The detector keys on a **bolded** `AC-n` at the start of a bullet, so a sub-bullet or
+  a line of prose referencing `AC-1` is not a false alarm.
+
+### Added
+
+- **The annotation is now a documented convention.** It was not one: nothing in
+  `write-stories` or `write-tech-spec` defined `A<n>` assumption ids or permitted
+  anything between `AC-n` and the colon, so the format was undocumented drift — which
+  is why the parser was right to reject it and why the next variant (`[A61]`,
+  `— A61`) would have dropped criteria again. `agentic-sdlc:write-stories` gains an
+  "Annotating a criterion with the assumption it rests on" section specifying
+  parentheses as the one legal form, plus a checklist line;
+  `agentic-sdlc:write-evals` documents that `author` refuses a partial parse and why.
+
+- **Regression tests** (5): every annotated form authors correctly, the annotation is
+  excluded from the criterion text, a partial drop fails *and leaves no manifest*,
+  sub-bullets and prose are ignored, and `**AC-2** (A61):` (colon outside the bold) is
+  caught. The original fix shipped with none, so the bug was one tidy-up away from
+  returning.
+
 ## [1.6.2] - 2026-11-03
 
 **Second review pass on the legacy-modernization track.** Fixes a data-loss path, an
